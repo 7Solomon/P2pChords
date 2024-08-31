@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:test_controller/connect_pages/choose_sc_page.dart';
+import 'package:P2pChords/connect_pages/choose_sc_page.dart';
 
 import 'state.dart';
 import 'display_chords/test.dart';
