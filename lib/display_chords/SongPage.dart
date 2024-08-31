@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'KeySelectPage.dart';
+
 class ChordSheetPage extends StatefulWidget {
   @override
   _ChordSheetPageState createState() => _ChordSheetPageState();
@@ -10,9 +12,12 @@ class ChordSheetPage extends StatefulWidget {
 class _ChordSheetPageState extends State<ChordSheetPage> {
   Map<String, dynamic>? songData;
   List<Widget> songStructure = [];
+  Map<String, Map<String, String>> nashvilleToChordMapping = {};
 
   int _current_section_1 = 0;
   int _current_section_2 = 1;
+
+  String currentKey = "C";
 
   void displaySnack(String str) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(str)));
@@ -21,6 +26,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   @override
   void initState() {
     super.initState();
+    loadMappings();
     loadSongData();
   }
 
@@ -29,7 +35,25 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     setState(() {
       songData = json.decode(jsonString);
       // Set Song Structure
+      currentKey = songData!['header']['key'];
       songStructure = buildSongContent(songData!['data']);
+    });
+  }
+
+  Future<void> loadMappings() async {
+    // Load Nashville to chord mapping
+    String jsonString =
+        await rootBundle.loadString('assets/nashville_to_chord_by_key.json');
+    final dynamic decodedJson = json.decode(jsonString);
+    setState(() {
+      nashvilleToChordMapping = (decodedJson as Map<String, dynamic>).map(
+        (key, value) => MapEntry(
+          key,
+          (value as Map<String, dynamic>).map(
+            (subKey, subValue) => MapEntry(subKey, subValue as String),
+          ),
+        ),
+      );
     });
   }
 
@@ -77,9 +101,18 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Einstellungen'),
-              onTap: () {
-                // Handle the settings action here
+              onTap: () async {
                 Navigator.pop(context); // Close the drawer
+                final selectedKey = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => KeySelectionPage()),
+                );
+                if (selectedKey != null && selectedKey != currentKey) {
+                  setState(() {
+                    currentKey = selectedKey;
+                    songStructure = buildSongContent(songData!['data']);
+                  });
+                }
               },
             ),
           ],
@@ -174,13 +207,23 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   }
 
   Map<String, String> parseChords(dynamic chordsData) {
-    print(chordsData);
     Map<String, String> parsedChords = {};
     if (chordsData is Map<String, dynamic>) {
+      if (!nashvilleToChordMapping.containsKey(currentKey)) {
+        displaySnack('Unknown key: $currentKey');
+        return parsedChords;
+      }
+      Map<String, String> keyMapping = nashvilleToChordMapping[currentKey]!;
+
       chordsData.forEach((key, value) {
         int? position = int.tryParse(key);
         if (position != null && value is String) {
-          parsedChords[position.toString()] = value;
+          String? chord = keyMapping[value];
+          if (chord != null) {
+            parsedChords[position.toString()] = chord;
+          } else {
+            displaySnack('Unknown Nashville number: $value');
+          }
         } else {
           displaySnack('Invalid chord data: key=$key, value=$value');
         }

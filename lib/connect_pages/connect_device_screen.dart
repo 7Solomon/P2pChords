@@ -3,6 +3,7 @@ import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/connect_pages/choose_sc_page.dart';
+import 'dart:convert';
 
 import 'send_data_page.dart';
 import 'receive_data_page.dart';
