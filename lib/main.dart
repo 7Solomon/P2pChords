@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:P2pChords/connect_pages/choose_sc_page.dart';
 
 import 'state.dart';
-import 'display_chords/test.dart';
+import 'display_chords/SongPage.dart';
 
 void main() {
   runApp(
