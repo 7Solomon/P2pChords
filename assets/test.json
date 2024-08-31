@@ -1,0 +1,181 @@
+{
+    "header": {
+        "name": "O Come To The Altar",
+        "key": "E",
+        "bpm": 140,
+        "time_signature": "6/8",
+        "authors": [
+            "Chris Brown",
+            "Mack Brock",
+            "Steven Furtick",
+            "Wade Joye"
+        ]
+    },
+    "data": {
+        "verse1": [
+            {
+                "lyrics": "Are you hurting and broken within",
+                "chords": {
+                    "0": "E",
+                    "26": "A"
+                }
+            },
+            {
+                "lyrics": "Overwhelmed by the weight of your sin",
+                "chords": {
+                    "0": "E",
+                    "33": "A"
+                }
+            },
+            {
+                "lyrics": "Jesus is calling",
+                "chords": {
+                    "0": "C#m",
+                    "14": "A"
+                }
+            },
+            {
+                "lyrics": "Have you come to the end of yourself",
+                "chords": {
+                    "0": "E",
+                    "33": "A"
+                }
+            },
+            {
+                "lyrics": "Do you thirst for a drink from the well",
+                "chords": {
+                    "0": "E",
+                    "35": "A"
+                }
+            },
+            {
+                "lyrics": "Jesus is calling",
+                "chords": {
+                    "0": "C#m",
+                    "14": "A"
+                }
+            }
+        ],
+        "chorus": [
+            {
+                "lyrics": "O come to the altar",
+                "chords": {
+                    "0": "E",
+                    "18": "F#m"
+                }
+            },
+            {
+                "lyrics": "The Father's arms are open wide",
+                "chords": {
+                    "0": "C#m",
+                    "28": "A"
+                }
+            },
+            {
+                "lyrics": "Forgiveness was bought with",
+                "chords": {
+                    "0": "E",
+                    "24": "F#m"
+                }
+            },
+            {
+                "lyrics": "The precious blood of Jesus Christ",
+                "chords": {
+                    "0": "C#m",
+                    "31": "A"
+                }
+            }
+        ],
+        "verse2": [
+            {
+                "lyrics": "Leave behind your regrets and mistakes",
+                "chords": {
+                    "0": "E",
+                    "34": "A"
+                }
+            },
+            {
+                "lyrics": "Come today there's no reason to wait",
+                "chords": {
+                    "0": "E",
+                    "33": "A"
+                }
+            },
+            {
+                "lyrics": "Jesus is calling",
+                "chords": {
+                    "0": "C#m",
+                    "14": "A"
+                }
+            },
+            {
+                "lyrics": "Bring your sorrows and trade them for joy",
+                "chords": {
+                    "0": "E",
+                    "37": "A"
+                }
+            },
+            {
+                "lyrics": "From the ashes a new life is born",
+                "chords": {
+                    "0": "E",
+                    "31": "A"
+                }
+            },
+            {
+                "lyrics": "Jesus is calling",
+                "chords": {
+                    "0": "C#m",
+                    "14": "A"
+                }
+            }
+        ],
+        "bridge": [
+            {
+                "lyrics": "Oh what a Savior isn't he wonderful",
+                "chords": {
+                    "0": "E",
+                    "33": "C#m"
+                }
+            },
+            {
+                "lyrics": "Sing alleluia Christ is risen",
+                "chords": {
+                    "0": "A",
+                    "26": "E"
+                }
+            },
+            {
+                "lyrics": "Bow down before him for he is Lord of all",
+                "chords": {
+                    "0": "E",
+                    "37": "C#m"
+                }
+            },
+            {
+                "lyrics": "Sing alleluia Christ is risen",
+                "chords": {
+                    "0": "A",
+                    "26": "E"
+                }
+            }
+        ],
+        "verse3": [
+            {
+                "lyrics": "Bear your cross as you wait for the crown",
+                "chords": {
+                    "0": "E",
+                    "36": "A"
+                }
+            },
+            {
+                "lyrics": "Tell the world of the treasure you've found",
+                "chords": {
+                    "0": "E",
+                    "20": "D",
+                    "36": "A/C#"
+                }
+            }
+        ]
+    }
+}
