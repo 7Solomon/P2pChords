@@ -4,6 +4,7 @@ import 'package:P2pChords/connect_pages/choose_sc_page.dart';
 
 import 'state.dart';
 import 'display_chords/SongPage.dart';
+import 'data_management/dataManagmentPage.dart';
 
 void main() {
   runApp(
@@ -68,6 +69,16 @@ class MainPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ChordSheetPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              child: const Text('Look at Json'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => JsonListPage()),
                 );
               },
             ),
