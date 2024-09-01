@@ -40,6 +40,8 @@ class MultiJsonStorage {
     final prefs = await SharedPreferences.getInstance();
     Map<String, dynamic>? groupIndex =
         jsonDecode(prefs.getString(_groupIndexKey) ?? '{}');
+    //print(groupIndex!
+    //    .map((key, value) => MapEntry(key, List<String>.from(value))));
     return groupIndex!
         .map((key, value) => MapEntry(key, List<String>.from(value)));
   }
@@ -51,20 +53,6 @@ class MultiJsonStorage {
 
   static Future<Map<String, Map<String, dynamic>>> loadAllJson(
       {String group = 'default'}) async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> keys = await getAllKeys(group: group);
-    Map<String, Map<String, dynamic>> result = {};
-    for (String key in keys) {
-      String? jsonString = prefs.getString('$_keyPrefix$group:$key');
-      if (jsonString != null) {
-        result[key] = jsonDecode(jsonString);
-      }
-    }
-    return result;
-  }
-
-  static Future<Map<String, Map<String, dynamic>>> loadAllJsonFromGroup(
-      String group) async {
     final prefs = await SharedPreferences.getInstance();
     List<String> keys = await getAllKeys(group: group);
     Map<String, Map<String, dynamic>> result = {};

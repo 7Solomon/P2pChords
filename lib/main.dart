@@ -4,7 +4,7 @@ import 'package:P2pChords/connect_pages/choose_sc_page.dart';
 
 import 'state.dart';
 import 'display_chords/SongPage.dart';
-import 'data_management/dataManagmentPage.dart';
+import 'data_management/GroupOverviewPage.dart';
 
 void main() {
   runApp(
@@ -59,16 +59,6 @@ class MainPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ChooseSCStatePage()),
-                );
-              },
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              child: const Text('Display Test'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ChordSheetPage()),
                 );
               },
             ),

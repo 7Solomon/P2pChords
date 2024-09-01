@@ -66,8 +66,10 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
 
     try {
       Map<String, dynamic> jsonData = jsonDecode(_fileContent!);
+      String groupIndex =
+          _groupSelector.text.isEmpty ? 'default' : _groupSelector.text;
       await MultiJsonStorage.saveJson(_nameSelector.text, jsonData,
-          group: _groupSelector.text);
+          group: groupIndex);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('JSON file saved successfully')),

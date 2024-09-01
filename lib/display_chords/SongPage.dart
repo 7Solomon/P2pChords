@@ -3,8 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'KeySelectPage.dart';
+import 'package:P2pChords/data_management/save_json_in_storage.dart';
 
 class ChordSheetPage extends StatefulWidget {
+  final String songName;
+  final String group;
+
+  // Constructor to accept song name and group
+  ChordSheetPage({required this.songName, required this.group});
   @override
   _ChordSheetPageState createState() => _ChordSheetPageState();
 }
@@ -31,13 +37,22 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   }
 
   Future<void> loadSongData() async {
-    String jsonString = await rootBundle.loadString('assets/test.json');
+    Map<String, dynamic>? loadedSongData =
+        await MultiJsonStorage.loadJson(widget.songName, group: widget.group);
     setState(() {
-      songData = json.decode(jsonString);
-      // Set Song Structure
+      songData = loadedSongData;
+      print(songData.toString());
       currentKey = songData!['header']['key'];
       songStructure = buildSongContent(songData!['data']);
     });
+
+    // String jsonString = await rootBundle.loadString('assets/test.json');
+    //setState(() {
+    //  songData = json.decode(jsonString);
+    // Set Song Structure
+    //  currentKey = songData!['header']['key'];
+    //  songStructure = buildSongContent(songData!['data']);
+    //});
   }
 
   Future<void> loadMappings() async {
