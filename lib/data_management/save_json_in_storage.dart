@@ -36,6 +36,34 @@ class MultiJsonStorage {
     return result;
   }
 
+  static Future<bool> removeGroup(String group) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Retrieve all keys in the group
+    final allKeysFromGroup = await getAllKeys(group: group);
+
+    bool overallResult = true;
+
+    // Remove each item in the group
+    for (var key in allKeysFromGroup) {
+      bool result = await prefs.remove('$_keyPrefix$group:$key');
+      if (result) {
+        await _updateIndex(key, group, false);
+      }
+      overallResult = overallResult && result;
+    }
+
+    // Remove the group from the index
+    final Map<String, dynamic> groupIndex =
+        jsonDecode(prefs.getString(_groupIndexKey) ?? '{}');
+    if (groupIndex.containsKey(group)) {
+      groupIndex.remove(group);
+      await prefs.setString(_groupIndexKey, jsonEncode(groupIndex));
+    }
+
+    return overallResult;
+  }
+
   static Future<Map<String, List<String>>> getAllGroups() async {
     final prefs = await SharedPreferences.getInstance();
     Map<String, dynamic>? groupIndex =

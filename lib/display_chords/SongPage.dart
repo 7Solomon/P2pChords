@@ -41,7 +41,6 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
         await MultiJsonStorage.loadJson(widget.songName, group: widget.group);
     setState(() {
       songData = loadedSongData;
-      print(songData.toString());
       currentKey = songData!['header']['key'];
       songStructure = buildSongContent(songData!['data']);
     });
@@ -225,13 +224,17 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     Map<String, String> parsedChords = {};
     if (chordsData is Map<String, dynamic>) {
       if (!nashvilleToChordMapping.containsKey(currentKey)) {
+        //print(currentKey.length);
+        //print(currentKey);
+
+        //print(currentKey.runtimeType);
         displaySnack('Unknown key: $currentKey');
         return parsedChords;
       }
       Map<String, String> keyMapping = nashvilleToChordMapping[currentKey]!;
-
       chordsData.forEach((key, value) {
         int? position = int.tryParse(key);
+        print(keyMapping[key]);
         if (position != null && value is String) {
           String? chord = keyMapping[value];
           if (chord != null) {
@@ -304,6 +307,8 @@ class ChordPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
 
+    double chordYPosition = 0; // Position to start painting chords
+
     chords.forEach((index, chord) {
       final offset = lyricPainter.getOffsetForCaret(
         TextPosition(offset: index),
@@ -312,10 +317,14 @@ class ChordPainter extends CustomPainter {
 
       chordPainter.text = TextSpan(text: chord, style: chordStyle);
       chordPainter.layout();
-      chordPainter.paint(canvas, Offset(offset.dx, 0));
+      chordPainter.paint(canvas, Offset(offset.dx, chordYPosition));
 
-      lyricPainter.paint(canvas, Offset(0, chordPainter.height + 5));
+      chordYPosition +=
+          chordPainter.height + 5; // Update Y position for next chord
     });
+
+    // Paint lyrics after chords
+    lyricPainter.paint(canvas, Offset(0, chordYPosition + 10));
   }
 
   @override
