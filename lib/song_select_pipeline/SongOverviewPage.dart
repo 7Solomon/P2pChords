@@ -1,14 +1,18 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'save_json_in_storage.dart';
-import 'package:P2pChords/display_chords/SongPage.dart';
+import '../data_management/save_json_in_storage.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage.dart';
 
 class Songoverviewpage extends StatelessWidget {
   final String groupName;
-  final List<String> songs;
+  final List<Map<String, String>> songs;
+  final VoidCallback onGroupDeleted;
 
-  Songoverviewpage({required this.groupName, required this.songs});
+  Songoverviewpage(
+      {required this.groupName,
+      required this.songs,
+      required this.onGroupDeleted});
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +27,11 @@ class Songoverviewpage extends StatelessWidget {
             child: ListView.builder(
               itemCount: songs.length,
               itemBuilder: (context, index) {
-                final songName = songs[index];
-
+                final songData = songs[index];
+                final hash = songData['hash'] ?? '';
+                final name = songData['name'] ?? 'noName';
                 return Dismissible(
-                  key: Key(songName), // Unique key for each item
+                  key: Key(hash), // Unique key for each item
                   direction:
                       DismissDirection.endToStart, // Swipe from right to left
                   background: Container(
@@ -69,25 +74,22 @@ class Songoverviewpage extends StatelessWidget {
                   },
                   onDismissed: (direction) {
                     // Handle the deletion logic here
-                    MultiJsonStorage.removeJson(songName, group: groupName)
-                        .then((success) {
+                    MultiJsonStorage.removeJson(hash).then((success) {
                       if (success) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('$songName Gelöscht')),
+                          SnackBar(content: Text('$name Gelöscht')),
                         );
                       }
                     });
                   },
+                  // Hier den Namen dann einfügen
                   child: ListTile(
-                    title: Text(songName),
+                    title: Text(name),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ChordSheetPage(
-                            songName: songName,
-                            group: groupName,
-                          ),
+                          builder: (context) => ChordSheetPage(songHash: hash),
                         ),
                       );
                     },
@@ -96,7 +98,7 @@ class Songoverviewpage extends StatelessWidget {
               },
             ),
           ),
-
+          /*
           // Löschen der Gruppe
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -125,6 +127,7 @@ class Songoverviewpage extends StatelessWidget {
                               Navigator.of(context).pop(); // Close the dialog
                               Navigator.of(context)
                                   .pop(); // Close the screen or go back to the previous screen
+                              onGroupDeleted();
                             });
                           },
                           child: const Text('Löschen'),
@@ -135,7 +138,7 @@ class Songoverviewpage extends StatelessWidget {
                 );
               },
             ),
-          ),
+          ),*/
         ],
       ),
     );

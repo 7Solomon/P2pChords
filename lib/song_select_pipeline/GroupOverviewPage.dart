@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'save_json_in_storage.dart';
-import 'SaveJsonPage.dart';
+import '../data_management/save_json_in_storage.dart';
+import '../data_management/SaveJsonPage.dart';
 import 'SongOverviewPage.dart';
 
 class JsonListPage extends StatefulWidget {
@@ -13,7 +13,7 @@ class JsonListPage extends StatefulWidget {
 }
 
 class _JsonListPageState extends State<JsonListPage> {
-  Map<String, List<String>> _allGroups = {};
+  Map<String, List<Map<String, String>>> _allGroups = {};
   bool _isLoading = true;
 
   @override
@@ -24,6 +24,7 @@ class _JsonListPageState extends State<JsonListPage> {
 
   Future<void> _loadAllJsons() async {
     setState(() => _isLoading = true);
+
     _allGroups = await MultiJsonStorage.getAllGroups();
     //_allJsons = await MultiJsonStorage.loadAllJson();
     setState(() => _isLoading = false);
@@ -58,24 +59,16 @@ class _JsonListPageState extends State<JsonListPage> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => Songoverviewpage(
-                                groupName:
-                                    key, // The name of the selected group
-                                songs: _allGroups[
-                                    key]!, // List of songs in the selected group
-                              ),
+                                  groupName:
+                                      key, // The name of the selected group
+                                  songs: _allGroups[
+                                      key]!, // List of songs in the selected group
+                                  onGroupDeleted: _loadAllJsons),
                             ),
                           );
                         });
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => JsonFilePickerPage()),
-        ),
-        child: const Icon(Icons.add),
-        tooltip: 'Neues Lied Hinzufügen',
-      ),
     );
   }
 }

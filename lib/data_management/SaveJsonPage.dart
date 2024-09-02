@@ -76,6 +76,7 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
       );
       Navigator.of(context).pop(); // Return to the previous page
     } catch (e) {
+      print(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving JSON: ${e.toString()}')),
       );
@@ -86,8 +87,9 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
 
   @override
   void dispose() {
-    _nameSelector
+    _groupSelector
         .dispose(); // Dispose of the controller when the widget is disposed
+    //could be Irelevant becaus eit doesnt change sth
     super.dispose();
   }
 

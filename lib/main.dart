@@ -1,10 +1,10 @@
+import 'package:P2pChords/display_groups/manageGroupPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/connect_pages/choose_sc_page.dart';
 
 import 'state.dart';
-import 'display_chords/SongPage.dart';
-import 'data_management/GroupOverviewPage.dart';
+import 'song_select_pipeline/GroupOverviewPage.dart';
 
 void main() {
   runApp(
@@ -64,11 +64,21 @@ class MainPage extends StatelessWidget {
             ),
             const SizedBox(height: 30),
             ElevatedButton(
-              child: const Text('Look at Json'),
+              child: const Text('Songs spielen'),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => JsonListPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              child: const Text('Bearbeiten der Gruppe'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ManageGroupPage()),
                 );
               },
             ),
