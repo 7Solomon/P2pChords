@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import '../data_management/save_json_in_storage.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 
 class Songoverviewpage extends StatelessWidget {
   final String groupName;

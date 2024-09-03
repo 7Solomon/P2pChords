@@ -5,7 +5,7 @@ import 'package:P2pChords/display_groups/allSongsPage.dart';
 class GroupSongsPage extends StatefulWidget {
   final String group;
 
-  GroupSongsPage({required this.group});
+  const GroupSongsPage({super.key, required this.group});
 
   @override
   _GroupSongsPageState createState() => _GroupSongsPageState();
@@ -30,7 +30,7 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
         title: Text(widget.group),
         actions: [
           IconButton(
-            icon: Icon(Icons.list),
+            icon: const Icon(Icons.list),
             onPressed: () {
               Navigator.push(
                 context,
@@ -56,13 +56,13 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
               future: _fetchSongs(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
+                  return const Center(
                       child: Text('In dieser Gruppe sind keine Lieder'));
                 }
 
@@ -70,7 +70,20 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                 return ListView(
                   children: songs.entries.map((entry) {
                     final key = entry.key;
-                    final songData = entry.value;
+                    final Map songData = entry.value;
+                    if (songData.isEmpty) {
+                      return Dismissible(
+                          key: Key(key),
+                          background: Container(color: Colors.red),
+                          direction: DismissDirection.startToEnd,
+                          onDismissed: (direction) async {
+                            await _removeSongFromGroup(key);
+                          },
+                          child: ListTile(
+                            title: const Text('Unknown SongData Please Fix!'),
+                            subtitle: Text(key),
+                          ));
+                    }
                     return Dismissible(
                       key: Key(key),
                       background: Container(color: Colors.red),
