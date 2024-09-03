@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/songPageFunctions.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/load_data.dart';
@@ -46,17 +45,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     final songDataResult = await loadSongData(
       widget.songHash,
       displaySnack,
-      (data, displaySnack, parseChords) => buildSongContent(
-        data,
-        displaySnack,
-        parseChords,
-      ),
-      (chordsData) => parseChords(
-        chordsData,
-        nashvilleToChordMapping,
-        currentKey,
-        displaySnack,
-      ),
+      buildSongContent,
+      parseChords,
       nashvilleToChordMapping,
       currentKey,
     );

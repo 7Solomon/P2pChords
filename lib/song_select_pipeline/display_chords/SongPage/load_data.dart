@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:P2pChords/data_management/save_json_in_storage.dart';
 
 Future<Map<String, dynamic>?> loadSongData(
   String songHash,
   Function displaySnack,
-  Function buildSongContent,
-  Function parseChords,
+  List<Widget> Function(Map<String, dynamic>, Function, Function)
+      buildSongContent,
+  Map<String, String> Function(
+          dynamic, Map<String, Map<String, String>>, String, Function)
+      parseChords,
   Map<String, Map<String, String>> nashvilleToChordMapping,
   String currentKey,
 ) async {
@@ -37,6 +39,7 @@ Future<Map<String, dynamic>?> loadSongData(
       'songStructure': songStructure,
     };
   } catch (e) {
+    print(e);
     displaySnack('An error occurred while loading song data: $e');
     return null;
   }

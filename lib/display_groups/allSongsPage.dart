@@ -6,7 +6,8 @@ class AllSongsPage extends StatefulWidget {
   final String group;
   final VoidCallback onSongAdded;
 
-  AllSongsPage({required this.group, required this.onSongAdded});
+  const AllSongsPage(
+      {super.key, required this.group, required this.onSongAdded});
 
   @override
   _AllSongsPageState createState() => _AllSongsPageState();
@@ -19,6 +20,10 @@ class _AllSongsPageState extends State<AllSongsPage> {
   @override
   void initState() {
     super.initState();
+    _loadData();
+  }
+
+  void _loadData() {
     _allSongsFuture = _fetchAllSongs();
     _groupSongKeysFuture = _fetchGroupSongKeys();
   }
@@ -46,9 +51,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
         group: widget.group,
       );
       setState(() {
-        _groupSongKeysFuture = _fetchGroupSongKeys(); // Refresh group song keys
+        _loadData(); // Refresh the data after adding a song
+        widget.onSongAdded(); // Notify parent widget
       });
-      widget.onSongAdded();
     }
   }
 
@@ -56,19 +61,19 @@ class _AllSongsPageState extends State<AllSongsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Alle Lieder'),
+        title: const Text('Alle Lieder'),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _allSongsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Keine Lieder Verfügbar'));
+            return const Center(child: Text('Keine Lieder Verfügbar'));
           }
 
           final songs = snapshot.data!;
@@ -76,7 +81,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
             future: _groupSongKeysFuture,
             builder: (context, groupSnapshot) {
               if (groupSnapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator());
               }
               if (groupSnapshot.hasError) {
                 return Center(child: Text('Error: ${groupSnapshot.error}'));
@@ -127,11 +132,16 @@ class _AllSongsPageState extends State<AllSongsPage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => JsonFilePickerPage()),
+            MaterialPageRoute(
+                builder: (context) => JsonFilePickerPage(onSongAdded: () {
+                      setState(() {
+                        _loadData(); // Reload data when a song is added
+                      });
+                    })),
           );
         },
+        tooltip: 'Neues Lied Hinnzufügen',
         child: const Icon(Icons.add),
-        tooltip: 'Add New Song',
       ),
     );
   }

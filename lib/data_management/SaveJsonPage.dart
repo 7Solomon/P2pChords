@@ -7,7 +7,8 @@ import 'package:path/path.dart' as path;
 import 'save_json_in_storage.dart';
 
 class JsonFilePickerPage extends StatefulWidget {
-  const JsonFilePickerPage({Key? key}) : super(key: key);
+  final VoidCallback onSongAdded;
+  const JsonFilePickerPage({super.key, required this.onSongAdded});
 
   @override
   _JsonFilePickerPageState createState() => _JsonFilePickerPageState();
@@ -43,6 +44,9 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
           _selectedFile = file;
           _fileName = path.basename(file.path);
           _fileContent = content;
+
+          // Update overview
+          widget.onSongAdded();
         });
       }
     } catch (e) {
@@ -124,7 +128,7 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: _nameSelector,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Name des Songs',
                 ),
@@ -132,7 +136,7 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: _groupSelector,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Willst du eine Gruppe',
                 ),
