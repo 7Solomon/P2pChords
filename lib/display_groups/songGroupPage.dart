@@ -74,7 +74,7 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                     return Dismissible(
                       key: Key(key),
                       background: Container(color: Colors.red),
-                      direction: DismissDirection.endToStart,
+                      direction: DismissDirection.startToEnd,
                       onDismissed: (direction) async {
                         await _removeSongFromGroup(key);
                       },

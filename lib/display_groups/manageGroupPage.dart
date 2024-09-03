@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:P2pChords/data_management/save_json_in_storage.dart';
 import 'package:P2pChords/display_groups/songGroupPage.dart';
+import 'package:P2pChords/display_groups/groupFunctions.dart'; // Import your group functions here
 
 class ManageGroupPage extends StatefulWidget {
   @override
@@ -58,9 +59,23 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
       appBar: AppBar(
         title: Text('Gruppen Übersicht'),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
+            onSelected: (String choice) {
+              if (choice == 'Neue Gruppe') {
+                _createNewGroup();
+              } else if (choice == 'Gruppe importieren') {
+                importGroup();
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return {'Neue Gruppe', 'Gruppe importieren'}.map((String choice) {
+                return PopupMenuItem<String>(
+                  value: choice,
+                  child: Text(choice),
+                );
+              }).toList();
+            },
             icon: Icon(Icons.add),
-            onPressed: _createNewGroup,
           ),
         ],
       ),
@@ -80,16 +95,71 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
           final groups = snapshot.data!;
           return ListView(
             children: groups.keys.map((group) {
-              return ListTile(
-                title: Text(group),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GroupSongsPage(group: group),
-                    ),
-                  );
+              return Dismissible(
+                key: Key(group),
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerLeft,
+                  padding: EdgeInsets.only(left: 20),
+                  child: Icon(Icons.delete, color: Colors.white),
+                ),
+                secondaryBackground: Container(
+                  color: Colors.blue,
+                  alignment: Alignment.centerRight,
+                  padding: EdgeInsets.only(right: 20),
+                  child: Icon(Icons.download, color: Colors.white),
+                ),
+                direction: DismissDirection.horizontal,
+                confirmDismiss: (direction) async {
+                  if (direction == DismissDirection.endToStart) {
+                    await exportGroup(group, context);
+                    return false; // Don't remove the item from the list
+                  } else if (direction == DismissDirection.startToEnd) {
+                    bool? deleteConfirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Bestätige das Löschen'),
+                          content: const Text(
+                              'Bist du sicher, dass du die Gruppe permanent löschen willst? Das kann nicht mehr rückgängig gemacht werden.'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(false); // Cancel
+                              },
+                              child: const Text('Abbrechen'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(true); // Confirm
+                              },
+                              child: const Text('Löschen'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (deleteConfirmed == true) {
+                      await MultiJsonStorage.removeGroup(group);
+                      setState(() {});
+                      return true; // Remove the item from the list
+                    } else {
+                      return false; // Don't remove the item
+                    }
+                  }
+                  return false;
                 },
+                child: ListTile(
+                  title: Text(group),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GroupSongsPage(group: group),
+                      ),
+                    );
+                  },
+                ),
               );
             }).toList(),
           );
