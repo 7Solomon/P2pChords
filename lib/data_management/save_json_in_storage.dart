@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:crypto/crypto.dart'; // Add this package to generate the hash
@@ -23,7 +22,7 @@ class MultiJsonStorage {
     }
   }
 
-  static Future<bool> saveJson(
+  static Future<Map<String, dynamic>> saveJson(
       String displayName, Map<String, dynamic> jsonData,
       {String group = 'default'}) async {
     final prefs = await SharedPreferences.getInstance();
@@ -69,7 +68,7 @@ class MultiJsonStorage {
       await prefs.setString('$_groupPrefix:group_map', jsonEncode(groupMap));
     }
 
-    return result;
+    return {'result': result, 'hash': jsonHash};
   }
 
   static Future<Map<String, dynamic>?> loadJson(String key) async {

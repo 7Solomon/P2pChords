@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,7 +12,12 @@ import 'receive_data_page.dart';
 import '../device.dart';
 import '../state.dart';
 
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
+import 'package:P2pChords/data_management/save_json_in_storage.dart';
+
 class ConnectionPage extends StatefulWidget {
+  const ConnectionPage({super.key});
+
   @override
   _ConnectionPageState createState() => _ConnectionPageState();
 }
@@ -19,7 +26,6 @@ class _ConnectionPageState extends State<ConnectionPage> {
   final Strategy strategy = Strategy.P2P_CLUSTER;
   Map<String, DeviceInfo> endpointMap = {};
   String? connectedDeviceId;
-  final List<String> _receivedMessages = [];
 
   @override
   void initState() {
@@ -42,6 +48,79 @@ class _ConnectionPageState extends State<ConnectionPage> {
     } else {
       displaySnack("Some permissions were denied");
       // You might want to show a dialog here explaining why the permissions are needed
+    }
+  }
+
+  void onConnectionInit(String id, ConnectionInfo info) {
+    //final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
+    final sectionProvider =
+        Provider.of<SectionProvider>(context, listen: false);
+
+    Nearby().acceptConnection(
+      id,
+      onPayLoadRecieved: (endid, payload) async {
+        if (payload.type == PayloadType.BYTES) {
+          String str = String.fromCharCodes(payload.bytes!);
+          var data = json.decode(str);
+
+          if (data['type'] == 'song_data') {
+            handleReceivedSongData(data['content']);
+          } else if (data['type'] == 'section_update') {
+            sectionProvider.receiveSections(json.encode(data['content']));
+          }
+
+          //globalUserIds.addReceivedMessage(str);
+        }
+      },
+    );
+  }
+
+  void handleReceivedSongData(Map<String, dynamic> songData,
+      {songGroup = 'default'}) async {
+    String songName = songData['header']['name'];
+
+    final songResult =
+        await MultiJsonStorage.saveJson(songName, songData, group: songGroup);
+    if (songResult['result']) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChordSheetPage(songHash: songResult['hash']),
+        ),
+      );
+    }
+  }
+
+  void sendSongData(String deviceId, Map<String, dynamic> songData) async {
+    final data = {
+      'type': 'song_data',
+      'content': songData,
+    };
+    try {
+      final codeUnits = data.toString().codeUnits;
+      final bytes = Uint8List.fromList(codeUnits);
+      await Nearby().sendBytesPayload(deviceId, bytes);
+      displaySnack("Data sent successfully to $deviceId: $data");
+    } catch (e) {
+      displaySnack("Error sending data to $deviceId: $e");
+    }
+  }
+
+  void sendSectionUpdate(String deviceId, int section1, int section2) async {
+    final data = {
+      'type': 'section_update',
+      'content': {
+        'section1': section1,
+        'section2': section2,
+      },
+    };
+    try {
+      final codeUnits = data.toString().codeUnits;
+      final bytes = Uint8List.fromList(codeUnits);
+      await Nearby().sendBytesPayload(deviceId, bytes);
+      displaySnack("Data sent successfully to $deviceId: $data");
+    } catch (e) {
+      displaySnack("Error sending data to $deviceId: $e");
     }
   }
 
@@ -244,19 +323,6 @@ class _ConnectionPageState extends State<ConnectionPage> {
     } catch (e) {
       displaySnack("Error in requesting connection: $e");
     }
-  }
-
-  void onConnectionInit(String id, ConnectionInfo info) {
-    final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
-    Nearby().acceptConnection(
-      id,
-      onPayLoadRecieved: (endid, payload) async {
-        if (payload.type == PayloadType.BYTES) {
-          String str = String.fromCharCodes(payload.bytes!);
-          globalUserIds.addReceivedMessage(str);
-        }
-      },
-    );
   }
 
   void displaySnack(String str) {

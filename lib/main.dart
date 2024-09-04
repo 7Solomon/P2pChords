@@ -13,8 +13,9 @@ void main() {
         ChangeNotifierProvider(create: (context) => GlobalMode()),
         ChangeNotifierProvider(create: (context) => GlobalUserIds()),
         ChangeNotifierProvider(create: (context) => GlobalName()),
+        ChangeNotifierProvider(create: (context) => SectionProvider()),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
@@ -68,7 +69,7 @@ class MainPage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => JsonListPage()),
+                  MaterialPageRoute(builder: (context) => const JsonListPage()),
                 );
               },
             ),

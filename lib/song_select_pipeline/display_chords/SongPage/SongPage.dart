@@ -1,7 +1,9 @@
+import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/songPageFunctions.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/load_data.dart';
+import 'package:provider/provider.dart';
 
 class ChordSheetPage extends StatefulWidget {
   final String songHash;
@@ -60,9 +62,16 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     }
   }
 
+  void _initProviders() {
+    final globalMode = Provider.of<GlobalMode>(context, listen: false);
+    final sectionProvider =
+        Provider.of<SectionProvider>(context, listen: false);
+  }
+
   @override
   void initState() {
     super.initState();
+    _initProviders();
     _initializeData();
   }
 
@@ -93,19 +102,20 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: displaySectionContent(
-              songStructure: songStructure,
-              currentSection1: _current_section_1,
-              currentSection2: _current_section_2,
-              updateSections: (section1, section2) {
-                setState(() {
-                  _current_section_1 = section1;
-                  _current_section_2 = section2;
-                });
-              },
-            ),
+          child: Consumer<SectionProvider>(
+            builder: (context, sectionProvider, child) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: displaySectionContent(
+                  songStructure: songStructure,
+                  currentSection1: sectionProvider.currentSection1,
+                  currentSection2: sectionProvider.currentSection2,
+                  updateSections: (section1, section2) {
+                    sectionProvider.updateSections(section1, section2);
+                  },
+                ),
+              );
+            },
           ),
         ),
       ),

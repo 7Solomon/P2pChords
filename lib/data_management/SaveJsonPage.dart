@@ -72,15 +72,23 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
       Map<String, dynamic> jsonData = jsonDecode(_fileContent!);
       String groupIndex =
           _groupSelector.text.isEmpty ? 'default' : _groupSelector.text;
-      await MultiJsonStorage.saveJson(_nameSelector.text, jsonData,
+      final returnJson = await MultiJsonStorage.saveJson(
+          _nameSelector.text, jsonData,
           group: groupIndex);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('JSON file saved successfully')),
-      );
-      Navigator.of(context).pop(); // Return to the previous page
+      if (returnJson['result'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'JSON file saved successfully, with hash ${returnJson['hash']}')),
+        );
+        Navigator.of(context).pop(); // Return to the previous page
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error saving JSON: ')));
+      }
     } catch (e) {
-      print(e.toString());
+      //print(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving JSON: ${e.toString()}')),
       );

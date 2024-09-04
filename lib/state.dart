@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 enum UserState { server, client, none }
@@ -28,10 +30,10 @@ class GlobalMode with ChangeNotifier {
 }
 
 class GlobalUserIds extends ChangeNotifier {
-  Set<String> _connectedDeviceIds = {};
+  final Set<String> _connectedDeviceIds = {};
   String? _connectedServerId;
 
-  List<String> _receivedMessages = [];
+  final List<String> _receivedMessages = [];
 
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
   String? get connectedServerId => _connectedServerId;
@@ -72,5 +74,24 @@ class GlobalName with ChangeNotifier {
   void defineName(String name) {
     _name = name;
     notifyListeners();
+  }
+}
+
+class SectionProvider with ChangeNotifier {
+  int _currentSection1 = 0;
+  int _currentSection2 = 1;
+
+  int get currentSection1 => _currentSection1;
+  int get currentSection2 => _currentSection2;
+
+  void updateSections(int section1, int section2, {bool notify = true}) {
+    _currentSection1 = section1;
+    _currentSection2 = section2;
+    if (notify) notifyListeners();
+  }
+
+  void receiveSections(String data) {
+    var sections = json.decode(data);
+    updateSections(sections['section1'], sections['section2'], notify: true);
   }
 }
