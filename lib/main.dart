@@ -55,6 +55,7 @@ class MainPage extends StatelessWidget {
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'P2P Test App',
@@ -83,10 +84,10 @@ class MainPage extends StatelessWidget {
                             fontSize: 18, fontWeight: FontWeight.bold),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(
+                          side: BorderSide(
                             color:
-                                Color.fromARGB(255, 0, 63, 115), // Border color
-                            width: 2, // Border width
+                                Colors.blue[200] ?? Colors.blue, // Border color
+                            width: 1, // Border width
                           ),
                         ),
                       ),
@@ -111,10 +112,10 @@ class MainPage extends StatelessWidget {
                             fontSize: 18, fontWeight: FontWeight.bold),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
-                          side: const BorderSide(
+                          side: BorderSide(
                             color:
-                                Color.fromARGB(255, 0, 63, 115), // Border color
-                            width: 2, // Border width
+                                Colors.blue[200] ?? Colors.blue, // Border color
+                            width: 1, // Border width
                           ),
                         ),
                       ),
@@ -123,22 +124,27 @@ class MainPage extends StatelessWidget {
                   ],
                 ),
               ),
-              Positioned(
-                right: 20,
-                bottom: 20,
-                child: FloatingActionButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => ChooseSCStatePage()),
-                    );
-                  },
-                  child: Icon(Icons.settings),
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.grey[800],
-                ),
-              ),
+              Consumer<GlobalMode>(builder: (context, globalMode, child) {
+                return Positioned(
+                    top: 20,
+                    right: 20,
+                    child: ElevatedButton(
+                      child: Row(children: [
+                        const Icon(Icons.settings),
+                        const SizedBox(
+                          width: 10,
+                        ),
+                        Text(globalMode.userState.name.toString()),
+                      ]),
+                      onPressed: () => {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ChooseSCStatePage()),
+                        )
+                      },
+                    ));
+              }),
             ],
           ),
         ),
