@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:P2pChords/data_management/save_json_in_storage.dart';
 import 'package:P2pChords/display_groups/songGroupPage.dart';
 import 'package:P2pChords/display_groups/groupFunctions.dart'; // Import your group functions here
+import 'package:P2pChords/customeWidgets/TileWidget.dart';
 
 class ManageGroupPage extends StatefulWidget {
+  const ManageGroupPage({super.key});
+
   @override
   _ManageGroupPageState createState() => _ManageGroupPageState();
 }
@@ -14,28 +17,28 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
   }
 
   Future<void> _createNewGroup() async {
-    final TextEditingController _controller = TextEditingController();
+    final TextEditingController controller = TextEditingController();
 
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Erstelle eine neue Gruppe'),
+          title: const Text('Erstelle eine neue Gruppe'),
           content: TextField(
-            controller: _controller,
-            decoration: InputDecoration(labelText: 'Gruppen Name'),
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Gruppen Name'),
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Abbrechen'),
+              child: const Text('Abbrechen'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('Erstellen'),
+              child: const Text('Erstellen'),
               onPressed: () async {
-                String newGroup = _controller.text.trim();
+                String newGroup = controller.text.trim();
                 if (newGroup.isNotEmpty) {
                   await MultiJsonStorage.saveJson(
                     newGroup,
@@ -57,7 +60,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gruppen Übersicht'),
+        title: const Text('Gruppen Übersicht'),
         actions: [
           PopupMenuButton<String>(
             onSelected: (String choice) {
@@ -75,7 +78,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                 );
               }).toList();
             },
-            icon: Icon(Icons.add),
+            icon: const Icon(Icons.add),
           ),
         ],
       ),
@@ -83,13 +86,13 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
         future: _fetchGroups(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Keine Gruppen vorhanden'));
+            return const Center(child: Text('Keine Gruppen vorhanden'));
           }
 
           final groups = snapshot.data!;
@@ -100,14 +103,14 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                 background: Container(
                   color: Colors.red,
                   alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.only(left: 20),
-                  child: Icon(Icons.delete, color: Colors.white),
+                  padding: const EdgeInsets.only(left: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 secondaryBackground: Container(
                   color: Colors.blue,
                   alignment: Alignment.centerRight,
-                  padding: EdgeInsets.only(right: 20),
-                  child: Icon(Icons.download, color: Colors.white),
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Icon(Icons.download, color: Colors.white),
                 ),
                 direction: DismissDirection.horizontal,
                 confirmDismiss: (direction) async {
@@ -149,8 +152,10 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                   }
                   return false;
                 },
-                child: ListTile(
-                  title: Text(group),
+                child: CustomListTile(
+                  title: group,
+                  icon: Icons.file_copy,
+                  subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                   onTap: () {
                     Navigator.push(
                       context,

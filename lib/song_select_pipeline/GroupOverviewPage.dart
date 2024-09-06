@@ -5,14 +5,16 @@ import '../data_management/save_json_in_storage.dart';
 import '../data_management/saveJsonPage.dart';
 import 'SongOverviewPage.dart';
 
-class JsonListPage extends StatefulWidget {
-  const JsonListPage({Key? key}) : super(key: key);
+import 'package:P2pChords/customeWidgets/TileWidget.dart';
+
+class GroupOverviewpage extends StatefulWidget {
+  const GroupOverviewpage({super.key});
 
   @override
-  _JsonListPageState createState() => _JsonListPageState();
+  _GroupOverviewpageState createState() => _GroupOverviewpageState();
 }
 
-class _JsonListPageState extends State<JsonListPage> {
+class _GroupOverviewpageState extends State<GroupOverviewpage> {
   Map<String, List<Map<String, String>>> _allGroups = {};
   bool _isLoading = true;
 
@@ -50,10 +52,10 @@ class _JsonListPageState extends State<JsonListPage> {
                   itemCount: _allGroups.length,
                   itemBuilder: (context, index) {
                     String key = _allGroups.keys.elementAt(index);
-                    return ListTile(
-                        title: Text(key),
-                        subtitle: const Text(
-                            'Klicke um die Songs der Gruppe anzusehen'),
+                    return CustomListTile(
+                        title: key,
+                        subtitle: 'Klicke um die Songs der Gruppe anzusehen',
+                        icon: Icons.file_copy,
                         onTap: () {
                           Navigator.push(
                             context,

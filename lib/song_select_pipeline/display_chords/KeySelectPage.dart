@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class KeySelectionPage extends StatefulWidget {
+  const KeySelectionPage({super.key});
+
   @override
   _KeySelectionPageState createState() => _KeySelectionPageState();
 }
@@ -27,7 +29,7 @@ class _KeySelectionPageState extends State<KeySelectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Key'),
+        title: const Text('Key'),
       ),
       body: Center(
         // Center the entire content
@@ -39,7 +41,7 @@ class _KeySelectionPageState extends State<KeySelectionPage> {
               'Wähle eine Tonart:',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             DropdownButton<String>(
               value: selectedKey,
               onChanged: (String? newKey) {
@@ -54,12 +56,12 @@ class _KeySelectionPageState extends State<KeySelectionPage> {
                 );
               }).toList(),
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, selectedKey);
               },
-              child: Text('Auswählen'),
+              child: const Text('Auswählen'),
             ),
           ],
         ),

@@ -4,7 +4,7 @@ class LyricsWithChords extends StatelessWidget {
   final String lyrics;
   final Map<String, String> chords;
 
-  LyricsWithChords({required this.lyrics, required this.chords});
+  const LyricsWithChords({super.key, required this.lyrics, required this.chords});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +14,7 @@ class LyricsWithChords extends StatelessWidget {
 
     // Calculate the height needed for both chords and lyrics
     final textPainter = TextPainter(
-      text: TextSpan(text: lyrics, style: TextStyle(fontSize: 16)),
+      text: TextSpan(text: lyrics, style: const TextStyle(fontSize: 16)),
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
@@ -58,7 +58,7 @@ class ChordPainter extends CustomPainter {
     double yOffset = 0; // Y position to start painting lyrics
     final double lineHeight =
         lyricPainter.height / lyrics.split('\n').length; // Line height
-    final double lineSpacing = 4; // Spacing between lines
+    const double lineSpacing = 4; // Spacing between lines
     double chordYOffset = 0; // Y position for chords
 
     // Paint lyrics

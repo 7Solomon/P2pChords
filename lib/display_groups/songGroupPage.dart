@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:P2pChords/data_management/save_json_in_storage.dart';
 import 'package:P2pChords/display_groups/allSongsPage.dart';
+import 'package:P2pChords/customeWidgets/TileWidget.dart';
 
 class GroupSongsPage extends StatefulWidget {
   final String group;
@@ -79,9 +80,11 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                           onDismissed: (direction) async {
                             await _removeSongFromGroup(key);
                           },
-                          child: ListTile(
-                            title: const Text('Unknown SongData Please Fix!'),
-                            subtitle: Text(key),
+                          child: CustomListTile(
+                            title: 'Unknown SongData Please Fix!',
+                            subtitle: key,
+                            arrowBool: false,
+                            iconBool: false,
                           ));
                     }
                     return Dismissible(
@@ -91,9 +94,13 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                       onDismissed: (direction) async {
                         await _removeSongFromGroup(key);
                       },
-                      child: ListTile(
-                        title: Text(songData['header']['name'] ?? 'Unbekannt'),
-                        subtitle: Text(key),
+                      child: CustomListTile(
+                        title: songData['header']['name'] ?? 'Unbekannt',
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 16.0),
+                        subtitle: key,
+                        arrowBool: false,
+                        iconBool: false,
                       ),
                     );
                   }).toList(),

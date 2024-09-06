@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:P2pChords/main.dart';
 import 'package:flutter/material.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -7,8 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:P2pChords/connect_pages/choose_sc_page.dart';
 import 'dart:convert';
 
-import 'send_data_page.dart';
-import 'receive_data_page.dart';
 import '../device.dart';
 import '../state.dart';
 
@@ -152,7 +151,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => ReceivingPage()),
+                                  builder: (context) => MainPage()),
                             );
                           }),
                       const SizedBox(height: 16),
@@ -184,23 +183,25 @@ class _ConnectionPageState extends State<ConnectionPage> {
                 case UserState.server:
                   return Column(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ElevatedButton(
                         child: const Text('Starte Server'),
                         onPressed: () => startAdvertising(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.blue[700],
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
+                          textStyle: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
                       ),
-                      ElevatedButton(
-                        child: const Text('Sende Daten'),
-                        onPressed: () {
-                          context
-                              .read<GlobalMode>()
-                              .setUserState(UserState.server);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => SendingPage()),
-                          );
-                        },
+                      SizedBox(
+                        height: 20,
                       ),
                       const SizedBox(height: 20),
                       const Text('Connected Devices:',

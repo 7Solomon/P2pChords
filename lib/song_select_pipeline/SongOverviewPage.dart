@@ -4,13 +4,16 @@ import 'package:flutter/material.dart';
 import '../data_management/save_json_in_storage.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 
+import 'package:P2pChords/customeWidgets/TileWidget.dart';
+
 class Songoverviewpage extends StatelessWidget {
   final String groupName;
   final List<Map<String, String>> songs;
   final VoidCallback onGroupDeleted;
 
-  Songoverviewpage(
-      {required this.groupName,
+  const Songoverviewpage(
+      {super.key,
+      required this.groupName,
       required this.songs,
       required this.onGroupDeleted});
 
@@ -83,8 +86,11 @@ class Songoverviewpage extends StatelessWidget {
                     });
                   },
                   // Hier den Namen dann einfügen
-                  child: ListTile(
-                    title: Text(name),
+                  child: CustomListTile(
+                    title: name,
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 0, horizontal: 16.0),
+                    iconBool: false,
                     onTap: () {
                       Navigator.push(
                         context,

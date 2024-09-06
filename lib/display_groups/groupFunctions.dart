@@ -34,21 +34,21 @@ Future<void> importGroup() async {
   }
 }
 
-Future<void> exportGroup(String group_name, BuildContext context) async {
+Future<void> exportGroup(String groupName, BuildContext context) async {
   // Load the group data
   Map<String, Map<String, dynamic>> jsons =
-      await MultiJsonStorage.loadJsonsFromGroup(group_name);
+      await MultiJsonStorage.loadJsonsFromGroup(groupName);
 
   // Initialize the group JSON with a header
   Map<String, dynamic> groupJson = {
-    'header': {'group_name': group_name, 'anzahl': jsons.length},
+    'header': {'group_name': groupName, 'anzahl': jsons.length},
     'data': {} // Initialize 'data' as an empty map
   };
 
   try {
     Directory? downloadsDirectory = await getDownloadsDirectory();
     String filePath =
-        '${downloadsDirectory!.path}/${group_name}_p2pController.json';
+        '${downloadsDirectory!.path}/${groupName}_p2pController.json';
 
     // Convert the Map to a JSON string
     String jsonString = jsonEncode(groupJson);
