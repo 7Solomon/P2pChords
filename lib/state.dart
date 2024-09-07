@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:nearby_connections/nearby_connections.dart';
 
 enum UserState { server, client, none }
 
@@ -59,11 +60,6 @@ class GlobalUserIds extends ChangeNotifier {
     _connectedServerId = null;
     notifyListeners();
   }
-
-  void addReceivedMessage(String message) {
-    _receivedMessages.add(message);
-    notifyListeners();
-  }
 }
 
 class GlobalName with ChangeNotifier {
@@ -78,11 +74,25 @@ class GlobalName with ChangeNotifier {
 }
 
 class SectionProvider with ChangeNotifier {
+  String _currentSongHash = 'none';
+  String _currentGroup = 'none';
   int _currentSection1 = 0;
   int _currentSection2 = 1;
 
+  String get currentSongHash => _currentSongHash;
+  String get currentGroup => _currentGroup;
   int get currentSection1 => _currentSection1;
   int get currentSection2 => _currentSection2;
+
+  void updateSongHash(String currentSongHash, {bool notify = true}) {
+    _currentSongHash = currentSongHash;
+    if (notify) notifyListeners();
+  }
+
+  void updateGroup(String currentGroup, {bool notify = true}) {
+    _currentGroup = currentGroup;
+    if (notify) notifyListeners();
+  }
 
   void updateSections(int section1, int section2, {bool notify = true}) {
     _currentSection1 = section1;

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:P2pChords/connect_pages/dataReceptionLogic.dart';
 import 'package:P2pChords/main.dart';
 import 'package:flutter/material.dart';
 import 'package:nearby_connections/nearby_connections.dart';
@@ -58,18 +59,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
     Nearby().acceptConnection(
       id,
       onPayLoadRecieved: (endid, payload) async {
-        if (payload.type == PayloadType.BYTES) {
-          String str = String.fromCharCodes(payload.bytes!);
-          var data = json.decode(str);
-
-          if (data['type'] == 'song_data') {
-            handleReceivedSongData(data['content']);
-          } else if (data['type'] == 'section_update') {
-            sectionProvider.receiveSections(json.encode(data['content']));
-          }
-
-          //globalUserIds.addReceivedMessage(str);
-        }
+        DataReceptionHandler(context).handlePayloadReceived(id, payload);
       },
     );
   }
@@ -87,21 +77,6 @@ class _ConnectionPageState extends State<ConnectionPage> {
           builder: (context) => ChordSheetPage(songHash: songResult['hash']),
         ),
       );
-    }
-  }
-
-  void sendSongData(String deviceId, Map<String, dynamic> songData) async {
-    final data = {
-      'type': 'song_data',
-      'content': songData,
-    };
-    try {
-      final codeUnits = data.toString().codeUnits;
-      final bytes = Uint8List.fromList(codeUnits);
-      await Nearby().sendBytesPayload(deviceId, bytes);
-      displaySnack("Data sent successfully to $deviceId: $data");
-    } catch (e) {
-      displaySnack("Error sending data to $deviceId: $e");
     }
   }
 

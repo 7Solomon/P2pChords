@@ -1,14 +1,17 @@
+import 'package:P2pChords/connect_pages/dataSendLogic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../data_management/save_json_in_storage.dart';
 import '../data_management/saveJsonPage.dart';
 import 'SongOverviewPage.dart';
+import '../state.dart'; // Import the file containing GlobalMode
 
 import 'package:P2pChords/customeWidgets/TileWidget.dart';
 
 class GroupOverviewpage extends StatefulWidget {
-  const GroupOverviewpage({super.key});
+  const GroupOverviewpage({Key? key}) : super(key: key);
 
   @override
   _GroupOverviewpageState createState() => _GroupOverviewpageState();
@@ -26,14 +29,16 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
   Future<void> _loadAllJsons() async {
     setState(() => _isLoading = true);
-
     _allGroups = await MultiJsonStorage.getAllGroups();
-    //_allJsons = await MultiJsonStorage.loadAllJson();
     setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final globalMode = Provider.of<GlobalMode>(context, listen: false);
+    final globalDataManager =
+        Provider.of<GlobalUserIds>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alle Gruppen'),
@@ -53,22 +58,38 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                   itemBuilder: (context, index) {
                     String key = _allGroups.keys.elementAt(index);
                     return CustomListTile(
-                        title: key,
-                        subtitle: 'Klicke um die Songs der Gruppe anzusehen',
-                        icon: Icons.file_copy,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => Songoverviewpage(
-                                  groupName:
-                                      key, // The name of the selected group
-                                  songs: _allGroups[
-                                      key]!, // List of songs in the selected group
-                                  onGroupDeleted: _loadAllJsons),
+                      title: key,
+                      subtitle: 'Klicke um die Songs der Gruppe anzusehen',
+                      icon: Icons.file_copy,
+                      onTap: () async {
+                        // Navigate to the SongOverviewPage
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Songoverviewpage(
+                              groupName: key,
+                              songs: _allGroups[key]!,
+                              onGroupDeleted: _loadAllJsons,
                             ),
-                          );
-                        });
+                          ),
+                        );
+
+                        // Check if the device is a server and send data to clients if it is
+                        if (globalMode.userState == UserState.server) {
+                          final songData = {
+                            'type': 'group_data',
+                            'content': {
+                              'groupName': key,
+                              'songs': _allGroups[key],
+                            },
+                          };
+
+                          Map successi = await sendDataToAllClients(
+                              songData, globalDataManager.connectedDeviceIds);
+                          // Display Sucessi If you want but I dont want to implement my boi
+                        }
+                      },
+                    );
                   },
                 ),
     );

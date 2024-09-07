@@ -1,3 +1,5 @@
+import 'package:P2pChords/connect_pages/dataSendLogic.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/connect_pages/choose_sc_page.dart';
@@ -40,6 +42,8 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final globalIdManager = Provider.of<GlobalUserIds>(context, listen: true);
+    final sectionProvider = Provider.of<SectionProvider>(context, listen: true);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -57,7 +61,7 @@ class MainPage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'P2P Test App',
                       style: TextStyle(
                         fontSize: 28,
@@ -65,32 +69,87 @@ class MainPage extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: 40),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const GroupOverviewpage()),
-                        );
+                    const SizedBox(height: 40),
+                    // Conditionally render "Songs spielen" or "Folge den Songs" button
+                    Consumer<GlobalMode>(
+                      builder: (context, globalMode, child) {
+                        // If user is a server or in none state
+                        if (globalMode.userState == UserState.server ||
+                            globalMode.userState == UserState.none) {
+                          return ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const GroupOverviewpage()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.purple[700],
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 15),
+                              textStyle: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                side: BorderSide(
+                                  color: Colors.blue[200] ??
+                                      Colors.blue, // Border color
+                                  width: 1, // Border width
+                                ),
+                              ),
+                            ),
+                            child: const Text('Songs spielen'),
+                          );
+                        } else {
+                          // If user is a client
+                          return ElevatedButton(
+                            onPressed: () async {
+                              // Send data to the server when the user is a client
+                              if (globalIdManager.connectedServerId != null) {
+                                bool result = await sendRequest(
+                                    globalIdManager.connectedServerId!);
+                                if (result &&
+                                    sectionProvider.currentGroup.contains(
+                                        sectionProvider.currentSongHash)) {
+                                  // Navigate to the ChordSheetPage
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => ChordSheetPage(
+                                            songHash: sectionProvider
+                                                .currentSongHash)),
+                                  );
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(
+                                        'Do bist noch nicht mit einem Server verbunden')));
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor:
+                                  const Color.fromARGB(255, 196, 111, 233),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 15),
+                              textStyle: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                side: BorderSide(
+                                  color: Colors.blue[200] ??
+                                      Colors.blue, // Border color
+                                  width: 1, // Border width
+                                ),
+                              ),
+                            ),
+                            child: const Text('Folge den Songs'),
+                          );
+                        }
                       },
-                      child: Text('Songs spielen'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.purple[700],
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                        textStyle: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: BorderSide(
-                            color:
-                                Colors.blue[200] ?? Colors.blue, // Border color
-                            width: 1, // Border width
-                          ),
-                        ),
-                      ),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -126,24 +185,26 @@ class MainPage extends StatelessWidget {
               ),
               Consumer<GlobalMode>(builder: (context, globalMode, child) {
                 return Positioned(
-                    top: 20,
-                    right: 20,
-                    child: ElevatedButton(
-                      child: Row(children: [
+                  top: 20,
+                  right: 20,
+                  child: ElevatedButton(
+                    child: Row(
+                      children: [
                         const Icon(Icons.settings),
-                        const SizedBox(
-                          width: 10,
-                        ),
+                        const SizedBox(width: 10),
                         Text(globalMode.userState.name.toString()),
-                      ]),
-                      onPressed: () => {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ChooseSCStatePage()),
-                        )
-                      },
-                    ));
+                      ],
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChooseSCStatePage(),
+                        ),
+                      );
+                    },
+                  ),
+                );
               }),
             ],
           ),
