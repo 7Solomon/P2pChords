@@ -1,3 +1,4 @@
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/songsDrawerWidget.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
@@ -6,9 +7,7 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/load_data
 import 'package:provider/provider.dart';
 
 class ChordSheetPage extends StatefulWidget {
-  final String songHash;
-
-  ChordSheetPage({required this.songHash});
+  const ChordSheetPage();
 
   @override
   _ChordSheetPageState createState() => _ChordSheetPageState();
@@ -21,8 +20,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   bool isLoadingSongData = true;
   bool isLoadingMapping = true;
 
-  int _current_section_1 = 0;
-  int _current_section_2 = 1;
+  //int _current_section_1 = 0;
+  //int _current_section_2 = 1;
 
   String currentKey = "C";
 
@@ -43,9 +42,10 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
       });
     }
 
+    final currentSongData = Provider.of<SongProvider>(context, listen: false);
     // Load song data
     final songDataResult = await loadSongData(
-      widget.songHash,
+      currentSongData.currentSongHash,
       displaySnack,
       buildSongContent,
       parseChords,
@@ -62,16 +62,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     }
   }
 
-  void _initProviders() {
-    final globalMode = Provider.of<GlobalMode>(context, listen: false);
-    final sectionProvider =
-        Provider.of<SectionProvider>(context, listen: false);
-  }
-
   @override
   void initState() {
     super.initState();
-    _initProviders();
     _initializeData();
   }
 
@@ -84,41 +77,48 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(songData!['header']['name']),
-      ),
-      drawer: songData != null
-          ? SongDrawer(
-              songData: songData!,
-              currentKey: currentKey,
-              onKeyChanged: (newKey) {
-                setState(() {
-                  currentKey = newKey;
-                  _initializeData(); // Reload data on key change
-                });
-              },
-            )
-          : null,
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Consumer<SectionProvider>(
-            builder: (context, sectionProvider, child) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: displaySectionContent(
-                  songStructure: songStructure,
-                  currentSection1: sectionProvider.currentSection1,
-                  currentSection2: sectionProvider.currentSection2,
-                  updateSections: (section1, section2) {
-                    sectionProvider.updateSections(section1, section2);
+        appBar: AppBar(
+          title: Text(songData!['header']['name']),
+        ),
+        drawer: songData != null
+            ? SongDrawer(
+                songData: songData!,
+                currentKey: currentKey,
+                onKeyChanged: (newKey) {
+                  setState(() {
+                    currentKey = newKey;
+                    _initializeData(); // Reload data on key change
+                  });
+                },
+              )
+            : null,
+        endDrawer: SongListDrawer(),
+        body: Builder(
+          builder: (context) => GestureDetector(
+            onDoubleTap: () {
+              Scaffold.of(context).openEndDrawer();
+            },
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Consumer<SongProvider>(
+                  builder: (context, sectionProvider, child) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: displaySectionContent(
+                        songStructure: songStructure,
+                        currentSection1: sectionProvider.currentSection1,
+                        currentSection2: sectionProvider.currentSection2,
+                        updateSections: (section1, section2) {
+                          sectionProvider.updateSections(section1, section2);
+                        },
+                      ),
+                    );
                   },
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 }

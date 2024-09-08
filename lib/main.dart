@@ -14,7 +14,7 @@ void main() {
         ChangeNotifierProvider(create: (context) => GlobalMode()),
         ChangeNotifierProvider(create: (context) => GlobalUserIds()),
         ChangeNotifierProvider(create: (context) => GlobalName()),
-        ChangeNotifierProvider(create: (context) => SectionProvider()),
+        ChangeNotifierProvider(create: (context) => SongProvider()),
       ],
       child: const MyApp(),
     ),
@@ -42,8 +42,8 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final globalIdManager = Provider.of<GlobalUserIds>(context, listen: true);
-    final sectionProvider = Provider.of<SectionProvider>(context, listen: true);
+    final globalIdManager = Provider.of<GlobalUserIds>(context, listen: false);
+    final sectionProvider = Provider.of<SongProvider>(context, listen: false);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -118,9 +118,7 @@ class MainPage extends StatelessWidget {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (context) => ChordSheetPage(
-                                            songHash: sectionProvider
-                                                .currentSongHash)),
+                                        builder: (context) => ChordSheetPage()),
                                   );
                                 }
                               } else {

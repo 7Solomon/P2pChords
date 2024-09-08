@@ -53,8 +53,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
 
   void onConnectionInit(String id, ConnectionInfo info) {
     //final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
-    final sectionProvider =
-        Provider.of<SectionProvider>(context, listen: false);
+    final sectionProvider = Provider.of<SongProvider>(context, listen: false);
 
     Nearby().acceptConnection(
       id,
@@ -66,17 +65,35 @@ class _ConnectionPageState extends State<ConnectionPage> {
 
   void handleReceivedSongData(Map<String, dynamic> songData,
       {songGroup = 'default'}) async {
+    final sectionProvider = Provider.of<SongProvider>(context, listen: false);
+
     String songName = songData['header']['name'];
 
     final songResult =
         await MultiJsonStorage.saveJson(songName, songData, group: songGroup);
     if (songResult['result']) {
+      sectionProvider.updateSongHash(songResult['hash']);
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ChordSheetPage(songHash: songResult['hash']),
+          builder: (context) => ChordSheetPage(),
         ),
       );
+    }
+  }
+
+  void sendSongUpdate(String deviceId, String songHash) async {
+    final data = {
+      'type': 'songWechsel',
+      'content': songHash,
+    };
+    try {
+      final codeUnits = data.toString().codeUnits;
+      final bytes = Uint8List.fromList(codeUnits);
+      await Nearby().sendBytesPayload(deviceId, bytes);
+      displaySnack("Data sent successfully to $deviceId: $data");
+    } catch (e) {
+      displaySnack("Error sending data to $deviceId: $e");
     }
   }
 

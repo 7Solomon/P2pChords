@@ -73,7 +73,7 @@ class GlobalName with ChangeNotifier {
   }
 }
 
-class SectionProvider with ChangeNotifier {
+class SongProvider with ChangeNotifier {
   String _currentSongHash = 'none';
   String _currentGroup = 'none';
   int _currentSection1 = 0;

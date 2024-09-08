@@ -38,6 +38,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
     final globalMode = Provider.of<GlobalMode>(context, listen: false);
     final globalDataManager =
         Provider.of<GlobalUserIds>(context, listen: false);
+    final currentSongData = Provider.of<SongProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -62,13 +63,12 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                       subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                       icon: Icons.file_copy,
                       onTap: () async {
+                        currentSongData.updateGroup(key);
                         // Navigate to the SongOverviewPage
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => Songoverviewpage(
-                              groupName: key,
-                              songs: _allGroups[key]!,
                               onGroupDeleted: _loadAllJsons,
                             ),
                           ),

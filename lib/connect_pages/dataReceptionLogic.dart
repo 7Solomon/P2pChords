@@ -12,7 +12,7 @@ class DataReceptionHandler {
   DataReceptionHandler(this.context);
 
   void handlePayloadReceived(String endpointId, Payload payload) async {
-    final sectionMode = Provider.of<SectionProvider>(context, listen: false);
+    final sectionMode = Provider.of<SongProvider>(context, listen: false);
     if (payload.type == PayloadType.BYTES) {
       String jsonString = String.fromCharCodes(payload.bytes!);
       Map<String, dynamic> data = json.decode(jsonString);
@@ -30,6 +30,9 @@ class DataReceptionHandler {
       }
       if (data['type'] == 'songData') {
         print('NOt implemented');
+      }
+      if (data['type'] == 'songWechsel') {
+        sectionMode.updateSongHash(data['content']);
       }
     }
   }
