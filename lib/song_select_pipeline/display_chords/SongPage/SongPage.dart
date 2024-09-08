@@ -20,9 +20,6 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   bool isLoadingSongData = true;
   bool isLoadingMapping = true;
 
-  //int _current_section_1 = 0;
-  //int _current_section_2 = 1;
-
   String currentKey = "C";
 
   void displaySnack(String str) {
@@ -70,34 +67,28 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoadingSongData || songData == null || isLoadingMapping) {
-      return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
-        appBar: AppBar(
-          title: Text(songData!['header']['name']),
-        ),
-        drawer: songData != null
-            ? SongDrawer(
-                songData: songData!,
-                currentKey: currentKey,
-                onKeyChanged: (newKey) {
-                  setState(() {
-                    currentKey = newKey;
-                    _initializeData(); // Reload data on key change
-                  });
-                },
-              )
-            : null,
-        endDrawer: SongListDrawer(),
-        body: Builder(
-          builder: (context) => GestureDetector(
-            onDoubleTap: () {
-              Scaffold.of(context).openEndDrawer();
-            },
+      appBar: AppBar(
+        title:
+            Text(songData != null ? songData!['header']['name'] : 'Loading...'),
+      ),
+      drawer: songData != null
+          ? SongDrawer(
+              songData: songData!,
+              currentKey: currentKey,
+              onKeyChanged: (newKey) {
+                setState(() {
+                  currentKey = newKey;
+                  _initializeData(); // Reload data on key change
+                });
+              },
+            )
+          : null,
+      endDrawer: SongListDrawer(),
+      body: Row(
+        children: [
+          Expanded(
+            flex: 9,
             child: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
@@ -119,6 +110,22 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
               ),
             ),
           ),
-        ));
+          Builder(
+            builder: (context) => Container(
+              width: 40, // Increased width for better touch target
+              child: InkWell(
+                onTap: () => Scaffold.of(context).openEndDrawer(),
+                child: Container(
+                  color: Colors.grey[300],
+                  child: Container(
+                    color: Colors.transparent, // Transparent background
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
