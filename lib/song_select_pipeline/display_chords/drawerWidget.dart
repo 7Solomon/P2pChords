@@ -6,7 +6,8 @@ class SongDrawer extends StatelessWidget {
   final String currentKey;
   final ValueChanged<String> onKeyChanged;
 
-  const SongDrawer({super.key, 
+  const SongDrawer({
+    super.key,
     required this.songData,
     required this.currentKey,
     required this.onKeyChanged,

@@ -4,7 +4,8 @@ class LyricsWithChords extends StatelessWidget {
   final String lyrics;
   final Map<String, String> chords;
 
-  const LyricsWithChords({super.key, required this.lyrics, required this.chords});
+  const LyricsWithChords(
+      {super.key, required this.lyrics, required this.chords});
 
   @override
   Widget build(BuildContext context) {

@@ -1,10 +1,10 @@
-import 'package:P2pChords/connect_pages/dataSendLogic.dart';
+import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:P2pChords/connect_pages/choose_sc_page.dart';
+import 'package:P2pChords/connect/pages/choosePage.dart';
 import 'package:P2pChords/song_select_pipeline/GroupOverviewPage.dart';
-import 'package:P2pChords/display_groups/manageGroupPage.dart';
+import 'package:P2pChords/groupManagement/manageGroupPage.dart';
 import 'state.dart';
 
 void main() {

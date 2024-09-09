@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:P2pChords/data_management/save_json_in_storage.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
 
 Future<Map<String, dynamic>?> loadSongData(
-  String songHash,
+  final currentSongData,
   Function displaySnack,
   List<Widget> Function(Map<String, dynamic>, Function, Function)
       buildSongContent,
@@ -15,28 +15,32 @@ Future<Map<String, dynamic>?> loadSongData(
   String currentKey,
 ) async {
   try {
-    Map<String, dynamic>? loadedSongData =
-        await MultiJsonStorage.loadJson(songHash);
+    Map<String, dynamic>? loadedSongDatas =
+        await MultiJsonStorage.loadJsonsFromGroup(currentSongData.currentGroup);
 
-    if (loadedSongData == null) {
-      displaySnack('No data found for the provided hash.');
+    if (loadedSongDatas.isEmpty) {
+      displaySnack('No data found for the provided group.');
       return null;
     }
-
-    List<Widget> songStructure = buildSongContent(
-      loadedSongData['data'],
-      displaySnack,
-      (chordsData) => parseChords(
-        chordsData,
-        nashvilleToChordMapping,
-        currentKey,
+    // Add all SongStructureWidgets
+    Map<String, List<Widget>> songStructures = {};
+    loadedSongDatas.forEach((key, value) {
+      List<Widget> songStructure = buildSongContent(
+        value['data'],
         displaySnack,
-      ),
-    );
+        (chordsData) => parseChords(
+          chordsData,
+          nashvilleToChordMapping,
+          currentKey,
+          displaySnack,
+        ),
+      );
+      songStructures[key] = songStructure;
+    });
 
     return {
-      'songData': loadedSongData,
-      'songStructure': songStructure,
+      'songDatas': loadedSongDatas,
+      'songStructures': songStructures,
     };
   } catch (e) {
     print(e);

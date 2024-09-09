@@ -1,10 +1,10 @@
-import 'package:P2pChords/connect_pages/dataSendLogic.dart';
+import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../data_management/save_json_in_storage.dart';
-import '../data_management/saveJsonPage.dart';
+import '../dataManagment/storageManager.dart';
+import '../dataManagment/saveJsonPage.dart';
 import 'SongOverviewPage.dart';
 import '../state.dart'; // Import the file containing GlobalMode
 
@@ -77,7 +77,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                         // Check if the device is a server and send data to clients if it is
                         if (globalMode.userState == UserState.server) {
                           final songData = {
-                            'type': 'group_data',
+                            'type': 'groupData',
                             'content': {
                               'groupName': key,
                               'songs': _allGroups[key],
@@ -87,6 +87,42 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                           Map successi = await sendDataToAllClients(
                               songData, globalDataManager.connectedDeviceIds);
                           // Display Sucessi If you want but I dont want to implement my boi
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Info über status'),
+                              action: SnackBarAction(
+                                label: 'mehr..',
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text('Detail Infos'),
+                                        content: SingleChildScrollView(
+                                          child: ListBody(
+                                            children:
+                                                successi.entries.map((entry) {
+                                              return Text(
+                                                  '${entry.key}: ${entry.value}');
+                                            }).toList(),
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context)
+                                                  .pop(); // Close the dialog
+                                            },
+                                            child: Text('Close'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          );
                         }
                       },
                     );

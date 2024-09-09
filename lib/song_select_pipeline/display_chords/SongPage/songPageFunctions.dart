@@ -1,31 +1,48 @@
+import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/lyricsChordsClass.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 
 List<Widget> displaySectionContent({
-  required List<Widget> songStructure,
+  required Map<String, List<Widget>> songStructure,
+  required List<Map<String, String>> groupSongs,
+  required String currentSongHash,
   required int currentSection1,
   required int currentSection2,
   required Function(int, int) updateSections,
+  required Function() onEndReached, // Add callback for end reach
+  required Function() onStartReachedd,
 }) {
   List<Widget> displayData = [];
-  if (currentSection1 >= 0 && currentSection1 < songStructure.length) {
+  List<Widget> sectionWidgets = songStructure[currentSongHash] ?? [];
+
+  // Handle the first section
+  if (currentSection1 >= 0 && currentSection1 < sectionWidgets.length) {
     displayData.add(GestureDetector(
       onTap: () {
         if (currentSection1 > 0) {
           updateSections(currentSection1 - 1, currentSection1);
+        } else {
+          // Call onEndReached if needed
+          onStartReachedd();
         }
       },
-      child: songStructure[currentSection1],
+      child: sectionWidgets[currentSection1],
     ));
   }
-  if (currentSection2 >= 0 && currentSection2 < songStructure.length) {
+
+  // Handle the second section
+  if (currentSection2 >= 0 && currentSection2 < sectionWidgets.length) {
     displayData.add(GestureDetector(
       onTap: () {
-        if (currentSection2 < songStructure.length - 1) {
+        if (currentSection2 < sectionWidgets.length - 1) {
           updateSections(currentSection2, currentSection2 + 1);
+        } else {
+          // Call onEndReached if needed
+          onEndReached();
         }
       },
-      child: songStructure[currentSection2],
+      child: sectionWidgets[currentSection2],
     ));
   }
 
@@ -33,6 +50,7 @@ List<Widget> displaySectionContent({
     return [const Text('Something went wrong')];
   }
   return displayData;
+  //return [const Text('ALl good')];
 }
 
 List<Widget> buildSongContent(

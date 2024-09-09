@@ -1,9 +1,9 @@
+import 'package:P2pChords/connect/pages/clientPage.dart';
+import 'package:P2pChords/connect/pages/serverPage.dart';
+import 'package:P2pChords/main.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../state.dart';
-import 'package:P2pChords/main.dart';
-
-import 'package:P2pChords/connect_pages/connect_device_screen.dart';
+import 'package:P2pChords/state.dart';
 
 class ChooseSCStatePage extends StatelessWidget {
   const ChooseSCStatePage({super.key});
@@ -12,7 +12,20 @@ class ChooseSCStatePage extends StatelessWidget {
     context.read<GlobalMode>().setUserState(state);
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => ConnectionPage()),
+      MaterialPageRoute(
+        builder: (context) {
+          if (state == UserState.server) {
+            return const ServerPage(); // Navigate to ServerPage
+          }
+          if (state == UserState.client) {
+            return const ClientPage(); // Navigate to ClientPage
+          } else {
+            //displayS
+            print('NOne');
+            return MainPage();
+          }
+        },
+      ),
     );
   }
 
@@ -32,7 +45,7 @@ class ChooseSCStatePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   'Wähle deine Rolle',
                   style: TextStyle(
                     fontSize: 28,

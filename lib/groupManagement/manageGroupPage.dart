@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:P2pChords/data_management/save_json_in_storage.dart';
-import 'package:P2pChords/display_groups/songGroupPage.dart';
-import 'package:P2pChords/display_groups/groupFunctions.dart'; // Import your group functions here
+import 'package:P2pChords/dataManagment/storageManager.dart';
+import 'package:P2pChords/groupManagement/songGroupPage.dart';
+import 'package:P2pChords/groupManagement/groupFunctions.dart'; // Import your group functions here
 import 'package:P2pChords/customeWidgets/TileWidget.dart';
 
 class ManageGroupPage extends StatefulWidget {

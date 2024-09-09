@@ -34,11 +34,8 @@ class GlobalUserIds extends ChangeNotifier {
   final Set<String> _connectedDeviceIds = {};
   String? _connectedServerId;
 
-  final List<String> _receivedMessages = [];
-
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
   String? get connectedServerId => _connectedServerId;
-  List<String> get receivedMessages => _receivedMessages;
 
   void addConnectedDevice(String id) {
     _connectedDeviceIds.add(id);
