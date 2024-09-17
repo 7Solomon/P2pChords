@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 
@@ -70,6 +71,7 @@ class GlobalName with ChangeNotifier {
   }
 }
 
+/*
 class SongProvider with ChangeNotifier {
   String _currentSongHash = 'none';
   String _currentGroup = 'none';
@@ -100,5 +102,177 @@ class SongProvider with ChangeNotifier {
   void receiveSections(String data) {
     var sections = json.decode(data);
     updateSections(sections['section1'], sections['section2'], notify: true);
+  }
+}
+*/
+class NearbyMusicSyncProvider with ChangeNotifier {
+  final Nearby _nearby = Nearby();
+  String _currentGroup = '';
+  String _currentSongHash = '';
+  int _currentSection1 = 0;
+  int _currentSection2 = 1;
+  UserState _userState = UserState.none;
+  bool _isServerDevice = false;
+  Set<String> _connectedDeviceIds = {};
+
+  String get currentGroup => _currentGroup;
+  String get currentSongHash => _currentSongHash;
+  int get currentSection1 => _currentSection1;
+  int get currentSection2 => _currentSection2;
+  bool get isServerDevice => _isServerDevice;
+  UserState get userState => _userState;
+  Set<String> get connectedDeviceIds => _connectedDeviceIds;
+
+  void setAsServerDevice(bool isServer) {
+    _isServerDevice = isServer;
+    _userState = isServer ? UserState.server : UserState.client;
+    notifyListeners();
+  }
+
+  Future<bool> startAdvertising(String name,
+      Function(String, ConnectionInfo) onConnectionInitiated) async {
+    try {
+      bool advertisingResult = await _nearby.startAdvertising(
+        name,
+        Strategy.P2P_CLUSTER,
+        onConnectionInitiated: onConnectionInitiated,
+        onConnectionResult: (id, status) {
+          if (status == Status.CONNECTED) {
+            _connectedDeviceIds.add(id);
+
+            notifyListeners();
+          }
+        },
+        onDisconnected: (id) {
+          _connectedDeviceIds.remove(id);
+          notifyListeners();
+        },
+      );
+      return advertisingResult;
+    } catch (e) {
+      print('Error starting advertising: $e');
+      return false;
+    }
+  }
+
+  Future<bool> startDiscovery(
+      String name, Function(String, String, String) onEndpointFound) async {
+    try {
+      bool discoveryResult = await _nearby.startDiscovery(
+        name,
+        Strategy.P2P_CLUSTER,
+        onEndpointFound: onEndpointFound,
+        onEndpointLost: (id) {
+          _connectedDeviceIds.remove(id);
+          notifyListeners();
+        },
+      );
+      return discoveryResult;
+    } catch (e) {
+      print('Error starting discovery: $e');
+      return false;
+    }
+  }
+
+  Future<bool> requestConnection(String name, String id,
+      Function(String, ConnectionInfo) onConnectionInitiated) async {
+    try {
+      bool result = await _nearby.requestConnection(
+        name,
+        id,
+        onConnectionInitiated: onConnectionInitiated,
+        onConnectionResult: (id, status) {
+          if (status == Status.CONNECTED) {
+            _connectedDeviceIds.add(id);
+            notifyListeners();
+          }
+        },
+        onDisconnected: (id) {
+          _connectedDeviceIds.remove(id);
+          notifyListeners();
+        },
+      );
+      return result;
+    } catch (e) {
+      print('Error requesting connection: $e');
+      return false;
+    }
+  }
+
+  void handleIncomingMessage(String message) {
+    try {
+      Map<String, dynamic> data = json.decode(message);
+      switch (data['type']) {
+        case 'songWechsel':
+          _currentSongHash = data['content'];
+          break;
+        case 'sectionWechsel':
+          _currentSection1 = data['content']['section1'];
+          _currentSection1 = data['content']['section2'];
+          break;
+        case 'groupData':
+          _currentGroup = data['content']['group'];
+          MultiJsonStorage.saveJsonsGroup(
+              data['content']['group'], data['content']['songs']);
+          break;
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error handling incoming message: $e');
+    }
+  }
+
+  Future<bool> updateSongAndSection(
+      String songHash, int section1, int section2) async {
+    if (_userState == UserState.server || _userState == UserState.none) {
+      _currentSongHash = songHash;
+      _currentSection1 = section1;
+      _currentSection2 = section2;
+      return _sendUpdateToClients();
+    }
+    return false;
+  }
+
+  Future<bool> updateGroup(String group) async {
+    if (_userState == UserState.server || _userState == UserState.none) {
+      _currentGroup = group;
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> _sendUpdateToClients() async {
+    Map<String, dynamic> data = {
+      'type': 'update',
+      'content': {
+        'songHash': _currentSongHash,
+        'section1': _currentSection1,
+        'section1': _currentSection2,
+      }
+    };
+    return _sendDataToAll(data);
+  }
+
+  Future<bool> sendGroupData(
+      String group, Map<String, dynamic> groupSongData) async {
+    Map<String, dynamic> data = {
+      'type': 'groupData',
+      'content': {
+        'group': group,
+        'songs': groupSongData,
+      }
+    };
+    return _sendDataToAll(data);
+  }
+
+  Future<bool> _sendDataToAll(Map<String, dynamic> data) async {
+    try {
+      final bytes = Uint8List.fromList(json.encode(data).codeUnits);
+      await _nearby.sendBytesPayload('*', bytes);
+      return true;
+    } catch (e) {
+      print('Error sending data to all devices: $e');
+      return false;
+    }
   }
 }

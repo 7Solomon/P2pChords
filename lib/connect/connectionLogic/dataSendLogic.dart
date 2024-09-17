@@ -1,4 +1,4 @@
-import 'dart:async';
+/*import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -82,3 +82,4 @@ Future<bool> sendSectionWechsel(
     return false;
   }
 }
+*/

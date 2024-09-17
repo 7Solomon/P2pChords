@@ -1,12 +1,9 @@
-import 'dart:typed_data';
-import 'package:P2pChords/connect/connectionLogic/dataReceptionLogic.dart';
 import 'package:flutter/material.dart';
-import 'package:nearby_connections/nearby_connections.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/device.dart';
+import 'package:nearby_connections/nearby_connections.dart';
 
 class ClientPage extends StatefulWidget {
   const ClientPage({Key? key}) : super(key: key);
@@ -16,7 +13,6 @@ class ClientPage extends StatefulWidget {
 }
 
 class _ClientPageState extends State<ClientPage> {
-  final Strategy _strategy = Strategy.P2P_CLUSTER;
   final Map<String, DeviceInfo> _endpointMap = {};
 
   @override
@@ -49,65 +45,51 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   void _onConnectionInit(String id, ConnectionInfo info) {
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     Nearby().acceptConnection(
       id,
       onPayLoadRecieved: (endid, payload) async {
-        _displaySnack('Received Data');
-        DataReceptionHandler(context).handlePayloadReceived(id, payload);
+        if (payload.type == PayloadType.BYTES) {
+          String message = String.fromCharCodes(payload.bytes!);
+          provider.handleIncomingMessage(message);
+        }
       },
     );
   }
 
   Future<void> _startDiscovery() async {
     final globalName = Provider.of<GlobalName>(context, listen: false);
-    try {
-      final success = await Nearby().startDiscovery(
-        globalName.name,
-        _strategy,
-        onEndpointFound: (id, name, serviceId) {
-          setState(() {
-            _endpointMap[id] = DeviceInfo(name, serviceId);
-          });
-        },
-        onEndpointLost: (id) {
-          setState(() {
-            _endpointMap.remove(id);
-          });
-        },
-      );
-      _displaySnack("Discovery successful: $success");
-    } catch (e) {
-      _displaySnack("Error in discovery: $e");
-    }
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+
+    final success = await provider.startDiscovery(
+      globalName.name,
+      (id, name, serviceId) {
+        setState(() {
+          _endpointMap[id] = DeviceInfo(name, serviceId);
+        });
+      },
+    );
+    _displaySnack("Discovery ${success ? 'successful' : 'failed'}");
   }
 
   Future<void> _requestConnection(String id) async {
     final globalName = Provider.of<GlobalName>(context, listen: false);
     final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
-    try {
-      final success = await Nearby().requestConnection(
-        globalName.name,
-        id,
-        onConnectionInitiated: _onConnectionInit,
-        onConnectionResult: (id, status) {
-          if (status == Status.CONNECTED) {
-            setState(() {
-              globalUserIds.setConnectedServerId(id);
-            });
-          }
-          _displaySnack(status.toString());
-        },
-        onDisconnected: (id) {
-          setState(() {
-            globalUserIds.setConnectedServerId('none');
-            _endpointMap.remove(id);
-          });
-        },
-      );
-      _displaySnack("Requested connection successful: $success");
-    } catch (e) {
-      _displaySnack("Error in requesting connection: $e");
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+
+    final success = await provider.requestConnection(
+      globalName.name,
+      id,
+      _onConnectionInit,
+    );
+
+    if (success) {
+      globalUserIds.setConnectedServerId(id);
     }
+    _displaySnack("Connection request ${success ? 'successful' : 'failed'}");
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/groupManagement/songGroupPage.dart';
@@ -163,6 +164,14 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                         builder: (context) => GroupSongsPage(group: group),
                       ),
                     );
+                  },
+                  onLongPress: () => {
+                    //Navigator.push(
+                    //  context,
+                    //  MaterialPageRoute(
+                    //    builder: (context) => JsonEditPage(jsonData: ,),
+                    //  ),
+                    //)
                   },
                 ),
               );

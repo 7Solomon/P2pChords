@@ -24,7 +24,7 @@ List<Widget> displaySectionContent({
           updateSections(currentSection1 - 1, currentSection1);
         } else {
           // Call onEndReached if needed
-          onStartReachedd();
+          onEndReached();
         }
       },
       child: sectionWidgets[currentSection1],
@@ -38,8 +38,8 @@ List<Widget> displaySectionContent({
         if (currentSection2 < sectionWidgets.length - 1) {
           updateSections(currentSection2, currentSection2 + 1);
         } else {
-          // Call onEndReached if needed
-          onEndReached();
+          // Call
+          onStartReachedd();
         }
       },
       child: sectionWidgets[currentSection2],

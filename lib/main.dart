@@ -1,4 +1,5 @@
 import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
+import 'package:P2pChords/metronome/test.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +15,7 @@ void main() {
         ChangeNotifierProvider(create: (context) => GlobalMode()),
         ChangeNotifierProvider(create: (context) => GlobalUserIds()),
         ChangeNotifierProvider(create: (context) => GlobalName()),
-        ChangeNotifierProvider(create: (context) => SongProvider()),
+        ChangeNotifierProvider(create: (context) => NearbyMusicSyncProvider()),
       ],
       child: const MyApp(),
     ),
@@ -43,7 +44,8 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final globalIdManager = Provider.of<GlobalUserIds>(context, listen: false);
-    final sectionProvider = Provider.of<SongProvider>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -109,11 +111,12 @@ class MainPage extends StatelessWidget {
                             onPressed: () async {
                               // Send data to the server when the user is a client
                               if (globalIdManager.connectedServerId != null) {
-                                bool result = await sendRequest(
-                                    globalIdManager.connectedServerId!);
-                                if (result &&
-                                    sectionProvider.currentGroup.contains(
-                                        sectionProvider.currentSongHash)) {
+                                //bool result = await
+
+                                //if (result &&
+                                if ( //
+                                    songSyncProvider.currentGroup.contains(
+                                        songSyncProvider.currentSongHash)) {
                                   // Navigate to the ChordSheetPage
                                   Navigator.push(
                                     context,
@@ -122,9 +125,10 @@ class MainPage extends StatelessWidget {
                                   );
                                 }
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(
-                                        'Do bist noch nicht mit einem Server verbunden')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Do bist noch nicht mit einem Server verbunden')));
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -177,7 +181,17 @@ class MainPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                        onPressed: () {
+                          //Navigator.push(
+                          //  context,
+                          //  MaterialPageRoute(
+                          //    builder: (context) => Metronome(),
+                          //  ),
+                          //);
+                        },
+                        child: const Text('Metronome')),
                   ],
                 ),
               ),

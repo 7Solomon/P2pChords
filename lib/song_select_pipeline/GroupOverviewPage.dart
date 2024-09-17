@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../dataManagment/storageManager.dart';
-import '../dataManagment/saveJsonPage.dart';
+import '../dataManagment/Pages/saveJsonPage.dart';
 import 'SongOverviewPage.dart';
 import '../state.dart'; // Import the file containing GlobalMode
 
@@ -18,6 +18,7 @@ class GroupOverviewpage extends StatefulWidget {
 }
 
 class _GroupOverviewpageState extends State<GroupOverviewpage> {
+  Map<String, Map<String, dynamic>> _allGroupData = {};
   Map<String, List<Map<String, String>>> _allGroups = {};
   bool _isLoading = true;
 
@@ -30,15 +31,29 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
   Future<void> _loadAllJsons() async {
     setState(() => _isLoading = true);
     _allGroups = await MultiJsonStorage.getAllGroups();
+
+    for (MapEntry<String, List<Map<String, String>>> entry
+        in _allGroups.entries) {
+      String groupName = entry.key;
+      List<Map<String, String>> groupValue = entry.value;
+
+      // Initialize the songs list for each group
+      for (Map<String, String> songValue in groupValue) {
+        String songHash = songValue['hash']!;
+        Map<String, dynamic>? songData =
+            await MultiJsonStorage.loadJson(songHash);
+        _allGroupData[groupName]?[songHash] = songData;
+      }
+    }
+
     setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final globalMode = Provider.of<GlobalMode>(context, listen: false);
-    final globalDataManager =
-        Provider.of<GlobalUserIds>(context, listen: false);
-    final currentSongData = Provider.of<SongProvider>(context, listen: false);
+    final nearbyProvider = Provider.of<NearbyMusicSyncProvider>(context);
+    //final currentSongData = Provider.of<SongProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +78,8 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                       subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                       icon: Icons.file_copy,
                       onTap: () async {
-                        currentSongData.updateGroup(key);
+                        /// !!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        nearbyProvider.updateGroup(key);
                         // Navigate to the SongOverviewPage
                         Navigator.push(
                           context,
@@ -76,16 +92,9 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
                         // Check if the device is a server and send data to clients if it is
                         if (globalMode.userState == UserState.server) {
-                          final songData = {
-                            'type': 'groupData',
-                            'content': {
-                              'groupName': key,
-                              'songs': _allGroups[key],
-                            },
-                          };
-
-                          Map successi = await sendDataToAllClients(
-                              songData, globalDataManager.connectedDeviceIds);
+                          final songData = _allGroupData[key]!;
+                          bool success =
+                              await nearbyProvider.sendGroupData(key, songData);
                           // Display Sucessi If you want but I dont want to implement my boi
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -99,13 +108,11 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                                       return AlertDialog(
                                         title: const Text('Detail Infos'),
                                         content: SingleChildScrollView(
-                                          child: ListBody(
-                                            children:
-                                                successi.entries.map((entry) {
-                                              return Text(
-                                                  '${entry.key}: ${entry.value}');
-                                            }).toList(),
-                                          ),
+                                          child: success
+                                              ? const Text(
+                                                  'Die Daten wurden erfolgreich an die Clients gesendet')
+                                              : const Text(
+                                                  'Die Daten konnten nicht an die Clients gesendet werden'),
                                         ),
                                         actions: [
                                           TextButton(
@@ -113,7 +120,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                                               Navigator.of(context)
                                                   .pop(); // Close the dialog
                                             },
-                                            child: Text('Close'),
+                                            child: const Text('Schließen'),
                                           ),
                                         ],
                                       );

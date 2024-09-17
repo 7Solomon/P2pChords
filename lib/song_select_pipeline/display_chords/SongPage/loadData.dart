@@ -15,15 +15,16 @@ Future<Map<String, dynamic>?> loadSongData(
   String currentKey,
 ) async {
   try {
+    //print(currentSongData.currentGroup);
     Map<String, dynamic>? loadedSongDatas =
         await MultiJsonStorage.loadJsonsFromGroup(currentSongData.currentGroup);
-
     if (loadedSongDatas.isEmpty) {
       displaySnack('No data found for the provided group.');
       return null;
     }
     // Add all SongStructureWidgets
     Map<String, List<Widget>> songStructures = {};
+    //print(loadedSongDatas);
     loadedSongDatas.forEach((key, value) {
       List<Widget> songStructure = buildSongContent(
         value['data'],

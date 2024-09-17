@@ -10,8 +10,8 @@ class SongListDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentSongprovider =
-        Provider.of<SongProvider>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     //print(currentSongprovider.currentGroup);
 
     return Drawer(
@@ -23,7 +23,7 @@ class SongListDrawer extends StatelessWidget {
               color: Colors.blue,
             ),
             child: Text(
-              currentSongprovider.currentGroup,
+              songSyncProvider.currentGroup,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -32,7 +32,7 @@ class SongListDrawer extends StatelessWidget {
           ),
           // Use FutureBuilder to handle the async operation
           FutureBuilder(
-            future: MultiJsonStorage.loadJsonsFromGroup(currentSongprovider
+            future: MultiJsonStorage.loadJsonsFromGroup(songSyncProvider
                 .currentGroup), // Fetch the songs asynchronously
             builder: (context, snapshot) {
               // Check for data and loading states
@@ -66,7 +66,7 @@ class SongListDrawer extends StatelessWidget {
                   return ListTile(
                     title: Text(name),
                     onTap: () async {
-                      currentSongprovider.updateSongHash(hash, notify: true);
+                      songSyncProvider.updateSongAndSection(hash, 0, 1);
                       // Close the drawer
                       Navigator.of(context).pop();
 

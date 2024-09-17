@@ -1,4 +1,4 @@
-import 'dart:convert';
+/*import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:nearby_connections/nearby_connections.dart';
@@ -287,3 +287,4 @@ class _ConnectionPageState extends State<ConnectionPage> {
     );
   }
 }
+*/

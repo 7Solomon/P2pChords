@@ -71,6 +71,13 @@ class MultiJsonStorage {
     return {'result': result, 'hash': jsonHash};
   }
 
+  static Future<void> saveJsonsGroup(
+      String groupName, Map groupSongData) async {
+    for (MapEntry entry in groupSongData.entries) {
+      await saveJson(entry.key, entry.value, group: groupName);
+    }
+  }
+
   static Future<Map<String, dynamic>?> loadJson(String key) async {
     final prefs = await SharedPreferences.getInstance();
     String? jsonString = prefs.getString('$_keyPrefix:$key');

@@ -16,16 +16,18 @@ class Songoverviewpage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentSongData = Provider.of<SongProvider>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    //print(songSyncProvider.currentGroup);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Songs in ${currentSongData.currentGroup}'),
+        title: Text('Songs in ${songSyncProvider.currentGroup}'),
       ),
       body: Column(
         children: [
           FutureBuilder(
               future: MultiJsonStorage.loadJsonsFromGroup(
-                  currentSongData.currentGroup),
+                  songSyncProvider.currentGroup),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -37,6 +39,8 @@ class Songoverviewpage extends StatelessWidget {
                 // Extract the data from snapshot
                 final Map<String, Map<String, dynamic>> songsData =
                     snapshot.data!;
+                //
+                //print(songsData);
 
                 //final List<String> songshashList = data[0] as List<String>;
                 //final Map<String, List<Map<String, String>>> groups =
@@ -110,8 +114,7 @@ class Songoverviewpage extends StatelessWidget {
                               vertical: 0, horizontal: 16.0),
                           iconBool: false,
                           onTap: () {
-                            currentSongData.updateSongHash(hash);
-                            print(hash);
+                            songSyncProvider.updateSongAndSection(hash, 0, 1);
                             Navigator.push(
                               context,
                               MaterialPageRoute(

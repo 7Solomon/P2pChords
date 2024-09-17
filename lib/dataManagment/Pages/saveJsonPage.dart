@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
 
-import 'storageManager.dart';
+import '../storageManager.dart';
 
 class JsonFilePickerPage extends StatefulWidget {
   final VoidCallback onSongAdded;

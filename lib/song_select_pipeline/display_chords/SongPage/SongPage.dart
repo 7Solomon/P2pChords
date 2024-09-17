@@ -43,10 +43,11 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     // Load all groups
     allGroups = await MultiJsonStorage.getAllGroups();
 
-    final currentSongData = Provider.of<SongProvider>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     // Load song data
     final songDataResult = await loadSongData(
-      currentSongData,
+      songSyncProvider,
       displaySnack,
       buildSongContent,
       parseChords,
@@ -64,14 +65,15 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   }
 
   void onSongStart() async {
-    final songProvider = Provider.of<SongProvider>(context, listen: false);
+    final songProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     final List<Map<String, String>> allSongs =
         allGroups?[songProvider.currentGroup];
 
     if (allSongs.isNotEmpty) {
       for (int i = 1; i < allSongs.length; i++) {
         if (allSongs[i]['hash'] == songProvider.currentSongHash) {
-          songProvider.updateSongHash(allSongs[i - 1]['hash']!);
+          songProvider.updateSongAndSection(allSongs[i - 1]['hash']!, 1, 2);
           break; // Exit the loop once the song hash is updated
         }
       }
@@ -80,14 +82,15 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   }
 
   void onSongEnd() async {
-    final songProvider = Provider.of<SongProvider>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     final List<Map<String, String>> allSongs =
-        allGroups?[songProvider.currentGroup];
+        allGroups?[songSyncProvider.currentGroup];
 
     if (allSongs.isNotEmpty) {
       for (int i = 0; i < allSongs.length - 1; i++) {
-        if (allSongs[i]['hash'] == songProvider.currentSongHash) {
-          songProvider.updateSongHash(allSongs[i + 1]['hash']!);
+        if (allSongs[i]['hash'] == songSyncProvider.currentSongHash) {
+          songSyncProvider.updateSongAndSection(allSongs[i + 1]['hash']!, 0, 1);
           break; // Exit the loop once the song hash is updated
         }
       }
@@ -105,24 +108,24 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Consumer<SongProvider>(
-          builder: (context, songProvider, child) {
-            if (songProvider.currentSongHash != null) {
-              _initializeData();
-            }
+        title: Consumer<NearbyMusicSyncProvider>(
+          builder: (context, songSyncProvider, child) {
+            _initializeData();
+            //print(songDatas![songSyncProvider.currentSongHash]);
             return Text(songDatas != null &&
-                    songDatas![songProvider.currentSongHash] != null
-                ? songDatas![songProvider.currentSongHash]!['header']['name']
+                    songDatas![songSyncProvider.currentSongHash] != null
+                ? songDatas![songSyncProvider.currentSongHash]!['header']
+                    ['name']
                 : 'Loading...');
           },
         ),
       ),
-      drawer: Consumer<SongProvider>(
-        builder: (context, songProvider, child) {
+      drawer: Consumer<NearbyMusicSyncProvider>(
+        builder: (context, songSyncProvider, child) {
           if (songDatas != null &&
-              songDatas![songProvider.currentSongHash] != null) {
+              songDatas![songSyncProvider.currentSongHash] != null) {
             return SongDrawer(
-              songData: songDatas![songProvider.currentSongHash]!,
+              songData: songDatas![songSyncProvider.currentSongHash]!,
               currentKey: currentKey,
               onKeyChanged: (newKey) {
                 setState(() {
@@ -144,18 +147,15 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             child: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Consumer<SongProvider>(
-                  builder: (context, songProvider, child) {
+                child: Consumer<NearbyMusicSyncProvider>(
+                  builder: (context, songSyncProvider, child) {
                     //print(allGroups);
                     final List<Map<String, String>>? currentGroup =
-                        allGroups?[songProvider.currentGroup];
-                    final String? currentSongHash =
-                        songProvider.currentSongHash;
-
+                        allGroups?[songSyncProvider.currentGroup];
+                    final String currentSongHash =
+                        songSyncProvider.currentSongHash;
                     // Ensure currentGroup is not null and has valid data
-                    if (currentGroup != null &&
-                        currentGroup.isNotEmpty &&
-                        currentSongHash != null) {
+                    if (currentGroup != null && currentGroup.isNotEmpty) {
                       // Proceed with displaying the content as you originally planned
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,10 +163,11 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                           songStructure: songStructures,
                           groupSongs: currentGroup,
                           currentSongHash: currentSongHash,
-                          currentSection1: songProvider.currentSection1,
-                          currentSection2: songProvider.currentSection2,
+                          currentSection1: songSyncProvider.currentSection1,
+                          currentSection2: songSyncProvider.currentSection2,
                           updateSections: (section1, section2) {
-                            songProvider.updateSections(section1, section2);
+                            songSyncProvider.updateSongAndSection(
+                                currentSongHash, section1, section2);
                           },
                           onEndReached: onSongEnd,
                           onStartReachedd: onSongStart,

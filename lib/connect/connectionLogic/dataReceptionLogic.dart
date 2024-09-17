@@ -1,5 +1,6 @@
-import 'dart:convert';
+/*import 'dart:convert';
 import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
+import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +9,9 @@ import 'package:provider/provider.dart';
 
 class DataReceptionHandler {
   final BuildContext context;
+  late DataLoader test;
 
   DataReceptionHandler(this.context);
-
   void _displaySnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -107,3 +108,4 @@ class DataReceivedDialog extends StatelessWidget {
     );
   }
 }
+*/

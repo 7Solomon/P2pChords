@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 
 class CustomListTile extends ListTile {
@@ -12,6 +14,7 @@ class CustomListTile extends ListTile {
     EdgeInsetsGeometry contentPadding = const EdgeInsets.symmetric(
         vertical: 8.0, horizontal: 16.0), // Default padding
     VoidCallback? onTap,
+    VoidCallback? onLongPress,
   }) : super(
           key: key,
           contentPadding: contentPadding, // Use the provided padding
@@ -38,5 +41,6 @@ class CustomListTile extends ListTile {
           trailing:
               arrowBool ? const Icon(Icons.arrow_forward_ios, size: 16) : null,
           onTap: onTap ?? () {}, // Default no-op callback
+          onLongPress: onLongPress ?? () {},
         );
 }

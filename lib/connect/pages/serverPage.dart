@@ -1,11 +1,9 @@
-import 'package:P2pChords/connect/connectionLogic/dataReceptionLogic.dart';
-import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
-import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
-import 'package:nearby_connections/nearby_connections.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:P2pChords/state.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
+import 'package:nearby_connections/nearby_connections.dart';
 
 class ServerPage extends StatefulWidget {
   const ServerPage({Key? key}) : super(key: key);
@@ -15,8 +13,6 @@ class ServerPage extends StatefulWidget {
 }
 
 class _ServerPageState extends State<ServerPage> {
-  final Strategy _strategy = Strategy.P2P_CLUSTER;
-
   @override
   void initState() {
     super.initState();
@@ -47,46 +43,48 @@ class _ServerPageState extends State<ServerPage> {
   }
 
   void _onConnectionInit(String id, ConnectionInfo info) {
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     Nearby().acceptConnection(
       id,
       onPayLoadRecieved: (endid, payload) async {
-        DataReceptionHandler(context).handlePayloadReceived(id, payload);
+        if (payload.type == PayloadType.BYTES) {
+          String message = String.fromCharCodes(payload.bytes!);
+          provider.handleIncomingMessage(message);
+        }
       },
     );
   }
 
   Future<void> _startAdvertising() async {
     final globalName = Provider.of<GlobalName>(context, listen: false);
-    final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
-    try {
-      final success = await Nearby().startAdvertising(
-        globalName.name,
-        _strategy,
-        onConnectionInitiated: _onConnectionInit,
-        onConnectionResult: (id, status) {
-          if (status == Status.CONNECTED) {
-            globalUserIds.addConnectedDevice(id);
-          }
-          _displaySnack(status.toString());
-        },
-        onDisconnected: (id) {
-          globalUserIds.removeConnectedDevice(id);
-          setState(() {
-            // Handle disconnection
-          });
-        },
-      );
-      _displaySnack("Advertising successful: $success");
-    } catch (e) {
-      _displaySnack("Error in advertising: $e");
-    }
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+
+    provider.setAsServerDevice(true);
+    final success =
+        await provider.startAdvertising(globalName.name, _onConnectionInit);
+    _displaySnack("Advertising ${success ? 'successful' : 'failed'}");
+  }
+
+  Future<void> _sendGroupData() async {
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+
+    final groupSongData = await MultiJsonStorage.loadJsonsFromGroup(
+        songSyncProvider.currentGroup);
+    final success = await provider.sendGroupData(
+        songSyncProvider.currentGroup, groupSongData);
+
+    _displaySnack("Group data send ${success ? 'successful' : 'failed'}");
   }
 
   @override
   Widget build(BuildContext context) {
-    final globalUserIds = Provider.of<GlobalUserIds>(context);
-    final currentSongData = Provider.of<SongProvider>(context);
-    final Set<String> connectedDeviceIds = globalUserIds.connectedDeviceIds;
+    final songSyncProvider = Provider.of<NearbyMusicSyncProvider>(context);
+    final Set<String> connectedDeviceIds = songSyncProvider.connectedDeviceIds;
 
     return Scaffold(
       appBar: AppBar(
@@ -114,22 +112,19 @@ class _ServerPageState extends State<ServerPage> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-                onPressed: () async {
-                  final groupSongData =
-                      await MultiJsonStorage.loadJsonsFromGroup(
-                          currentSongData.currentGroup);
-
-                  final data = {
-                    'type': 'groupData',
-                    'content': {
-                      'group': currentSongData.currentGroup,
-                      'songs': groupSongData
-                    },
-                  };
-
-                  sendDataToAllClients(data, globalUserIds.connectedDeviceIds);
-                },
-                child: Text('Send')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.greenAccent,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Send Group Data',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              onPressed: _sendGroupData,
+            ),
             const SizedBox(height: 24),
             const Text(
               'Connected Devices:',
