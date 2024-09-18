@@ -20,19 +20,10 @@ class _ServerPageState extends State<ServerPage> {
   }
 
   Future<void> _checkPermissions() async {
-    final statuses = await [
-      Permission.location,
-      Permission.bluetooth,
-      Permission.bluetoothAdvertise,
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.nearbyWifiDevices,
-    ].request();
-
-    final allGranted = statuses.values.every((status) => status.isGranted);
-    _displaySnack(allGranted
-        ? "All permissions granted"
-        : "Some permissions were denied");
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    //provider.displaySnack() = _displaySnack;
+    provider.checkPermissions();
   }
 
   void _displaySnack(String message) {
@@ -40,45 +31,6 @@ class _ServerPageState extends State<ServerPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
     }
-  }
-
-  void _onConnectionInit(String id, ConnectionInfo info) {
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-    Nearby().acceptConnection(
-      id,
-      onPayLoadRecieved: (endid, payload) async {
-        if (payload.type == PayloadType.BYTES) {
-          String message = String.fromCharCodes(payload.bytes!);
-          provider.handleIncomingMessage(message);
-        }
-      },
-    );
-  }
-
-  Future<void> _startAdvertising() async {
-    final globalName = Provider.of<GlobalName>(context, listen: false);
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-
-    provider.setAsServerDevice(true);
-    final success =
-        await provider.startAdvertising(globalName.name, _onConnectionInit);
-    _displaySnack("Advertising ${success ? 'successful' : 'failed'}");
-  }
-
-  Future<void> _sendGroupData() async {
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-    final songSyncProvider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-
-    final groupSongData = await MultiJsonStorage.loadJsonsFromGroup(
-        songSyncProvider.currentGroup);
-    final success = await provider.sendGroupData(
-        songSyncProvider.currentGroup, groupSongData);
-
-    _displaySnack("Group data send ${success ? 'successful' : 'failed'}");
   }
 
   @override
@@ -108,22 +60,9 @@ class _ServerPageState extends State<ServerPage> {
                 'Start Server',
                 style: TextStyle(fontSize: 16, color: Colors.white),
               ),
-              onPressed: _startAdvertising,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.greenAccent,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Send Group Data',
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
-              onPressed: _sendGroupData,
+              onPressed: () {
+                songSyncProvider.startAdvertising();
+              },
             ),
             const SizedBox(height: 24),
             const Text(

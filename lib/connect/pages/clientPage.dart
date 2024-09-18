@@ -22,19 +22,10 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   Future<void> _checkPermissions() async {
-    final statuses = await [
-      Permission.location,
-      Permission.bluetooth,
-      Permission.bluetoothAdvertise,
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.nearbyWifiDevices,
-    ].request();
-
-    final allGranted = statuses.values.every((status) => status.isGranted);
-    _displaySnack(allGranted
-        ? "All permissions granted"
-        : "Some permissions were denied");
+    final provider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    //provider.displaySnack() = _displaySnack;
+    provider.checkPermissions();
   }
 
   void _displaySnack(String message) {
@@ -44,57 +35,10 @@ class _ClientPageState extends State<ClientPage> {
     }
   }
 
-  void _onConnectionInit(String id, ConnectionInfo info) {
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-    Nearby().acceptConnection(
-      id,
-      onPayLoadRecieved: (endid, payload) async {
-        if (payload.type == PayloadType.BYTES) {
-          String message = String.fromCharCodes(payload.bytes!);
-          provider.handleIncomingMessage(message);
-        }
-      },
-    );
-  }
-
-  Future<void> _startDiscovery() async {
-    final globalName = Provider.of<GlobalName>(context, listen: false);
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-
-    final success = await provider.startDiscovery(
-      globalName.name,
-      (id, name, serviceId) {
-        setState(() {
-          _endpointMap[id] = DeviceInfo(name, serviceId);
-        });
-      },
-    );
-    _displaySnack("Discovery ${success ? 'successful' : 'failed'}");
-  }
-
-  Future<void> _requestConnection(String id) async {
-    final globalName = Provider.of<GlobalName>(context, listen: false);
-    final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-
-    final success = await provider.requestConnection(
-      globalName.name,
-      id,
-      _onConnectionInit,
-    );
-
-    if (success) {
-      globalUserIds.setConnectedServerId(id);
-    }
-    _displaySnack("Connection request ${success ? 'successful' : 'failed'}");
-  }
-
   @override
   Widget build(BuildContext context) {
-    final globalUserIds = Provider.of<GlobalUserIds>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -118,11 +62,13 @@ class _ClientPageState extends State<ClientPage> {
                 'Search for Servers',
                 style: TextStyle(fontSize: 16, color: Colors.white),
               ),
-              onPressed: _startDiscovery,
+              onPressed: () {
+                songSyncProvider.startAdvertising();
+              },
             ),
             const SizedBox(height: 24),
             Text(
-              'Connected Device: ${globalUserIds.connectedServerId ?? "None"}',
+              'Connected Device: ${songSyncProvider.connectedDeviceIds}',
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 24),
@@ -157,7 +103,8 @@ class _ClientPageState extends State<ClientPage> {
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.link),
-                              onPressed: () => _requestConnection(id),
+                              onPressed: () =>
+                                  songSyncProvider.requestConnection(id),
                             ),
                           ),
                         );

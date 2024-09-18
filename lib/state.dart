@@ -2,110 +2,16 @@ import 'dart:convert';
 
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:nearby_connections/nearby_connections.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum UserState { server, client, none }
 
-enum SenderType { ble, wifi, none }
+//enum SenderType { ble, wifi, none }
 
-class GlobalMode with ChangeNotifier {
-  UserState _userState = UserState.none; // Default mode
-  SenderType _senderType = SenderType.none; // Default mode
-
-  // Getter for UserState
-  UserState get userState => _userState;
-
-  // Getter for SenderType
-  SenderType get senderType => _senderType;
-
-  // Setter for UserState
-  void setUserState(UserState userState) {
-    _userState = userState;
-    notifyListeners(); // Notify listeners to update the UI
-  }
-
-  // Setter for SenderType
-  void setSenderType(SenderType senderType) {
-    _senderType = senderType;
-    notifyListeners(); // Notify listeners to update the UI
-  }
-}
-
-class GlobalUserIds extends ChangeNotifier {
-  final Set<String> _connectedDeviceIds = {};
-  String? _connectedServerId;
-
-  Set<String> get connectedDeviceIds => _connectedDeviceIds;
-  String? get connectedServerId => _connectedServerId;
-
-  void addConnectedDevice(String id) {
-    _connectedDeviceIds.add(id);
-    notifyListeners();
-  }
-
-  void removeConnectedDevice(String id) {
-    _connectedDeviceIds.remove(id);
-    notifyListeners();
-  }
-
-  void setConnectedServerId(String? id) {
-    _connectedServerId = id;
-    notifyListeners();
-  }
-
-  void clearAll() {
-    _connectedDeviceIds.clear();
-    _connectedServerId = null;
-    notifyListeners();
-  }
-}
-
-class GlobalName with ChangeNotifier {
-  String _name = 'undefined';
-
-  String get name => _name;
-
-  void defineName(String name) {
-    _name = name;
-    notifyListeners();
-  }
-}
-
-/*
-class SongProvider with ChangeNotifier {
-  String _currentSongHash = 'none';
-  String _currentGroup = 'none';
-  int _currentSection1 = 0;
-  int _currentSection2 = 1;
-
-  String get currentSongHash => _currentSongHash;
-  String get currentGroup => _currentGroup;
-  int get currentSection1 => _currentSection1;
-  int get currentSection2 => _currentSection2;
-
-  void updateSongHash(String currentSongHash, {bool notify = true}) {
-    _currentSongHash = currentSongHash;
-    if (notify) notifyListeners();
-  }
-
-  void updateGroup(String currentGroup, {bool notify = true}) {
-    _currentGroup = currentGroup;
-    if (notify) notifyListeners();
-  }
-
-  void updateSections(int section1, int section2, {bool notify = true}) {
-    _currentSection1 = section1;
-    _currentSection2 = section2;
-    if (notify) notifyListeners();
-  }
-
-  void receiveSections(String data) {
-    var sections = json.decode(data);
-    updateSections(sections['section1'], sections['section2'], notify: true);
-  }
-}
-*/
 class NearbyMusicSyncProvider with ChangeNotifier {
+  String _name = 'undefined';
   final Nearby _nearby = Nearby();
   String _currentGroup = '';
   String _currentSongHash = '';
@@ -114,7 +20,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   UserState _userState = UserState.none;
   bool _isServerDevice = false;
   Set<String> _connectedDeviceIds = {};
+  void Function(String) _displaySnack = (String message) {
+    print(message);
+  };
 
+  String get name => _name;
   String get currentGroup => _currentGroup;
   String get currentSongHash => _currentSongHash;
   int get currentSection1 => _currentSection1;
@@ -122,6 +32,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   bool get isServerDevice => _isServerDevice;
   UserState get userState => _userState;
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
+  void Function(String) get displaySnack => _displaySnack;
+
+  void defineName(String name) {
+    _name = name;
+    notifyListeners();
+  }
 
   void setAsServerDevice(bool isServer) {
     _isServerDevice = isServer;
@@ -129,17 +45,31 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> startAdvertising(String name,
-      Function(String, ConnectionInfo) onConnectionInitiated) async {
+  Future<void> checkPermissions() async {
+    final statuses = await [
+      Permission.location,
+      Permission.bluetooth,
+      Permission.bluetoothAdvertise,
+      Permission.bluetoothConnect,
+      Permission.bluetoothScan,
+      Permission.nearbyWifiDevices,
+    ].request();
+
+    final allGranted = statuses.values.every((status) => status.isGranted);
+    _displaySnack(allGranted
+        ? "All permissions granted"
+        : "Some permissions were denied");
+  }
+
+  Future<bool> startAdvertising() async {
     try {
       bool advertisingResult = await _nearby.startAdvertising(
-        name,
+        _name,
         Strategy.P2P_CLUSTER,
         onConnectionInitiated: onConnectionInitiated,
         onConnectionResult: (id, status) {
           if (status == Status.CONNECTED) {
             _connectedDeviceIds.add(id);
-
             notifyListeners();
           }
         },
@@ -150,16 +80,16 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       );
       return advertisingResult;
     } catch (e) {
-      print('Error starting advertising: $e');
+      _displaySnack('Error starting advertising: $e');
       return false;
     }
   }
 
   Future<bool> startDiscovery(
-      String name, Function(String, String, String) onEndpointFound) async {
+      Function(String, String, String) onEndpointFound) async {
     try {
       bool discoveryResult = await _nearby.startDiscovery(
-        name,
+        _name,
         Strategy.P2P_CLUSTER,
         onEndpointFound: onEndpointFound,
         onEndpointLost: (id) {
@@ -169,18 +99,44 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       );
       return discoveryResult;
     } catch (e) {
-      print('Error starting discovery: $e');
+      _displaySnack('Error starting discovery: $e');
       return false;
     }
   }
 
-  Future<bool> requestConnection(String name, String id,
-      Function(String, ConnectionInfo) onConnectionInitiated) async {
+  void onConnectionInitiated(String id, ConnectionInfo info) {
+    Nearby().acceptConnection(
+      id,
+      onPayLoadRecieved: (endid, payload) async {
+        if (payload.type == PayloadType.BYTES) {
+          String message = String.fromCharCodes(payload.bytes!);
+          handleIncomingMessage(message);
+        }
+      },
+    );
+    if (_isServerDevice && _currentGroup.isNotEmpty) {
+      sendCurrentGroupDataToIdDevice(id);
+    }
+  }
+
+  void onConnectionInitiatedByRequest(String id, ConnectionInfo info) {
+    Nearby().acceptConnection(
+      id,
+      onPayLoadRecieved: (endid, payload) async {
+        if (payload.type == PayloadType.BYTES) {
+          String message = String.fromCharCodes(payload.bytes!);
+          handleIncomingMessage(message);
+        }
+      },
+    );
+  }
+
+  Future<bool> requestConnection(String id) async {
     try {
       bool result = await _nearby.requestConnection(
-        name,
+        _name,
         id,
-        onConnectionInitiated: onConnectionInitiated,
+        onConnectionInitiated: onConnectionInitiatedByRequest,
         onConnectionResult: (id, status) {
           if (status == Status.CONNECTED) {
             _connectedDeviceIds.add(id);
@@ -194,7 +150,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       );
       return result;
     } catch (e) {
-      print('Error requesting connection: $e');
+      _displaySnack('Error requesting connection: $e');
       return false;
     }
   }
@@ -218,7 +174,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print('Error handling incoming message: $e');
+      _displaySnack('Error handling incoming message: $e');
     }
   }
 
@@ -247,10 +203,23 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       'content': {
         'songHash': _currentSongHash,
         'section1': _currentSection1,
-        'section1': _currentSection2,
+        'section2': _currentSection2,
       }
     };
     return _sendDataToAll(data);
+  }
+
+  Future<bool> sendCurrentGroupDataToIdDevice(String id) async {
+    Map<String, dynamic> groupSongData =
+        await MultiJsonStorage.loadJsonsFromGroup(_currentGroup);
+    Map<String, dynamic> data = {
+      'type': 'groupData',
+      'content': {
+        'group': _currentGroup,
+        'songs': groupSongData,
+      }
+    };
+    return sendDataToDevice(id, data);
   }
 
   Future<bool> sendGroupData(
@@ -265,13 +234,26 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     return _sendDataToAll(data);
   }
 
+  Future<bool> sendDataToDevice(
+      String deviceId, Map<String, dynamic> data) async {
+    try {
+      final bytes = Uint8List.fromList(utf8.encode(json.encode(data)));
+      await _nearby.sendBytesPayload(deviceId, bytes);
+      _displaySnack('Data sent successfully to device: $deviceId');
+      return true;
+    } catch (e) {
+      _displaySnack('Error sending data to device $deviceId: $e');
+      return false;
+    }
+  }
+
   Future<bool> _sendDataToAll(Map<String, dynamic> data) async {
     try {
       final bytes = Uint8List.fromList(json.encode(data).codeUnits);
       await _nearby.sendBytesPayload('*', bytes);
       return true;
     } catch (e) {
-      print('Error sending data to all devices: $e');
+      _displaySnack('Error sending data to all devices: $e');
       return false;
     }
   }

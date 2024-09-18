@@ -51,7 +51,6 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
   @override
   Widget build(BuildContext context) {
-    final globalMode = Provider.of<GlobalMode>(context, listen: false);
     final nearbyProvider = Provider.of<NearbyMusicSyncProvider>(context);
     //final currentSongData = Provider.of<SongProvider>(context, listen: false);
 
@@ -91,7 +90,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                         );
 
                         // Check if the device is a server and send data to clients if it is
-                        if (globalMode.userState == UserState.server) {
+                        if (nearbyProvider.userState == UserState.server) {
                           final songData = _allGroupData[key]!;
                           bool success =
                               await nearbyProvider.sendGroupData(key, songData);

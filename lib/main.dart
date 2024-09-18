@@ -12,9 +12,6 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => GlobalMode()),
-        ChangeNotifierProvider(create: (context) => GlobalUserIds()),
-        ChangeNotifierProvider(create: (context) => GlobalName()),
         ChangeNotifierProvider(create: (context) => NearbyMusicSyncProvider()),
       ],
       child: const MyApp(),
@@ -43,7 +40,6 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final globalIdManager = Provider.of<GlobalUserIds>(context, listen: false);
     final songSyncProvider =
         Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     return Scaffold(
@@ -73,12 +69,8 @@ class MainPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                     // Conditionally render "Songs spielen" or "Folge den Songs" button
-                    Consumer<GlobalMode>(
-                      builder: (context, globalMode, child) {
-                        // If user is a server or in none state
-                        if (globalMode.userState == UserState.server ||
-                            globalMode.userState == UserState.none) {
-                          return ElevatedButton(
+                    songSyncProvider.userState == UserState.server
+                        ? ElevatedButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -104,19 +96,16 @@ class MainPage extends StatelessWidget {
                               ),
                             ),
                             child: const Text('Songs spielen'),
-                          );
-                        } else {
-                          // If user is a client
-                          return ElevatedButton(
+                          )
+                        :
+                        // If user is a client
+                        ElevatedButton(
                             onPressed: () async {
                               // Send data to the server when the user is a client
-                              if (globalIdManager.connectedServerId != null) {
-                                //bool result = await
-
-                                //if (result &&
-                                if ( //
-                                    songSyncProvider.currentGroup.contains(
-                                        songSyncProvider.currentSongHash)) {
+                              if (songSyncProvider
+                                  .connectedDeviceIds.isNotEmpty) {
+                                if (songSyncProvider.currentGroup.contains(
+                                    songSyncProvider.currentSongHash)) {
                                   // Navigate to the ChordSheetPage
                                   Navigator.push(
                                     context,
@@ -149,10 +138,8 @@ class MainPage extends StatelessWidget {
                               ),
                             ),
                             child: const Text('Folge den Songs'),
-                          );
-                        }
-                      },
-                    ),
+                          ),
+
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
@@ -162,14 +149,13 @@ class MainPage extends StatelessWidget {
                               builder: (context) => ManageGroupPage()),
                         );
                       },
-                      child: Text('Bearbeiten der Gruppen'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             const Color.fromARGB(255, 255, 255, 255),
                         foregroundColor: Colors.blue[700],
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                        textStyle: TextStyle(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 15),
+                        textStyle: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
@@ -180,6 +166,7 @@ class MainPage extends StatelessWidget {
                           ),
                         ),
                       ),
+                      child: const Text('Bearbeiten der Gruppen'),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -195,29 +182,27 @@ class MainPage extends StatelessWidget {
                   ],
                 ),
               ),
-              Consumer<GlobalMode>(builder: (context, globalMode, child) {
-                return Positioned(
-                  top: 20,
-                  right: 20,
-                  child: ElevatedButton(
-                    child: Row(
-                      children: [
-                        const Icon(Icons.settings),
-                        const SizedBox(width: 10),
-                        Text(globalMode.userState.name.toString()),
-                      ],
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChooseSCStatePage(),
-                        ),
-                      );
-                    },
+              Positioned(
+                top: 20,
+                right: 20,
+                child: ElevatedButton(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.settings),
+                      const SizedBox(width: 10),
+                      Text(songSyncProvider.userState.name.toString()),
+                    ],
                   ),
-                );
-              }),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChooseSCStatePage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),

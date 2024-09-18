@@ -9,7 +9,7 @@ class ChooseSCStatePage extends StatelessWidget {
   const ChooseSCStatePage({super.key});
 
   void _setUserStateAndNavigate(BuildContext context, UserState state) {
-    context.read<GlobalMode>().setUserState(state);
+    //final userStateProvider = Provider.of<GlobalName>(context, listen: false);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -20,8 +20,6 @@ class ChooseSCStatePage extends StatelessWidget {
           if (state == UserState.client) {
             return const ClientPage(); // Navigate to ClientPage
           } else {
-            //displayS
-            print('NOne');
             return MainPage();
           }
         },
