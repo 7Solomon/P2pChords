@@ -43,7 +43,6 @@ class MainPage extends StatelessWidget {
     final songSyncProvider =
         Provider.of<NearbyMusicSyncProvider>(context, listen: true);
 
-    print(songSyncProvider.userState);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(

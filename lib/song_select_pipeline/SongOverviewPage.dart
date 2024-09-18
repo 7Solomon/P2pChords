@@ -56,7 +56,10 @@ class Songoverviewpage extends StatelessWidget {
                       final hash = songsData.keys.elementAt(index);
                       final song = songsData[hash]!;
                       final name = song['header']['name'] ?? 'noName';
-                      return Dismissible(
+                      return
+
+                          /*
+                      Dismissible(
                         key: Key(hash), // Unique key for each item
                         direction: DismissDirection
                             .endToStart, // Swipe from right to left
@@ -98,6 +101,7 @@ class Songoverviewpage extends StatelessWidget {
                             },
                           );
                         },
+                        
                         onDismissed: (direction) {
                           // Handle the deletion logic here
                           MultiJsonStorage.removeJson(hash).then((success) {
@@ -108,38 +112,41 @@ class Songoverviewpage extends StatelessWidget {
                             }
                           });
                         },
+                       
+
                         // Hier den Namen dann einfügen
-                        child: CustomListTile(
-                          title: name,
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 0, horizontal: 16.0),
-                          iconBool: false,
-                          onTap: () {
-                            songSyncProvider.updateSongAndSection(hash, 0, 1);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChordSheetPage(),
+                        child: */
+                          CustomListTile(
+                        title: name,
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0, horizontal: 16.0),
+                        iconBool: false,
+                        onTap: () {
+                          songSyncProvider.updateSongAndSection(hash, 0, 1);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChordSheetPage(),
+                            ),
+                          );
+                        },
+                        onLongPress: () {
+                          // Edit Json Data
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JsonEditPage(
+                                jsonData: song,
+                                saveJson: (String json) {
+                                  MultiJsonStorage.saveJson(
+                                      hash, jsonDecode(json),
+                                      group: songSyncProvider.currentGroup);
+                                },
                               ),
-                            );
-                          },
-                          onLongPress: () {
-                            // Edit Json Data
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => JsonEditPage(
-                                  jsonData: song,
-                                  saveJson: (String json) {
-                                    MultiJsonStorage.saveJson(
-                                        hash, jsonDecode(json),
-                                        group: songSyncProvider.currentGroup);
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
+                        //),
                       );
                     },
                   ),

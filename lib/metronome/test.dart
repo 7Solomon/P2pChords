@@ -29,7 +29,6 @@ class _P2PMetronomeState extends State<P2PMetronome> {
     await _audioPlayer.setSource(AssetSource('metronome_click.mp3'));
   }
 
-
   void _onConnectionInitiated(String id, ConnectionInfo info) {
     Nearby().acceptConnection(
       id,
