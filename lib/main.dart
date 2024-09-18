@@ -41,7 +41,9 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final songSyncProvider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+        Provider.of<NearbyMusicSyncProvider>(context, listen: true);
+
+    print(songSyncProvider.userState);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(

@@ -9,15 +9,20 @@ class ChooseSCStatePage extends StatelessWidget {
   const ChooseSCStatePage({super.key});
 
   void _setUserStateAndNavigate(BuildContext context, UserState state) {
-    //final userStateProvider = Provider.of<GlobalName>(context, listen: false);
+    final songSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) {
+          print(state);
           if (state == UserState.server) {
+            print('Server');
+            songSyncProvider.setAsServerDevice(true);
             return const ServerPage(); // Navigate to ServerPage
           }
           if (state == UserState.client) {
+            songSyncProvider.setAsServerDevice(false);
             return const ClientPage(); // Navigate to ClientPage
           } else {
             return MainPage();

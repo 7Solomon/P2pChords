@@ -42,7 +42,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   void setAsServerDevice(bool isServer) {
     _isServerDevice = isServer;
     _userState = isServer ? UserState.server : UserState.client;
-    notifyListeners();
+
+    // Delay the notifyListeners() call until after the current frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   Future<void> checkPermissions() async {

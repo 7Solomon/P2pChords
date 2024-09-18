@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
@@ -119,6 +120,22 @@ class Songoverviewpage extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ChordSheetPage(),
+                              ),
+                            );
+                          },
+                          onLongPress: () {
+                            // Edit Json Data
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => JsonEditPage(
+                                  jsonData: song,
+                                  saveJson: (String json) {
+                                    MultiJsonStorage.saveJson(
+                                        hash, jsonDecode(json),
+                                        group: songSyncProvider.currentGroup);
+                                  },
+                                ),
                               ),
                             );
                           },

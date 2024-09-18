@@ -91,44 +91,52 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
                         // Check if the device is a server and send data to clients if it is
                         if (nearbyProvider.userState == UserState.server) {
-                          final songData = _allGroupData[key]!;
-                          bool success =
-                              await nearbyProvider.sendGroupData(key, songData);
-                          // Display Sucessi If you want but I dont want to implement my boi
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Info über status'),
-                              action: SnackBarAction(
-                                label: 'mehr..',
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: const Text('Detail Infos'),
-                                        content: SingleChildScrollView(
-                                          child: success
-                                              ? const Text(
-                                                  'Die Daten wurden erfolgreich an die Clients gesendet')
-                                              : const Text(
-                                                  'Die Daten konnten nicht an die Clients gesendet werden'),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context)
-                                                  .pop(); // Close the dialog
-                                            },
-                                            child: const Text('Schließen'),
-                                          ),
-                                        ],
-                                      );
+                          Map<String, dynamic> songData =
+                              _allGroupData[key] ?? {};
+
+                          bool? shouldSend = await showDialog<bool>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Senden der Gruppen Daten'),
+                                content: const Text(
+                                    'Willst du die Datein zu den clients Senden?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context)
+                                          .pop(false); // User pressed No
                                     },
-                                  );
-                                },
-                              ),
-                            ),
+                                    child: const Text('Nein'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context)
+                                          .pop(true); // User pressed Yes
+                                    },
+                                    child: const Text('Ja'),
+                                  ),
+                                ],
+                              );
+                            },
                           );
+
+                          // If the user presses Yes, send the data
+                          if (shouldSend == true) {
+                            bool success = await nearbyProvider.sendGroupData(
+                                key, songData);
+
+                            // Optionally show a success message
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: success
+                                    ? const Text(
+                                        'Daten erfolgreich an alle Clients gesendet')
+                                    : const Text(
+                                        'Fehler beim Senden der Daten'),
+                              ),
+                            );
+                          }
                         }
                       },
                     );
