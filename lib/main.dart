@@ -172,12 +172,12 @@ class MainPage extends StatelessWidget {
                     const SizedBox(height: 20),
                     ElevatedButton(
                         onPressed: () {
-                          //Navigator.push(
-                          //  context,
-                          //  MaterialPageRoute(
-                          //    builder: (context) => Metronome(),
-                          //  ),
-                          //);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => P2PMetronome(),
+                            ),
+                          );
                         },
                         child: const Text('Metronome')),
                   ],

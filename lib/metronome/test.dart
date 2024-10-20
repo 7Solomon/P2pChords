@@ -26,7 +26,7 @@ class _P2PMetronomeState extends State<P2PMetronome> {
   }
 
   Future<void> _loadAudio() async {
-    await _audioPlayer.setSource(AssetSource('metronome_click.mp3'));
+    await _audioPlayer.setSource(AssetSource('metronome.mp3'));
   }
 
   void _onConnectionInitiated(String id, ConnectionInfo info) {

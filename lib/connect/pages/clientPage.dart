@@ -26,6 +26,7 @@ class _ClientPageState extends State<ClientPage> {
         Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     //provider.displaySnack() = _displaySnack;
     provider.checkPermissions();
+    //_displaySnack("Permissions checked");
   }
 
   void _displaySnack(String message) {

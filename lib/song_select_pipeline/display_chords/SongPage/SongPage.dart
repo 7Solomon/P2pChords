@@ -169,8 +169,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                             songSyncProvider.updateSongAndSection(
                                 currentSongHash, section1, section2);
                           },
-                          onEndReached: onSongEnd,
-                          onStartReachedd: onSongStart,
+                          onEndReached: onSongStart,
+                          onStartReachedd: onSongEnd,
                         ),
                       );
                     } else {

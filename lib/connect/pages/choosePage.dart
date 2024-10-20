@@ -15,9 +15,7 @@ class ChooseSCStatePage extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) {
-          print(state);
           if (state == UserState.server) {
-            print('Server');
             songSyncProvider.setAsServerDevice(true);
             return const ServerPage(); // Navigate to ServerPage
           }
