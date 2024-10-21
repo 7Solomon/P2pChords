@@ -1,7 +1,10 @@
 import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
+import 'package:P2pChords/customeWidgets/MetronomeBlinkWidget.dart';
+import 'package:P2pChords/metronome/MetronomePage.dart';
 import 'package:P2pChords/metronome/test.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/connect/pages/choosePage.dart';
 import 'package:P2pChords/song_select_pipeline/GroupOverviewPage.dart';
@@ -12,7 +15,21 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => NearbyMusicSyncProvider()),
+        ChangeNotifierProvider(create: (_) => NearbyMusicSyncProvider()),
+        BlocProvider<MetronomeBloc>(
+          create: (context) {
+            final syncProvider =
+                Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+            final bloc = MetronomeBloc(
+              onMetronomeChanged: syncProvider.sendMetronomeUpdate,
+            );
+            syncProvider.onMetronomeUpdateReceived =
+                (bpm, isPlaying, tickCount) {
+              bloc.add(SyncMetronome(bpm, isPlaying, tickCount));
+            };
+            return bloc;
+          },
+        ),
       ],
       child: const MyApp(),
     ),
@@ -55,6 +72,7 @@ class MainPage extends StatelessWidget {
         child: SafeArea(
           child: Stack(
             children: [
+              BlinkingCircle(),
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -175,7 +193,7 @@ class MainPage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => P2PMetronome(),
+                              builder: (context) => MetronomePage(),
                             ),
                           );
                         },

@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:P2pChords/dataManagment/storageManager.dart';
+import 'package:P2pChords/metronome/test.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -20,9 +22,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   UserState _userState = UserState.none;
   bool _isServerDevice = false;
   Set<String> _connectedDeviceIds = {};
+
   void Function(String) _displaySnack = (String message) {
-    print(message);
+    //print(message);
   };
+  void Function(int bpm, bool isPlaying, int tickCount)?
+      onMetronomeUpdateReceived;
 
   String get name => _name;
   String get currentGroup => _currentGroup;
@@ -33,6 +38,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   UserState get userState => _userState;
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
   void Function(String) get displaySnack => _displaySnack;
+  Function get sendDataToAll => _sendDataToAll;
 
   void defineName(String name) {
     _name = name;
@@ -174,6 +180,9 @@ class NearbyMusicSyncProvider with ChangeNotifier {
           _currentGroup = data['content']['group'];
           MultiJsonStorage.saveJsonsGroup(
               data['content']['group'], data['content']['songs']);
+          break;
+        case 'metronomeUpdate':
+          handleMetronomeUpdate(data);
           break;
       }
       notifyListeners();
