@@ -45,6 +45,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
     final songSyncProvider =
         Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    songSyncProvider.updateDisplaySnack(displaySnack);
     // Load song data
     final songDataResult = await loadSongData(
       songSyncProvider,
@@ -110,7 +111,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
       appBar: AppBar(
         title: Consumer<NearbyMusicSyncProvider>(
           builder: (context, songSyncProvider, child) {
-            _initializeData();
+            //_initializeData();
             //print(songDatas![songSyncProvider.currentSongHash]);
             return Text(songDatas != null &&
                     songDatas![songSyncProvider.currentSongHash] != null
@@ -146,7 +147,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             flex: 9,
             child: SingleChildScrollView(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Consumer<NearbyMusicSyncProvider>(
                   builder: (context, songSyncProvider, child) {
                     //print(allGroups);
@@ -175,7 +176,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                       );
                     } else {
                       // Handle the case where data is null or invalid
-                      return Text("No song data available.");
+                      return const Text("Der Song hat keine Daten");
                     }
                   },
                 ),

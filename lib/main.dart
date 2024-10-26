@@ -59,6 +59,7 @@ class MainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final songSyncProvider =
         Provider.of<NearbyMusicSyncProvider>(context, listen: true);
+    //songSyncProvider.updateDisplaySnack(); muss gemounted sein
 
     return Scaffold(
       body: Container(
@@ -88,7 +89,7 @@ class MainPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                     // Conditionally render "Songs spielen" or "Folge den Songs" button
-                    songSyncProvider.userState == UserState.server
+                    songSyncProvider.userState != UserState.client
                         ? ElevatedButton(
                             onPressed: () {
                               Navigator.push(

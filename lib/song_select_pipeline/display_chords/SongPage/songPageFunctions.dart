@@ -19,6 +19,7 @@ List<Widget> displaySectionContent({
   // Handle the first section
   if (currentSection1 >= 0 && currentSection1 < sectionWidgets.length) {
     displayData.add(GestureDetector(
+      
       onTap: () {
         if (currentSection1 > 0) {
           updateSections(currentSection1 - 1, currentSection1);

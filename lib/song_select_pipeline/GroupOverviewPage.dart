@@ -29,6 +29,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
   }
 
   Future<void> _loadAllJsons() async {
+    print('Loading all JSONs');
     setState(() => _isLoading = true);
     _allGroups = await MultiJsonStorage.getAllGroups();
 
@@ -36,16 +37,19 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
         in _allGroups.entries) {
       String groupName = entry.key;
       List<Map<String, String>> groupValue = entry.value;
+      _allGroupData[groupName] = {};
 
       // Initialize the songs list for each group
       for (Map<String, String> songValue in groupValue) {
         String songHash = songValue['hash']!;
+
         Map<String, dynamic>? songData =
             await MultiJsonStorage.loadJson(songHash);
-        _allGroupData[groupName]?[songHash] = songData;
+        if (songData != null) {
+          _allGroupData[groupName]![songHash] = songData;
+        }
       }
     }
-
     setState(() => _isLoading = false);
   }
 
@@ -91,6 +95,9 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
                         // Check if the device is a server and send data to clients if it is
                         if (nearbyProvider.userState == UserState.server) {
+                          //print(_allGroupData);
+                          //print(key);
+                          //print(_allGroupData[key]);
                           Map<String, dynamic> songData =
                               _allGroupData[key] ?? {};
 

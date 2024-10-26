@@ -69,27 +69,27 @@ class MetronomeBloc extends Bloc<MetronomeEvent, MetronomeState> {
       _tickCount++;
       if (_tickCount % ticksPerBeat == 0) {
         // This is a main beat
-        // Here you would trigger the metronome sound
         print('Tick! BPM: ${state.bpm}, Beat: ${_tickCount ~/ ticksPerBeat}');
       }
 
-      // Emit new state and sync
       emit(MetronomeState(
           isPlaying: true, bpm: state.bpm, tickCount: _tickCount));
       onMetronomeChanged(state.bpm, true, _tickCount);
 
-      // Check and correct drift
+      // Set _lastTickTime to now and then correct drift
+      _lastTickTime = DateTime.now();
       _correctDrift(tickInterval);
     });
   }
 
   void _correctDrift(Duration expectedInterval) {
+    if (_lastTickTime == null) return;
+
     final now = DateTime.now();
     final actualInterval = now.difference(_lastTickTime!);
     final drift = actualInterval - expectedInterval;
 
     if (drift.abs() > Duration(milliseconds: 5)) {
-      // If drift is significant, adjust the next tick time
       _timer?.cancel();
       _timer = Timer(expectedInterval - drift, () {
         _startTicking();

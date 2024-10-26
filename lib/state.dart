@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/metronome/test.dart';
@@ -23,9 +24,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   bool _isServerDevice = false;
   Set<String> _connectedDeviceIds = {};
 
-  void Function(String) _displaySnack = (String message) {
-    //print(message);
-  };
+  void Function(String) _displaySnack = (_) {};
   void Function(int bpm, bool isPlaying, int tickCount)?
       onMetronomeUpdateReceived;
 
@@ -42,6 +41,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
 
   void defineName(String name) {
     _name = name;
+    notifyListeners();
+  }
+
+  void updateDisplaySnack(void Function(String) newDisplaySnack) {
+    _displaySnack = newDisplaySnack;
     notifyListeners();
   }
 
@@ -73,59 +77,134 @@ class NearbyMusicSyncProvider with ChangeNotifier {
 
   Future<bool> startAdvertising() async {
     try {
+      _displaySnack("Starting advertising as: $_name");
+
       bool advertisingResult = await _nearby.startAdvertising(
         _name,
         Strategy.P2P_CLUSTER,
-        onConnectionInitiated: onConnectionInitiated,
+        onConnectionInitiated: (id, info) {
+          _displaySnack("Connection initiated with $id (${info.endpointName})");
+          onConnectionInitiated(id, info);
+        },
         onConnectionResult: (id, status) {
+          _displaySnack("Connection result for $id: $status");
           if (status == Status.CONNECTED) {
             _connectedDeviceIds.add(id);
+            _displaySnack("Successfully connected to $id");
             notifyListeners();
+          } else if (status == Status.REJECTED) {
+            _displaySnack("Connection rejected by $id");
+          } else if (status == Status.ERROR) {
+            _displaySnack("Error connecting to $id");
           }
         },
         onDisconnected: (id) {
+          _displaySnack("Disconnected from $id");
           _connectedDeviceIds.remove(id);
           notifyListeners();
         },
       );
+
+      _displaySnack(advertisingResult
+          ? "Successfully started advertising"
+          : "Failed to start advertising");
       return advertisingResult;
-    } catch (e) {
-      _displaySnack('Error starting advertising: $e');
-      return false;
+    } catch (e, stackTrace) {
+      if (e.toString().contains('STATUS_ALREADY_ADVERTISING')) {
+        // Maybe ich muss ändern ?
+        // Handle the "already advertising" case
+        _displaySnack("Already advertising");
+        return false;
+      } else {
+        // Handle any other errors
+        _displaySnack('Error starting advertising: $e\n$stackTrace');
+        return false;
+      }
     }
   }
 
   Future<bool> startDiscovery(
       Function(String, String, String) onEndpointFound) async {
     try {
+      _displaySnack("Starting discovery as: $_name");
+
       bool discoveryResult = await _nearby.startDiscovery(
         _name,
         Strategy.P2P_CLUSTER,
-        onEndpointFound: onEndpointFound,
+        onEndpointFound: (id, name, serviceId) {
+          _displaySnack("Found endpoint: $id ($name)");
+          onEndpointFound(id, name, serviceId);
+        },
         onEndpointLost: (id) {
+          _displaySnack("Lost endpoint: $id");
           _connectedDeviceIds.remove(id);
           notifyListeners();
         },
       );
+
+      _displaySnack(discoveryResult
+          ? "Successfully started discovery"
+          : "Failed to start discovery");
       return discoveryResult;
-    } catch (e) {
-      _displaySnack('Error starting discovery: $e');
+    } catch (e, stackTrace) {
+      _displaySnack('Error starting discovery: $e\n$stackTrace');
       return false;
     }
   }
 
   void onConnectionInitiated(String id, ConnectionInfo info) {
+    _displaySnack("Accepting connection from $id (${info.endpointName})");
+
     Nearby().acceptConnection(
       id,
       onPayLoadRecieved: (endid, payload) async {
         if (payload.type == PayloadType.BYTES) {
           String message = String.fromCharCodes(payload.bytes!);
+          _displaySnack(
+              "Received payload from $endid: ${message.substring(0, min(50, message.length))}...");
           handleIncomingMessage(message);
         }
       },
-    );
+    ).catchError((e) {
+      _displaySnack("Error accepting connection: $e");
+    });
+
     if (_isServerDevice && _currentGroup.isNotEmpty) {
+      _displaySnack("Sending current group data to new device $id");
       sendCurrentGroupDataToIdDevice(id);
+    }
+  }
+
+  Future<bool> requestConnection(String id) async {
+    try {
+      _displaySnack("Requesting connection to $id");
+
+      bool result = await _nearby.requestConnection(
+        _name,
+        id,
+        onConnectionInitiated: (id, info) {
+          _displaySnack(
+              "Connection initiated by request with $id (${info.endpointName})");
+          onConnectionInitiatedByRequest(id, info);
+        },
+        onConnectionResult: (id, status) {
+          _displaySnack("Connection result for request to $id: $status");
+          if (status == Status.CONNECTED) {
+            _connectedDeviceIds.add(id);
+            notifyListeners();
+          }
+        },
+        onDisconnected: (id) {
+          _displaySnack("Disconnected from requested connection $id");
+          _connectedDeviceIds.remove(id);
+          notifyListeners();
+        },
+      );
+
+      return result;
+    } catch (e, stackTrace) {
+      _displaySnack('Error requesting connection: $e\n$stackTrace');
+      return false;
     }
   }
 
@@ -141,33 +220,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     );
   }
 
-  Future<bool> requestConnection(String id) async {
-    try {
-      bool result = await _nearby.requestConnection(
-        _name,
-        id,
-        onConnectionInitiated: onConnectionInitiatedByRequest,
-        onConnectionResult: (id, status) {
-          if (status == Status.CONNECTED) {
-            _connectedDeviceIds.add(id);
-            notifyListeners();
-          }
-        },
-        onDisconnected: (id) {
-          _connectedDeviceIds.remove(id);
-          notifyListeners();
-        },
-      );
-      return result;
-    } catch (e) {
-      _displaySnack('Error requesting connection: $e');
-      return false;
-    }
-  }
-
   void handleIncomingMessage(String message) {
+    print('Did receive: $message');
     try {
       Map<String, dynamic> data = json.decode(message);
+      displaySnack("Received message: ${data['type']}");
       switch (data['type']) {
         case 'songWechsel':
           _currentSongHash = data['content'];
@@ -197,7 +254,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       _currentSongHash = songHash;
       _currentSection1 = section1;
       _currentSection2 = section2;
-      return _sendUpdateToClients();
+      notifyListeners();
+      if (_userState == UserState.server) {
+        return await _sendUpdateToClients();
+      }
+      return true;
     }
     return false;
   }
@@ -236,11 +297,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   Future<bool> sendGroupData(
-      String group, Map<String, dynamic> groupSongData) async {
+      String groupName, Map<String, dynamic> groupSongData) async {
     Map<String, dynamic> data = {
       'type': 'groupData',
       'content': {
-        'group': group,
+        'group': groupName,
         'songs': groupSongData,
       }
     };
@@ -261,10 +322,17 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   Future<bool> _sendDataToAll(Map<String, dynamic> data) async {
+    bool allSuccess = true; // Start by assuming success
+
     try {
-      final bytes = Uint8List.fromList(json.encode(data).codeUnits);
-      await _nearby.sendBytesPayload('*', bytes);
-      return true;
+      for (String id in _connectedDeviceIds) {
+        bool result = await sendDataToDevice(id, data);
+        if (!result) {
+          allSuccess = false;
+          _displaySnack('Error sending data to device with id: $id');
+        }
+      }
+      return allSuccess;
     } catch (e) {
       _displaySnack('Error sending data to all devices: $e');
       return false;
