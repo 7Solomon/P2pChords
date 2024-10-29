@@ -16,10 +16,12 @@ enum UserState { server, client, none }
 class NearbyMusicSyncProvider with ChangeNotifier {
   String _name = 'undefined';
   final Nearby _nearby = Nearby();
+
   String _currentGroup = '';
   String _currentSongHash = '';
-  int _currentSection1 = 0;
-  int _currentSection2 = 1;
+  List<int> _currentSections = [0, 1];
+  int _numberOfSectionsToShow = 2;
+
   UserState _userState = UserState.none;
   bool _isServerDevice = false;
   Set<String> _connectedDeviceIds = {};
@@ -29,10 +31,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       onMetronomeUpdateReceived;
 
   String get name => _name;
+  //
   String get currentGroup => _currentGroup;
   String get currentSongHash => _currentSongHash;
-  int get currentSection1 => _currentSection1;
-  int get currentSection2 => _currentSection2;
+  List<int> get currentSections => _currentSections;
+  int get numberOfSectionsToShow => _numberOfSectionsToShow;
+
   bool get isServerDevice => _isServerDevice;
   UserState get userState => _userState;
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
@@ -230,8 +234,8 @@ class NearbyMusicSyncProvider with ChangeNotifier {
           _currentSongHash = data['content'];
           break;
         case 'sectionWechsel':
-          _currentSection1 = data['content']['section1'];
-          _currentSection1 = data['content']['section2'];
+          _currentSections = data['content']['currentSections'];
+          _numberOfSectionsToShow = data['content']['numberOfSectionsToShow'];
           break;
         case 'groupData':
           _currentGroup = data['content']['group'];
@@ -248,12 +252,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateSongAndSection(
-      String songHash, int section1, int section2) async {
+  Future<bool> updateSongAndSection(String songHash, List<int> currentSections,
+      int numberOfSectionsToShow) async {
     if (_userState == UserState.server || _userState == UserState.none) {
       _currentSongHash = songHash;
-      _currentSection1 = section1;
-      _currentSection2 = section2;
+      _currentSections = currentSections;
+      _numberOfSectionsToShow = numberOfSectionsToShow;
       notifyListeners();
       if (_userState == UserState.server) {
         return await _sendUpdateToClients();
@@ -276,8 +280,8 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       'type': 'update',
       'content': {
         'songHash': _currentSongHash,
-        'section1': _currentSection1,
-        'section2': _currentSection2,
+        'currentSections': _currentSections,
+        'numberOfSectionsToShow': _numberOfSectionsToShow,
       }
     };
     return _sendDataToAll(data);

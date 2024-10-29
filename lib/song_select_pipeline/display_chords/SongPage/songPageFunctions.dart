@@ -1,57 +1,113 @@
-import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/lyricsChordsClass.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 List<Widget> displaySectionContent({
   required Map<String, List<Widget>> songStructure,
   required List<Map<String, String>> groupSongs,
   required String currentSongHash,
-  required int currentSection1,
-  required int currentSection2,
-  required Function(int, int) updateSections,
-  required Function() onEndReached, // Add callback for end reach
-  required Function() onStartReachedd,
+  required List<int> currentSections,
+  //required Function(List<int>) updateSections,
+  required Function() onEndReached,
+  required Function() onStartReached,
 }) {
   List<Widget> displayData = [];
   List<Widget> sectionWidgets = songStructure[currentSongHash] ?? [];
 
-  // Handle the first section
-  if (currentSection1 >= 0 && currentSection1 < sectionWidgets.length) {
-    displayData.add(GestureDetector(
-      
-      onTap: () {
-        if (currentSection1 > 0) {
-          updateSections(currentSection1 - 1, currentSection1);
-        } else {
-          // Call onEndReached if needed
-          onEndReached();
-        }
-      },
-      child: sectionWidgets[currentSection1],
-    ));
-  }
-
-  // Handle the second section
-  if (currentSection2 >= 0 && currentSection2 < sectionWidgets.length) {
-    displayData.add(GestureDetector(
-      onTap: () {
-        if (currentSection2 < sectionWidgets.length - 1) {
-          updateSections(currentSection2, currentSection2 + 1);
-        } else {
-          // Call
-          onStartReachedd();
-        }
-      },
-      child: sectionWidgets[currentSection2],
-    ));
+  // Add all requested sections
+  for (int sectionIndex in currentSections) {
+    if (sectionIndex >= 0 && sectionIndex < sectionWidgets.length) {
+      displayData.add(sectionWidgets[sectionIndex]);
+    }
   }
 
   if (displayData.isEmpty) {
-    return [const Text('Something went wrong')];
+    return [const Text('Keine Songdaten verfügbar')];
   }
   return displayData;
-  //return [const Text('ALl good')];
+}
+
+// New widget to handle screen taps
+class SongDisplayScreen extends StatelessWidget {
+  final Map<String, List<Widget>> songStructure;
+  final List<Map<String, String>> groupSongs;
+  final String currentSongHash;
+  final List<int> currentSections;
+  final Function(String, List<int>, int) updateSections;
+  final Function() onEndReached;
+  final Function() onStartReached;
+
+  const SongDisplayScreen({
+    Key? key,
+    required this.songStructure,
+    required this.groupSongs,
+    required this.currentSongHash,
+    required this.currentSections,
+    required this.updateSections,
+    required this.onEndReached,
+    required this.onStartReached,
+  }) : super(key: key);
+
+  void _handleTap(BuildContext context, Offset tapPosition) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final double height = box.size.height;
+    final bool isTopHalf = tapPosition.dy < height / 2;
+
+    final List<Widget> sectionWidgets = songStructure[currentSongHash] ?? [];
+
+    if (isTopHalf) {
+      // Move sections down
+      List<int> newSections = currentSections.map((section) {
+        if (section > 0) {
+          return section - 1;
+        } else {
+          onEndReached();
+          return section;
+        }
+      }).toList();
+
+      if (!listEquals(newSections, currentSections)) {
+        updateSections(currentSongHash, newSections, 2); // das hier auch
+      }
+    } else {
+      // Move sections up
+      List<int> newSections = currentSections.map((section) {
+        if (section < sectionWidgets.length - 1) {
+          return section + 1;
+        } else {
+          onStartReached();
+          return section;
+        }
+      }).toList();
+
+      if (!listEquals(newSections, currentSections)) {
+        updateSections(currentSongHash, newSections,
+            2); // maybe muss anders geregelt werden
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque, // Ensures taps are detected everywhere
+      onTapDown: (TapDownDetails details) {
+        _handleTap(context, details.localPosition);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: displaySectionContent(
+          songStructure: songStructure,
+          groupSongs: groupSongs,
+          currentSongHash: currentSongHash,
+          currentSections: currentSections,
+          //updateSections: updateSections,
+          onEndReached: onEndReached,
+          onStartReached: onStartReached,
+        ),
+      ),
+    );
+  }
 }
 
 List<Widget> buildSongContent(

@@ -66,7 +66,7 @@ class SongListDrawer extends StatelessWidget {
                   return ListTile(
                     title: Text(name),
                     onTap: () async {
-                      songSyncProvider.updateSongAndSection(hash, 0, 1);
+                      songSyncProvider.updateSongAndSection(hash, [0, 1], 2);
                       // Close the drawer
                       Navigator.of(context).pop();
 

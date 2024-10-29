@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/uiSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../dataManagment/storageManager.dart';
@@ -19,6 +21,7 @@ class Songoverviewpage extends StatelessWidget {
   Widget build(BuildContext context) {
     final songSyncProvider =
         Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    final uiSettings = context.watch<UiSettings>();
     //print(songSyncProvider.currentGroup);
     return Scaffold(
       appBar: AppBar(
@@ -56,6 +59,7 @@ class Songoverviewpage extends StatelessWidget {
                       final hash = songsData.keys.elementAt(index);
                       final song = songsData[hash]!;
                       final name = song['header']['name'] ?? 'noName';
+
                       return
 
                           /*
@@ -122,7 +126,14 @@ class Songoverviewpage extends StatelessWidget {
                             vertical: 0, horizontal: 16.0),
                         iconBool: false,
                         onTap: () {
-                          songSyncProvider.updateSongAndSection(hash, 0, 1);
+                          //print(songsData);
+                          List<int> sectionIndexes = List.generate(
+                              // Ist noch alles quatsch hier
+                              min(songsData.length,
+                                  uiSettings.secctionIndexSize),
+                              (index) => index + 1);
+                          songSyncProvider.updateSongAndSection(
+                              hash, [0, 1], uiSettings.secctionIndexSize);
                           Navigator.push(
                             context,
                             MaterialPageRoute(

@@ -74,7 +74,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     if (allSongs.isNotEmpty) {
       for (int i = 1; i < allSongs.length; i++) {
         if (allSongs[i]['hash'] == songProvider.currentSongHash) {
-          songProvider.updateSongAndSection(allSongs[i - 1]['hash']!, 1, 2);
+          songProvider.updateSongAndSection(
+              allSongs[i - 1]['hash']!, [1, 2], 2);
           break; // Exit the loop once the song hash is updated
         }
       }
@@ -91,7 +92,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     if (allSongs.isNotEmpty) {
       for (int i = 0; i < allSongs.length - 1; i++) {
         if (allSongs[i]['hash'] == songSyncProvider.currentSongHash) {
-          songSyncProvider.updateSongAndSection(allSongs[i + 1]['hash']!, 0, 1);
+          songSyncProvider.updateSongAndSection(
+              allSongs[i + 1]['hash']!, [0, 1], 2);
           break; // Exit the loop once the song hash is updated
         }
       }
@@ -158,25 +160,21 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     // Ensure currentGroup is not null and has valid data
                     if (currentGroup != null && currentGroup.isNotEmpty) {
                       // Proceed with displaying the content as you originally planned
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: displaySectionContent(
-                          songStructure: songStructures,
-                          groupSongs: currentGroup,
-                          currentSongHash: currentSongHash,
-                          currentSection1: songSyncProvider.currentSection1,
-                          currentSection2: songSyncProvider.currentSection2,
-                          updateSections: (section1, section2) {
-                            songSyncProvider.updateSongAndSection(
-                                currentSongHash, section1, section2);
-                          },
-                          onEndReached: onSongStart,
-                          onStartReachedd: onSongEnd,
-                        ),
+                      return SongDisplayScreen(
+                        songStructure: songStructures,
+                        groupSongs: currentGroup,
+                        currentSongHash: currentSongHash,
+                        currentSections: songSyncProvider.currentSections,
+                        updateSections: (hash, sections, sectionIndex) {
+                          songSyncProvider.updateSongAndSection(
+                              hash, sections, sectionIndex);
+                        },
+                        onEndReached: onSongStart,
+                        onStartReached: onSongEnd,
                       );
                     } else {
                       // Handle the case where data is null or invalid
-                      return const Text("Der Song hat keine Daten");
+                      return const Text("Keine Daten um anzuzeigen");
                     }
                   },
                 ),

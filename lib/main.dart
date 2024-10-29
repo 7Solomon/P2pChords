@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:P2pChords/connect/pages/choosePage.dart';
 import 'package:P2pChords/song_select_pipeline/GroupOverviewPage.dart';
 import 'package:P2pChords/groupManagement/manageGroupPage.dart';
+import 'package:P2pChords/uiSettings.dart';
 import 'state.dart';
 
 void main() {
@@ -30,6 +31,7 @@ void main() {
             return bloc;
           },
         ),
+        ChangeNotifierProvider(create: (_) => UiSettings()),
       ],
       child: const MyApp(),
     ),
