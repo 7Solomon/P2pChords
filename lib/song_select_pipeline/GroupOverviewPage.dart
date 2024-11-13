@@ -1,4 +1,5 @@
 import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
+import 'package:P2pChords/uiSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +19,7 @@ class GroupOverviewpage extends StatefulWidget {
 }
 
 class _GroupOverviewpageState extends State<GroupOverviewpage> {
-  Map<String, Map<String, dynamic>> _allGroupData = {};
+  Map<String, Map<String, Map>> _allGroupData = {};
   Map<String, List<Map<String, String>>> _allGroups = {};
   bool _isLoading = true;
 
@@ -30,6 +31,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
   Future<void> _loadAllJsons() async {
     print('Loading all JSONs');
+
     setState(() => _isLoading = true);
     _allGroups = await MultiJsonStorage.getAllGroups();
 
@@ -53,10 +55,28 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
     setState(() => _isLoading = false);
   }
 
+  //void test(){
+  //  FutureBuilder(
+  //            future: MultiJsonStorage.loadJsonsFromGroup(
+  //                songSyncProvider.currentGroup),
+  //            builder: (context, snapshot) {
+  //              if (snapshot.connectionState == ConnectionState.waiting) {
+  //                return const Center(child: CircularProgressIndicator());
+  //              } else if (snapshot.hasError) {
+  //                return Center(child: Text('Error: ${snapshot.error}'));
+  //              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+  //                return const Center(child: Text('No songs available'));
+  //              }
+  //              // Extract the data from snapshot
+  //              final Map<String, Map<String, dynamic>> songsData =
+  //                  snapshot.data!;
+  //              //
+  //}
+
   @override
   Widget build(BuildContext context) {
     final nearbyProvider = Provider.of<NearbyMusicSyncProvider>(context);
-    //final currentSongData = Provider.of<SongProvider>(context, listen: false);
+    final globalData = Provider.of<UiSettings>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -81,69 +101,74 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                       subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                       icon: Icons.file_copy,
                       onTap: () async {
-                        /// !!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        nearbyProvider.updateGroup(key);
-                        // Navigate to the SongOverviewPage
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Songoverviewpage(
-                              onGroupDeleted: _loadAllJsons,
-                            ),
-                          ),
-                        );
+                        final Map<String, Map> songsDataMap =
+                            _allGroupData[key] ?? {};
+                        ////// !!! globalData.groupSongMap ==  Was hier?
+                        //print('songsDataMap: $songsDataMap');
+                        globalData.setSongsDataMap(songsDataMap);
+                        globalData.setCurrentGroup(key);
 
-                        // Check if the device is a server and send data to clients if it is
-                        if (nearbyProvider.userState == UserState.server) {
-                          //print(_allGroupData);
-                          //print(key);
-                          //print(_allGroupData[key]);
-                          Map<String, dynamic> songData =
-                              _allGroupData[key] ?? {};
-
-                          bool? shouldSend = await showDialog<bool>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Senden der Gruppen Daten'),
-                                content: const Text(
-                                    'Willst du die Datein zu den clients Senden?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context)
-                                          .pop(false); // User pressed No
-                                    },
-                                    child: const Text('Nein'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context)
-                                          .pop(true); // User pressed Yes
-                                    },
-                                    child: const Text('Ja'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-
-                          // If the user presses Yes, send the data
-                          if (shouldSend == true) {
-                            bool success = await nearbyProvider.sendGroupData(
-                                key, songData);
-
-                            // Optionally show a success message
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: success
-                                    ? const Text(
-                                        'Daten erfolgreich an alle Clients gesendet')
-                                    : const Text(
-                                        'Fehler beim Senden der Daten'),
-                              ),
+                        if (nearbyProvider.userState != UserState.client) {
+                          if (nearbyProvider.userState == UserState.server) {
+                            bool? shouldSend = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Senden der Gruppen Daten'),
+                                  content: const Text(
+                                      'Willst du die Datein zu den clients Senden?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context)
+                                            .pop(false); // User pressed No
+                                      },
+                                      child: const Text('Nein'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context)
+                                            .pop(true); // User pressed Yes
+                                      },
+                                      child: const Text('Ja'),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
+
+                            // If the user presses Yes, send the data
+                            if (shouldSend == true) {
+                              bool success = await nearbyProvider.sendGroupData(
+                                  key, songsDataMap);
+
+                              // Optionally show a success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: success
+                                      ? const Text(
+                                          'Daten erfolgreich an alle Clients gesendet')
+                                      : const Text(
+                                          'Fehler beim Senden der Daten'),
+                                ),
+                              );
+                            }
                           }
+
+                          // Navigate to the SongOverviewPage
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Songoverviewpage(),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Du kannst keine Gruppen auswählen, wenn du ein Client bist'),
+                            ),
+                          );
                         }
                       },
                     );

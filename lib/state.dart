@@ -17,10 +17,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   String _name = 'undefined';
   final Nearby _nearby = Nearby();
 
+  /// DEBUG REMOVE
   String _currentGroup = '';
   String _currentSongHash = '';
-  List<int> _currentSections = [0, 1];
+  List<int> _currentSections = [];
   int _numberOfSectionsToShow = 2;
+  //
 
   UserState _userState = UserState.none;
   bool _isServerDevice = false;
@@ -31,11 +33,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       onMetronomeUpdateReceived;
 
   String get name => _name;
-  //
-  String get currentGroup => _currentGroup;
-  String get currentSongHash => _currentSongHash;
-  List<int> get currentSections => _currentSections;
-  int get numberOfSectionsToShow => _numberOfSectionsToShow;
+  //String get currentGroup => _currentGroup;
+  //String get currentSongHash => _currentSongHash;
+  //List<int> get currentSections => List.unmodifiable(_currentSections);
+  //int get numberOfSectionsToShow => _numberOfSectionsToShow;
 
   bool get isServerDevice => _isServerDevice;
   UserState get userState => _userState;
@@ -47,6 +48,23 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     _name = name;
     notifyListeners();
   }
+
+  //void initializeSections({
+  //  required String songHash,
+  //  int startFromSection = 0,
+  //  int? numberOfSections,
+  //}) {
+  //  _currentSongHash = songHash;
+  //  _numberOfSectionsToShow = numberOfSections ?? _numberOfSectionsToShow;
+//
+  //  // Create a list of consecutive sections starting from startFromSection
+  //  _currentSections = List.generate(
+  //    _numberOfSectionsToShow,
+  //    (index) => startFromSection + index,
+  //  );
+//
+  //  notifyListeners();
+  //}
 
   void updateDisplaySnack(void Function(String) newDisplaySnack) {
     _displaySnack = newDisplaySnack;
@@ -252,19 +270,65 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateSongAndSection(String songHash, List<int> currentSections,
-      int numberOfSectionsToShow) async {
-    if (_userState == UserState.server || _userState == UserState.none) {
-      _currentSongHash = songHash;
-      _currentSections = currentSections;
-      _numberOfSectionsToShow = numberOfSectionsToShow;
-      notifyListeners();
-      if (_userState == UserState.server) {
-        return await _sendUpdateToClients();
-      }
-      return true;
+  Future<bool> updateSongAndSection(
+    String songHash,
+    List<int> currentSections,
+    int numberOfSectionsToShow,
+  ) async {
+    if (_userState != UserState.server && _userState != UserState.none) {
+      return false;
     }
-    return false;
+
+    _currentSongHash = songHash;
+    _currentSections = currentSections;
+    _numberOfSectionsToShow = numberOfSectionsToShow;
+    notifyListeners();
+
+    if (_userState == UserState.server) {
+      return await _sendUpdateToClients();
+    }
+    return true;
+  }
+
+  Future<bool> updateNumberOfSections(int newNumber, int totalSections) async {
+    if (_userState != UserState.server && _userState != UserState.none) {
+      return false;
+    }
+
+    // Ensure we don't exceed total sections
+    _numberOfSectionsToShow = newNumber.clamp(1, totalSections);
+
+    // Adjust current sections if needed
+    if (_currentSections.length > _numberOfSectionsToShow) {
+      // Remove sections from the end
+      _currentSections = _currentSections.sublist(0, _numberOfSectionsToShow);
+    } else if (_currentSections.length < _numberOfSectionsToShow) {
+      // Add sections at the end
+      int lastSection = _currentSections.last;
+      for (int i = 1;
+          i <= _numberOfSectionsToShow - _currentSections.length;
+          i++) {
+        if (lastSection + i < totalSections) {
+          _currentSections.add(lastSection + i);
+        }
+      }
+    }
+
+    notifyListeners();
+
+    if (_userState == UserState.server) {
+      return await _sendUpdateToClients();
+    }
+    return true;
+  }
+
+  // Helper method to check if movement is possible
+  bool canMove(bool moveUp, int totalSections) {
+    if (moveUp) {
+      return _currentSections.last < totalSections - 1;
+    } else {
+      return _currentSections.first > 0;
+    }
   }
 
   Future<bool> updateGroup(String group) async {

@@ -59,10 +59,11 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final globalSongData = Provider.of<UiSettings>(context, listen: true);
     final songSyncProvider =
         Provider.of<NearbyMusicSyncProvider>(context, listen: true);
     //songSyncProvider.updateDisplaySnack(); muss gemounted sein
-
+    //globalSongData.getListOfDisplaySections(2);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -126,8 +127,8 @@ class MainPage extends StatelessWidget {
                               // Send data to the server when the user is a client
                               if (songSyncProvider
                                   .connectedDeviceIds.isNotEmpty) {
-                                if (songSyncProvider.currentGroup.contains(
-                                    songSyncProvider.currentSongHash)) {
+                                if (globalSongData.currentGroup
+                                    .contains(globalSongData.currentSongHash)) {
                                   // Navigate to the ChordSheetPage
                                   Navigator.push(
                                     context,
