@@ -36,10 +36,13 @@ class _SongDisplayScreenState extends State<SongDisplayScreen> {
     final bool isTopHalf = tapPosition.dy < height / 2;
     final bool isRightQuarter = tapPosition.dx > box.size.width * 0.75;
 
-    if (isTopHalf) {
-      globalSongData..updateListOfDisplaySectionsUp();
+    if (isRightQuarter) {
+      widget.displaySnack(
+          'Right quarter'); // could not work, because of some async gap shit
+    } else if (isTopHalf) {
+      globalSongData.updateListOfDisplaySectionsUp();
     } else {
-      globalSongData..updateListOfDisplaySectionsDown();
+      globalSongData.updateListOfDisplaySectionsDown();
     }
   }
 
