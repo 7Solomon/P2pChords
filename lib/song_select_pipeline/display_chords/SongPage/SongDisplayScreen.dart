@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/displayFunctions.dart';
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/uiSettings.dart';
@@ -9,11 +11,13 @@ class SongDisplayScreen extends StatefulWidget {
   final globalData;
   final mappings;
   final void Function(String) displaySnack;
+  final void Function() openDrawer;
   const SongDisplayScreen({
     Key? key,
     required this.globalData,
     required this.mappings,
     required this.displaySnack,
+    required this.openDrawer,
   }) : super(key: key);
 
   @override
@@ -22,12 +26,15 @@ class SongDisplayScreen extends StatefulWidget {
 
 class _SongDisplayScreenState extends State<SongDisplayScreen> {
   late UiSettings globalSongData; // Store provider instance here
+  late NearbyMusicSyncProvider musicSyncProvider;
   // remove !!!! sectionWidgets
   //final sectionWidgets = [];
   @override
   void initState() {
     super.initState();
     globalSongData = Provider.of<UiSettings>(context, listen: false);
+    musicSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
   }
 
   void _handleTap(BuildContext context, Offset tapPosition) {
@@ -39,38 +46,18 @@ class _SongDisplayScreenState extends State<SongDisplayScreen> {
     if (isRightQuarter) {
       widget.displaySnack(
           'Right quarter'); // could not work, because of some async gap shit
+
+      widget.openDrawer;
     } else if (isTopHalf) {
       globalSongData.updateListOfDisplaySectionsUp();
+      musicSyncProvider.sendUpdateToClients(
+          globalSongData.uiSectionData, globalSongData.startIndexofSection);
     } else {
       globalSongData.updateListOfDisplaySectionsDown();
+      musicSyncProvider.sendUpdateToClients(
+          globalSongData.uiSectionData, globalSongData.startIndexofSection);
     }
   }
-
-  //void onStartReached() {
-  //final List<Map<String, String>> allSongs =
-  //    allGroups?[songSyncProvider.currentGroup] ?? [];
-//
-  //for (int i = 1; i < allSongs.length; i++) {
-  //  if (allSongs[i]['hash'] == songSyncProvider.currentSongHash) {
-  //    songSyncProvider.updateSongAndSection(
-  //        allSongs[i - 1]['hash']!, [1, 2], 2);
-  //    break;
-  //  }
-  //}
-  //}
-
-  //void onEndReached() {
-  //final List<Map<String, String>> allSongs =
-  //    allGroups?[songSyncProvider.currentGroup] ?? [];
-//
-  //for (int i = 0; i < allSongs.length - 1; i++) {
-  //  if (allSongs[i]['hash'] == songSyncProvider.currentSongHash) {
-  //    songSyncProvider.updateSongAndSection(
-  //        allSongs[i + 1]['hash']!, [0, 1], 2);
-  //    break;
-  //  }
-  //}
-  //}
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +71,7 @@ class _SongDisplayScreenState extends State<SongDisplayScreen> {
         children: displaySectionContent(
             globalData: widget
                 .globalData, // was widget.globalData.groupSongMap before, viellecicht so schöner
-            uiDisplaySectionData: widget.globalData.UiSectionData,
+            uiDisplaySectionData: widget.globalData.uiSectionData,
             key: widget.globalData.currentKey,
             mappings: widget.mappings,
             displaySnack: widget.displaySnack),

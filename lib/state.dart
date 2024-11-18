@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/metronome/test.dart';
+import 'package:P2pChords/uiSettings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,13 +17,7 @@ enum UserState { server, client, none }
 class NearbyMusicSyncProvider with ChangeNotifier {
   String _name = 'undefined';
   final Nearby _nearby = Nearby();
-
-  /// DEBUG REMOVE
-  String _currentGroup = '';
-  String _currentSongHash = '';
-  List<int> _currentSections = [];
-  int _numberOfSectionsToShow = 2;
-  //
+  final UiSettings _uiSettings = UiSettings();
 
   UserState _userState = UserState.none;
   bool _isServerDevice = false;
@@ -33,10 +28,6 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       onMetronomeUpdateReceived;
 
   String get name => _name;
-  //String get currentGroup => _currentGroup;
-  //String get currentSongHash => _currentSongHash;
-  //List<int> get currentSections => List.unmodifiable(_currentSections);
-  //int get numberOfSectionsToShow => _numberOfSectionsToShow;
 
   bool get isServerDevice => _isServerDevice;
   UserState get userState => _userState;
@@ -48,23 +39,6 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     _name = name;
     notifyListeners();
   }
-
-  //void initializeSections({
-  //  required String songHash,
-  //  int startFromSection = 0,
-  //  int? numberOfSections,
-  //}) {
-  //  _currentSongHash = songHash;
-  //  _numberOfSectionsToShow = numberOfSections ?? _numberOfSectionsToShow;
-//
-  //  // Create a list of consecutive sections starting from startFromSection
-  //  _currentSections = List.generate(
-  //    _numberOfSectionsToShow,
-  //    (index) => startFromSection + index,
-  //  );
-//
-  //  notifyListeners();
-  //}
 
   void updateDisplaySnack(void Function(String) newDisplaySnack) {
     _displaySnack = newDisplaySnack;
@@ -191,9 +165,9 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       _displaySnack("Error accepting connection: $e");
     });
 
-    if (_isServerDevice && _currentGroup.isNotEmpty) {
+    if (_isServerDevice && _uiSettings.currentGroup.isNotEmpty) {
       _displaySnack("Sending current group data to new device $id");
-      sendCurrentGroupDataToIdDevice(id);
+      //sendGroupData(id);
     }
   }
 
@@ -248,17 +222,14 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       Map<String, dynamic> data = json.decode(message);
       displaySnack("Received message: ${data['type']}");
       switch (data['type']) {
-        case 'songWechsel':
-          _currentSongHash = data['content'];
-          break;
-        case 'sectionWechsel':
-          _currentSections = data['content']['currentSections'];
-          _numberOfSectionsToShow = data['content']['numberOfSectionsToShow'];
-          break;
+        case 'update':
+          Map sectionData = data['content']['sectionData'];
+          int index = data['content']['index'];
+          _uiSettings.setUiSectionDataAndIndex(sectionData, index);
         case 'groupData':
-          _currentGroup = data['content']['group'];
           MultiJsonStorage.saveJsonsGroup(
               data['content']['group'], data['content']['songs']);
+          _uiSettings.setCurrentGroup(data['content']['group']);
           break;
         case 'metronomeUpdate':
           handleMetronomeUpdate(data);
@@ -270,98 +241,41 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateSongAndSection(
-    String songHash,
-    List<int> currentSections,
-    int numberOfSectionsToShow,
-  ) async {
-    if (_userState != UserState.server && _userState != UserState.none) {
-      return false;
-    }
-
-    _currentSongHash = songHash;
-    _currentSections = currentSections;
-    _numberOfSectionsToShow = numberOfSectionsToShow;
-    notifyListeners();
-
-    if (_userState == UserState.server) {
-      return await _sendUpdateToClients();
-    }
-    return true;
-  }
-
-  Future<bool> updateNumberOfSections(int newNumber, int totalSections) async {
-    if (_userState != UserState.server && _userState != UserState.none) {
-      return false;
-    }
-
-    // Ensure we don't exceed total sections
-    _numberOfSectionsToShow = newNumber.clamp(1, totalSections);
-
-    // Adjust current sections if needed
-    if (_currentSections.length > _numberOfSectionsToShow) {
-      // Remove sections from the end
-      _currentSections = _currentSections.sublist(0, _numberOfSectionsToShow);
-    } else if (_currentSections.length < _numberOfSectionsToShow) {
-      // Add sections at the end
-      int lastSection = _currentSections.last;
-      for (int i = 1;
-          i <= _numberOfSectionsToShow - _currentSections.length;
-          i++) {
-        if (lastSection + i < totalSections) {
-          _currentSections.add(lastSection + i);
-        }
-      }
-    }
-
-    notifyListeners();
-
-    if (_userState == UserState.server) {
-      return await _sendUpdateToClients();
-    }
-    return true;
-  }
-
-  // Helper method to check if movement is possible
-  bool canMove(bool moveUp, int totalSections) {
-    if (moveUp) {
-      return _currentSections.last < totalSections - 1;
-    } else {
-      return _currentSections.first > 0;
-    }
-  }
-
-  Future<bool> updateGroup(String group) async {
-    if (_userState == UserState.server || _userState == UserState.none) {
-      _currentGroup = group;
-      return true;
-    }
-    return false;
-  }
-
-  Future<bool> _sendUpdateToClients() async {
+  Future<bool> sendUpdateToClients(Map sectionData, int index) async {
     Map<String, dynamic> data = {
       'type': 'update',
       'content': {
-        'songHash': _currentSongHash,
-        'currentSections': _currentSections,
-        'numberOfSectionsToShow': _numberOfSectionsToShow,
-      }
+        'sectionData': sectionData,
+        'index': index
+      } // Index braucht man eigentlich nicht. Aber why not
     };
+    print(data);
     return _sendDataToAll(data);
   }
 
   Future<bool> sendCurrentGroupDataToIdDevice(String id) async {
     Map<String, dynamic> groupSongData =
-        await MultiJsonStorage.loadJsonsFromGroup(_currentGroup);
+        await MultiJsonStorage.loadJsonsFromGroup(_uiSettings.currentGroup);
     Map<String, dynamic> data = {
       'type': 'groupData',
       'content': {
-        'group': _currentGroup,
+        'group': _uiSettings.currentGroup,
         'songs': groupSongData,
       }
     };
+
     return sendDataToDevice(id, data);
+  }
+
+  Future<bool> sendSongsDataMap(Map dataMap) {
+    Map<String, dynamic> data = {
+      'type': 'groupData',
+      'content': {
+        'group': _uiSettings.currentGroup,
+        'songs': dataMap,
+      }
+    };
+    return _sendDataToAll(data);
   }
 
   Future<bool> sendGroupData(

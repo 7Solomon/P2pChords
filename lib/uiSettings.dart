@@ -6,39 +6,26 @@ class UiSettings extends ChangeNotifier {
   //ThemeMode _themeMode = ThemeMode.system;
   //double _fontSize = 14.0;
   Map<String, Map> _songsDataMap = {};
-  Map<String, List> _groupSongMap = {};
+  //Map<String, List> _groupSongMap = {};
   String _currentGroup = "";
   String _currentSongHash = "";
   String _currentKey = "C";
 
   ///
-  Map _UiSectionData = {};
+  Map<String, Map<String, String>> _nashvileMappings = {};
+  Map _uiSectionData = {};
   int _lengthOfSections = 4;
-  int _sectionsAdded = 0;
   int _startIndexofSection = 0;
 
   Map get songsDataMap => _songsDataMap;
-  Map<String, List> get groupSongMap => _groupSongMap;
+  Map<String, Map<String, String>> get nashvileMappings => _nashvileMappings;
   String get currentGroup => _currentGroup;
   String get currentSongHash => _currentSongHash;
   String get currentKey => _currentKey;
-  Map get UiSectionData => _UiSectionData;
+  Map get uiSectionData => _uiSectionData;
+  int get lengthOfSections => _lengthOfSections;
+  int get startIndexofSection => _startIndexofSection;
 
-  //ThemeMode get themeMode => _themeMode;
-  //double get fontSize => _fontSize;
-
-  //String giveHashAfterHash(String hash) {
-  //  List keys = _songsDataMap.keys.toList();
-  //  int currentIndex = keys.indexOf(hash);
-
-  //  if (currentIndex != -1 && currentIndex < keys.length - 1) {
-  //    String nextKey = keys[currentIndex + 1];
-  //    return nextKey;
-  //  } else {
-  //    String firstKey = keys[0];
-  //    return firstKey;
-  //  }
-  //}
   void getListOfDisplaySections(int currentIndex) {
     int maxLengthOfSections = _lengthOfSections;
     Map<String, List<int>> displaySections = {};
@@ -104,13 +91,10 @@ class UiSettings extends ChangeNotifier {
     }
 
     _startIndexofSection = currentIndex;
-    _UiSectionData = displaySections;
-    print('Display Sections: $_UiSectionData');
+    _uiSectionData = displaySections;
   }
 
   void updateListOfDisplaySectionsUp() {
-    print(
-        '_songsDataMap.keys.toList().indexOf(_currentSongHash)${_songsDataMap.keys.toList().indexOf(_currentSongHash)}');
     if (!(_startIndexofSection - 1 > 0)) {
       if (_songsDataMap.keys.toList().indexOf(_currentSongHash) > 0) {
         // Set New Key and Index 0 if the start is reached and this is not the first song
@@ -135,11 +119,6 @@ class UiSettings extends ChangeNotifier {
   void updateListOfDisplaySectionsDown() {
     if (_startIndexofSection + 1 > // ! kann zu Not Good Screen führen???
         _songsDataMap[_currentSongHash]!['data'].length - 1) {
-      print('--');
-      print((
-        _songsDataMap.keys.toList().indexOf(_currentSongHash),
-        _songsDataMap.keys.toList().length - 1
-      ));
       if (_songsDataMap.keys.toList().indexOf(_currentSongHash) >=
           _songsDataMap.keys.toList().length - 1) {
         _currentSongHash = _songsDataMap.keys.toList()[0];
@@ -179,8 +158,14 @@ class UiSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setGroupSongMap(Map<String, List> data) {
-    _groupSongMap = data;
+  void setNashvileMappings(Map<String, Map<String, String>> map) {
+    _nashvileMappings = map;
+    notifyListeners();
+  }
+
+  void setUiSectionDataAndIndex(Map data, int index) {
+    _startIndexofSection = index;
+    _uiSectionData = data;
     notifyListeners();
   }
 }

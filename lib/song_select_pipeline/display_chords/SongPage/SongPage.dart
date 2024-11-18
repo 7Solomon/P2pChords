@@ -16,8 +16,10 @@ class ChordSheetPage extends StatefulWidget {
 }
 
 class _ChordSheetPageState extends State<ChordSheetPage> {
+  late UiSettings globalSongData;
+  late NearbyMusicSyncProvider musicSyncProvider;
+
   bool isLoadingMapping = true;
-  Map<String, Map<String, String>> mappings = {};
 
   void displaySnack(String str) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(str)));
@@ -29,7 +31,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
           'assets/nashville_to_chord_by_key.json', displaySnack);
       if (loadedMappings != null && loadedMappings.isNotEmpty) {
         setState(() {
-          mappings = loadedMappings;
+          globalSongData.setNashvileMappings(loadedMappings);
           isLoadingMapping = false;
         });
       } else {
@@ -44,6 +46,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   @override
   void initState() {
     super.initState();
+    globalSongData = Provider.of<UiSettings>(context, listen: false);
+    musicSyncProvider =
+        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
@@ -51,20 +56,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
   @override
   Widget build(BuildContext context) {
-    //final songSyncProvider =
-    //    Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-    //final List<Map<String, String>>? currentGroup =
-    //    allGroups?[songSyncProvider.currentGroup];
-    //final String currentSongHash = songSyncProvider.currentSongHash;
-    //print(widgetSongData);
-    //print('------');
-    //print(plainSongData);
-    //final String songname =
-    //    allGroups?[currentSongHash]?['header']['name'] ?? // FALSCH IMPLEMENTERT
-    //        'Not Implemented';
     return Scaffold(
       appBar: AppBar(
-        title: Text("Song Name, noch nicht implementiert"),
+        title: const Text("Songs"),
       ),
       drawer: Consumer<UiSettings>(
         builder: (context, globalData, child) {
@@ -95,29 +89,17 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     }
                     if (globalData.songsDataMap.isNotEmpty) {
                       return SongDisplayScreen(
-                        globalData: globalData,
-                        mappings: mappings,
-                        displaySnack: displaySnack,
-                      );
+                          globalData: globalData,
+                          mappings: globalData.nashvileMappings,
+                          displaySnack: displaySnack,
+                          openDrawer: () {
+                            Scaffold.of(context).openEndDrawer();
+                          });
                     } else {
                       // Handle the case where data is null or invalid
                       return const Text("Keine Daten um anzuzeigen");
                     }
                   },
-                ),
-              ),
-            ),
-          ),
-          Builder(
-            builder: (context) => Container(
-              width: 40,
-              child: InkWell(
-                onTap: () => Scaffold.of(context).openEndDrawer(),
-                child: Container(
-                  color: Colors.grey[300],
-                  child: Container(
-                    color: Colors.transparent,
-                  ),
                 ),
               ),
             ),

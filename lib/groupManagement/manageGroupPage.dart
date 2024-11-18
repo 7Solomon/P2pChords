@@ -41,11 +41,12 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
               onPressed: () async {
                 String newGroup = controller.text.trim();
                 if (newGroup.isNotEmpty) {
-                  await MultiJsonStorage.saveJson(
-                    newGroup,
-                    {},
-                    group: newGroup,
-                  );
+                  //await MultiJsonStorage.saveJson(
+                  //  newGroup,
+                  //  {},          /// Das hier ist ganz quatschig, weil es keine Songs in der neuen gruppe gibt
+                  //  group: newGroup,
+                  //);
+                  MultiJsonStorage.saveNewGroup(newGroup);
                   setState(() {});
                 }
                 Navigator.of(context).pop();

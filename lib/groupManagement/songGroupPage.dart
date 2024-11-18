@@ -68,43 +68,49 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                 }
 
                 final songs = snapshot.data!;
-                return ListView(
-                  children: songs.entries.map((entry) {
-                    final key = entry.key;
-                    final Map songData = entry.value;
-                    if (songData.isEmpty) {
+
+                print(songs);
+                if (songs.isNotEmpty) {
+                  return ListView(
+                    children: songs.entries.map((entry) {
+                      final key = entry.key;
+                      final Map songData = entry.value;
+                      if (songData.isEmpty) {
+                        return Dismissible(
+                            key: Key(key),
+                            background: Container(color: Colors.red),
+                            direction: DismissDirection.startToEnd,
+                            onDismissed: (direction) async {
+                              await _removeSongFromGroup(key);
+                            },
+                            child: CustomListTile(
+                              title: 'Unknown SongData Please Fix!',
+                              subtitle: key,
+                              arrowBool: false,
+                              iconBool: false,
+                            ));
+                      }
                       return Dismissible(
-                          key: Key(key),
-                          background: Container(color: Colors.red),
-                          direction: DismissDirection.startToEnd,
-                          onDismissed: (direction) async {
-                            await _removeSongFromGroup(key);
-                          },
-                          child: CustomListTile(
-                            title: 'Unknown SongData Please Fix!',
-                            subtitle: key,
-                            arrowBool: false,
-                            iconBool: false,
-                          ));
-                    }
-                    return Dismissible(
-                      key: Key(key),
-                      background: Container(color: Colors.red),
-                      direction: DismissDirection.startToEnd,
-                      onDismissed: (direction) async {
-                        await _removeSongFromGroup(key);
-                      },
-                      child: CustomListTile(
-                        title: songData['header']['name'] ?? 'Unbekannt',
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8.0, horizontal: 16.0),
-                        subtitle: key,
-                        arrowBool: false,
-                        iconBool: false,
-                      ),
-                    );
-                  }).toList(),
-                );
+                        key: Key(key),
+                        background: Container(color: Colors.red),
+                        direction: DismissDirection.startToEnd,
+                        onDismissed: (direction) async {
+                          await _removeSongFromGroup(key);
+                        },
+                        child: CustomListTile(
+                          title: songData['header']['name'] ?? 'Unbekannt',
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 16.0),
+                          subtitle: key,
+                          arrowBool: false,
+                          iconBool: false,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                } else {
+                  return const Center(child: Text('Keine Lieder Verfügbar'));
+                }
               },
             ),
           ),

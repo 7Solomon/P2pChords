@@ -23,6 +23,7 @@ class Songoverviewpage extends StatelessWidget {
     //final songSyncProvider =
     //    Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     final globalSongData = context.watch<UiSettings>();
+    final musicSyncProvider = context.watch<NearbyMusicSyncProvider>();
 
     //print(songSyncProvider.currentGroup);
     return Scaffold(
@@ -47,6 +48,9 @@ class Songoverviewpage extends StatelessWidget {
                   onTap: () {
                     globalSongData.setCurrentSong(hash);
                     globalSongData.getListOfDisplaySections(0);
+                    musicSyncProvider.sendUpdateToClients(
+                        globalSongData.uiSectionData,
+                        globalSongData.startIndexofSection);
                     Navigator.push(
                       context,
                       MaterialPageRoute(

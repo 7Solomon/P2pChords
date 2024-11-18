@@ -4,6 +4,56 @@ import 'package:P2pChords/song_select_pipeline/display_chords/lyricsChordsClass.
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
+/// Experimenetal
+Widget buildAdaptiveContent(
+  BuildContext context,
+  BoxConstraints constraints,
+  dynamic globalData,
+  dynamic uiDisplaySectionData,
+  dynamic key,
+  dynamic mappings,
+  void Function(String) displaySnack,
+) {
+  // Get the original content
+  List<Widget> content = displaySectionContent(
+    globalData: globalData,
+    uiDisplaySectionData: uiDisplaySectionData,
+    key: key,
+    mappings: mappings,
+    displaySnack: displaySnack,
+  );
+
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      // Start with normal size
+      double currentFontSize = 14.0; // Or whatever your default font size is
+
+      return Wrap(
+        direction: Axis.horizontal,
+        alignment: WrapAlignment.start,
+        spacing: 16.0, // Horizontal gap between elements
+        runSpacing: 16.0, // Vertical gap between lines
+        children: content.map((widget) {
+          // Wrap each item in a container with a maximum width
+          return Container(
+            constraints: BoxConstraints(
+              maxWidth: 200.0, // Adjust this value based on your needs
+            ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                textTheme: Theme.of(context).textTheme.apply(
+                      fontSizeFactor: currentFontSize / 14.0, // Scale font size
+                    ),
+              ),
+              child: widget,
+            ),
+          );
+        }).toList(),
+      );
+    },
+  );
+}
+
 List<Widget> displaySectionContent({
   required globalData,
   required uiDisplaySectionData, // How many Sections should be displayed should be regulated in here you understand

@@ -2,6 +2,7 @@ import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
 import 'package:P2pChords/customeWidgets/MetronomeBlinkWidget.dart';
 import 'package:P2pChords/metronome/MetronomePage.dart';
 import 'package:P2pChords/metronome/test.dart';
+import 'package:P2pChords/song_select_pipeline/UiSettingsPage.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -202,6 +203,38 @@ class MainPage extends StatelessWidget {
                           );
                         },
                         child: const Text('Metronome')),
+
+                    ///
+                    //TEST BUTTON
+                    ///
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => UisettingsPage()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color.fromARGB(255, 255, 255, 255),
+                        foregroundColor: Colors.blue[700],
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 15),
+                        textStyle: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: BorderSide(
+                            color:
+                                Colors.blue[200] ?? Colors.blue, // Border color
+                            width: 1, // Border width
+                          ),
+                        ),
+                      ),
+                      child: const Text('Zu den Ui Settings'),
+                    ),
                   ],
                 ),
               ),

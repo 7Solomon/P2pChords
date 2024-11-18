@@ -49,7 +49,9 @@ Future<void> exportGroup(String groupName, BuildContext context) async {
     Directory? downloadsDirectory = await getDownloadsDirectory();
     String filePath =
         '${downloadsDirectory!.path}/${groupName}_p2pController.json';
-
+    //Directory? downloadsDirectory = Directory('/storage/emulated/0/Download');
+    //String filePath =
+    '${downloadsDirectory.path}/${groupName}_p2pController.json';
     // Convert the Map to a JSON string
     String jsonString = jsonEncode(groupJson);
 
@@ -58,9 +60,9 @@ Future<void> exportGroup(String groupName, BuildContext context) async {
     await file.writeAsString(jsonString);
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('File saved to $filePath')));
-    // return ('File saved to $filePath');
+    //print('File saved to $filePath');
   } catch (e) {
-    //return ('Error saving file: $e');
+    //print('Error saving file: $e');
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
   }

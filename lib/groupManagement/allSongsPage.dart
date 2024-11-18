@@ -88,6 +88,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
               if (groupSnapshot.hasError) {
                 return Center(child: Text('Error: ${groupSnapshot.error}'));
               }
+              if (!groupSnapshot.hasData) {
+                return const Center(child: Text('Keine Lieder in der Gruppe'));
+              }
 
               final groupSongKeys = groupSnapshot.data ?? [];
 

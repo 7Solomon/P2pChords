@@ -30,7 +30,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
   }
 
   Future<void> _loadAllJsons() async {
-    print('Loading all JSONs');
+    //print('Loading all JSONs');
 
     setState(() => _isLoading = true);
     _allGroups = await MultiJsonStorage.getAllGroups();
@@ -103,9 +103,8 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                       onTap: () async {
                         final Map<String, Map> songsDataMap =
                             _allGroupData[key] ?? {};
-                        ////// !!! globalData.groupSongMap ==  Was hier?
-                        //print('songsDataMap: $songsDataMap');
                         globalData.setSongsDataMap(songsDataMap);
+                        nearbyProvider.sendSongsDataMap(songsDataMap);
                         globalData.setCurrentGroup(key);
 
                         if (nearbyProvider.userState != UserState.client) {

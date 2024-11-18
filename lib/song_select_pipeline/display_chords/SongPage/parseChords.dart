@@ -8,10 +8,7 @@ Map<String, String> parseChords(
 
   if (chordsData is Map<String, dynamic>) {
     if (!nashvilleToChordMapping.containsKey(currentKey)) {
-      print('Unknown key: $currentKey');
-      print(nashvilleToChordMapping);
-      print(currentKey);
-      //displaySnack('Unknown key: $currentKey');
+      displaySnack('Unknown key: $currentKey');
       return parsedChords;
     }
 
