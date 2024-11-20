@@ -19,7 +19,6 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
 
   Future<void> _createNewGroup() async {
     final TextEditingController controller = TextEditingController();
-
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -46,7 +45,9 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                   //  {},          /// Das hier ist ganz quatschig, weil es keine Songs in der neuen gruppe gibt
                   //  group: newGroup,
                   //);
+
                   MultiJsonStorage.saveNewGroup(newGroup);
+                  MultiJsonStorage.printAllWithPrefix('json_storage_groups_');
                   setState(() {});
                 }
                 Navigator.of(context).pop();

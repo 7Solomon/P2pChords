@@ -78,6 +78,19 @@ List<Widget> displaySectionContent({
     final songData = songsData[toDisplaySongHash];
     final SongName = songData['header']['name'] ?? 'noName';
     final songDataList = songData['data'].entries.toList();
+    // adde den Songtitel
+    displayData.addAll([
+      Text(
+        SongName,
+        style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            fontStyle: FontStyle.italic),
+      ),
+      const SizedBox(
+        height: 20,
+      )
+    ]);
     // Hier die Logic mit uiDisplay Data adden denke ich
 
     for (int index in toDisplaySections) {
@@ -98,7 +111,7 @@ List<Widget> displaySectionContent({
             displaySnack));
       } else
         print('Section not found');
-      //displaySnack('Section not found');      Eigeintlich besser aber fürht zu Noch bug wegen not build und so
+      //displaySnack('Section not found'); //     Eigeintlich besser aber fürht zu Noch bug wegen not build und so
     }
   }
 

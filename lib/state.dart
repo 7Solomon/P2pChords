@@ -223,9 +223,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       displaySnack("Received message: ${data['type']}");
       switch (data['type']) {
         case 'update':
-          Map sectionData = data['content']['sectionData'];
+          String currentSongHash = data['content']['currentSongHash'];
           int index = data['content']['index'];
-          _uiSettings.setUiSectionDataAndIndex(sectionData, index);
+          _uiSettings.setCurrentSong(currentSongHash);
+          _uiSettings.getListOfDisplaySections(index);
         case 'groupData':
           MultiJsonStorage.saveJsonsGroup(
               data['content']['group'], data['content']['songs']);
@@ -241,11 +242,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> sendUpdateToClients(Map sectionData, int index) async {
+  Future<bool> sendUpdateToClients(String currentSongHash, int index) async {
     Map<String, dynamic> data = {
       'type': 'update',
       'content': {
-        'sectionData': sectionData,
+        'currentSongHash': currentSongHash,
         'index': index
       } // Index braucht man eigentlich nicht. Aber why not
     };

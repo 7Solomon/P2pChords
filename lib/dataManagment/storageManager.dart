@@ -12,7 +12,7 @@ class MultiJsonStorage {
     final prefs = await SharedPreferences.getInstance();
     final keys =
         prefs.getKeys(); // Retrieve all keys stored in SharedPreferences
-
+    print(keys);
     // Iterate through all keys and check if they start with the given prefix
     for (String key in keys) {
       if (key.startsWith(prefix)) {
@@ -74,6 +74,7 @@ class MultiJsonStorage {
   static Future<void> saveNewGroup(String name) async {
     final prefs = await SharedPreferences.getInstance();
     String? groupMapString = prefs.getString('$_groupPrefix:group_map');
+    print(groupMapString);
     if (groupMapString != null) {
       Map<String, dynamic> decodedMap = jsonDecode(groupMapString);
       if (!decodedMap.containsKey(name)) {
@@ -81,6 +82,10 @@ class MultiJsonStorage {
         await prefs.setString(
             '$_groupPrefix:group_map', jsonEncode(decodedMap));
       }
+    } else {
+      Map<String, dynamic> decodedMap = {};
+      decodedMap[name] = [];
+      await prefs.setString('$_groupPrefix:group_map', jsonEncode(decodedMap));
     }
   }
 

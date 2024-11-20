@@ -14,7 +14,7 @@ class UiSettings extends ChangeNotifier {
   ///
   Map<String, Map<String, String>> _nashvileMappings = {};
   Map _uiSectionData = {};
-  int _lengthOfSections = 4;
+  int _lengthOfSections = 2;
   int _startIndexofSection = 0;
 
   Map get songsDataMap => _songsDataMap;
@@ -163,9 +163,9 @@ class UiSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setUiSectionDataAndIndex(Map data, int index) {
-    _startIndexofSection = index;
-    _uiSectionData = data;
-    notifyListeners();
-  }
+  //void setUiSectionDataAndIndex(Map data, int index) {
+  //  _startIndexofSection = index;
+  //  _uiSectionData = data;
+  //  notifyListeners();
+  //}
 }

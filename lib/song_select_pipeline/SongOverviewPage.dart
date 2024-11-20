@@ -49,7 +49,7 @@ class Songoverviewpage extends StatelessWidget {
                     globalSongData.setCurrentSong(hash);
                     globalSongData.getListOfDisplaySections(0);
                     musicSyncProvider.sendUpdateToClients(
-                        globalSongData.uiSectionData,
+                        globalSongData.currentSongHash,
                         globalSongData.startIndexofSection);
                     Navigator.push(
                       context,

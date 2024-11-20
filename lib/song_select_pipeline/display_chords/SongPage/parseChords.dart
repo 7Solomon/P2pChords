@@ -86,16 +86,19 @@ String? resolveComplexChord(
       baseChordResolved += "sus"; // Append "sus", e.g., "Gsus"
     }
   }
-  // Handle seventh chords (e.g., "5maj7", "5sus7")
-  else if (chord.contains('7')) {
-    String basePart =
-        chord.replaceAll(RegExp(r'[^\d]'), ''); // Get the base number
+  // Handle seventh chords (e.g., "5maj7", "5sus7" and ..4 and ..2)
+  else if ((chord.endsWith('7') ||
+          chord.endsWith('4') ||
+          chord.endsWith('2')) &&
+      chord.length > 1) {
+    String basePart = chord.substring(0, 1); // Get the base number
     baseChordResolved = keyMapping[basePart];
     if (baseChordResolved != null) {
       baseChordResolved +=
           chord.substring(basePart.length); // Append "maj7" or "sus7"
     }
   }
+
   // Handle augmented/diminished chords (e.g., "5aug", "7dim")
   else if (chord.endsWith('aug') || chord.endsWith('dim')) {
     String basePart =
