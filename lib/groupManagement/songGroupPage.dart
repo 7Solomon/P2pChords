@@ -69,7 +69,7 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
 
                 final songs = snapshot.data!;
 
-                print(songs);
+                
                 if (songs.isNotEmpty) {
                   return ListView(
                     children: songs.entries.map((entry) {

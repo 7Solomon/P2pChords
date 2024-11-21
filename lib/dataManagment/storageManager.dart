@@ -8,33 +8,32 @@ class MultiJsonStorage {
   static const String _groupPrefix = 'json_storage_groups_';
 
   // For debug
-  static Future<void> printAllWithPrefix(String prefix) async {
+  static Future<void> printAllWithPrefix() async {
     final prefs = await SharedPreferences.getInstance();
     final keys =
         prefs.getKeys(); // Retrieve all keys stored in SharedPreferences
-    print(keys);
+
     // Iterate through all keys and check if they start with the given prefix
     for (String key in keys) {
-      if (key.startsWith(prefix)) {
-        String? value = prefs.getString(key);
-        print('Key: $key, Value: $value');
-      }
+      String? value = prefs.getString(key);
+      print('Key: $key, Value: $value');
     }
   }
 
   static Future<Map<String, dynamic>> saveJson(
       String displayName, Map<String, dynamic> jsonData,
-      {String group = 'default'}) async {
+      {String group = 'default', String jsonHash = 'undefined'}) async {
     final prefs = await SharedPreferences.getInstance();
 
     // Convert the JSON data to string
     String jsonString = jsonEncode(jsonData);
-
-    // Generieren des Hash
-    String jsonHash = md5.convert(utf8.encode(jsonString)).toString();
+    if (jsonHash == 'undefined') {
+      jsonHash = md5.convert(utf8.encode(jsonString)).toString();
+    }
 
     // Speichern der Json unter dem Hash Key
     bool result = await prefs.setString('$_keyPrefix:$jsonHash', jsonString);
+
     if (result) {
       // Retrieve the map of groups to hashes
       String? groupMapString = prefs.getString('$_groupPrefix:group_map');
@@ -55,7 +54,6 @@ class MultiJsonStorage {
 
       // Get the list of hashes associated with the group, or create a new list
       List<Map<String, String>> songMap = groupMap[group] ?? [];
-
       // Add the hash to the group if it's not already there
       if (!songMap.any((map) => map['hash'] == jsonHash)) {
         songMap.add({'name': displayName, 'hash': jsonHash});
@@ -74,7 +72,7 @@ class MultiJsonStorage {
   static Future<void> saveNewGroup(String name) async {
     final prefs = await SharedPreferences.getInstance();
     String? groupMapString = prefs.getString('$_groupPrefix:group_map');
-    print(groupMapString);
+
     if (groupMapString != null) {
       Map<String, dynamic> decodedMap = jsonDecode(groupMapString);
       if (!decodedMap.containsKey(name)) {
@@ -91,8 +89,10 @@ class MultiJsonStorage {
 
   static Future<void> saveJsonsGroup(
       String groupName, Map groupSongData) async {
+    saveNewGroup(groupName); // MAybe not gooooood
     for (MapEntry entry in groupSongData.entries) {
-      await saveJson(entry.key, entry.value, group: groupName);
+      String name = entry.value['header']['name'] ?? 'No name';
+      await saveJson(name, entry.value, group: groupName, jsonHash: entry.key);
     }
   }
 

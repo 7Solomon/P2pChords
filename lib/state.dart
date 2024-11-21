@@ -217,10 +217,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   void handleIncomingMessage(String message) {
-    print('Did receive: $message');
+    //print('Did receive: $message');
+
     try {
-      Map<String, dynamic> data = json.decode(message);
+      Map<String, dynamic> data = json.decode(message.trim());
       displaySnack("Received message: ${data['type']}");
+
       switch (data['type']) {
         case 'update':
           String currentSongHash = data['content']['currentSongHash'];
@@ -250,7 +252,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
         'index': index
       } // Index braucht man eigentlich nicht. Aber why not
     };
-    print(data);
+    // FOR DEBUG !!!!!!!!!!!!
+    // --------------------
+    //handleIncomingMessage(jsonEncode(data));
+    // --------------------
     return _sendDataToAll(data);
   }
 
@@ -264,20 +269,25 @@ class NearbyMusicSyncProvider with ChangeNotifier {
         'songs': groupSongData,
       }
     };
+    // FOR DEBUG !!!!!!!!!!!!
+    // --------------------
+    //handleIncomingMessage(jsonEncode(data));
+    // --------------------
 
     return sendDataToDevice(id, data);
   }
 
-  Future<bool> sendSongsDataMap(Map dataMap) {
-    Map<String, dynamic> data = {
-      'type': 'groupData',
-      'content': {
-        'group': _uiSettings.currentGroup,
-        'songs': dataMap,
-      }
-    };
-    return _sendDataToAll(data);
-  }
+  //Future<bool> sendSongsDataMap(Map dataMap) {
+  //  Map<String, dynamic> data = {
+  //    'type': 'groupData',
+  //    'content': {
+  //      'group': _uiSettings.currentGroup,
+  //      'songs': dataMap,
+  //    }
+  //  };
+//
+  //  return _sendDataToAll(data);
+  //}
 
   Future<bool> sendGroupData(
       String groupName, Map<String, dynamic> groupSongData) async {
@@ -288,6 +298,11 @@ class NearbyMusicSyncProvider with ChangeNotifier {
         'songs': groupSongData,
       }
     };
+    // FOR DEBUG !!!!!!!!!!!!
+    // --------------------
+    //handleIncomingMessage(jsonEncode(data));
+    // --------------------
+
     return _sendDataToAll(data);
   }
 

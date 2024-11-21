@@ -14,7 +14,9 @@ class ManageGroupPage extends StatefulWidget {
 
 class _ManageGroupPageState extends State<ManageGroupPage> {
   Future<Map<String, List<Map<String, String>>>> _fetchGroups() async {
-    return await MultiJsonStorage.getAllGroups();
+    final test = await MultiJsonStorage.getAllGroups();
+    print(test);
+    return await test;
   }
 
   Future<void> _createNewGroup() async {
@@ -47,7 +49,6 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                   //);
 
                   MultiJsonStorage.saveNewGroup(newGroup);
-                  MultiJsonStorage.printAllWithPrefix('json_storage_groups_');
                   setState(() {});
                 }
                 Navigator.of(context).pop();

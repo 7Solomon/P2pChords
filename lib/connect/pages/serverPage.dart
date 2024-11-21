@@ -346,6 +346,12 @@ class _ServerPageState extends State<ServerPage>
                         ),
                 ),
               ),
+              ElevatedButton(
+                  child: Text('Permissions Check'),
+                  onPressed: () {
+                    _permissionsChecked = false;
+                    _checkPermissions();
+                  })
             ],
           ),
         ),

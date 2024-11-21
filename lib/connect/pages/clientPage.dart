@@ -405,6 +405,12 @@ class _ClientPageState extends State<ClientPage>
                         ),
                 ),
               ),
+              ElevatedButton(
+                  child: Text('Permissions Check'),
+                  onPressed: () {
+                    _permissionsChecked = false;
+                    _checkPermissions();
+                  })
             ],
           ),
         ),

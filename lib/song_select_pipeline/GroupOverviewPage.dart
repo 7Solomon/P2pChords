@@ -104,7 +104,6 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                         final Map<String, Map> songsDataMap =
                             _allGroupData[key] ?? {};
                         globalData.setSongsDataMap(songsDataMap);
-                        nearbyProvider.sendSongsDataMap(songsDataMap);
                         globalData.setCurrentGroup(key);
 
                         if (nearbyProvider.userState != UserState.client) {
