@@ -46,11 +46,17 @@ class Songoverviewpage extends StatelessWidget {
                       const EdgeInsets.symmetric(vertical: 0, horizontal: 16.0),
                   iconBool: false,
                   onTap: () {
+                    // FOR DEBUGGING
                     globalSongData.setCurrentSong(hash);
                     globalSongData.getListOfDisplaySections(0);
+                    //globalSongData.getListOfDisplaySectionsExperimental(0);
                     musicSyncProvider.sendUpdateToClients(
                         globalSongData.currentSongHash,
-                        globalSongData.startIndexofSection);
+                        globalSongData.startIndexofSection,
+                        globalSongData.currentGroup);
+                    //musicSyncProvider.sendUpdateToClients(hash, 0);
+
+                    ///
                     Navigator.push(
                       context,
                       MaterialPageRoute(

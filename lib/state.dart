@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 
 enum UserState { server, client, none }
 
@@ -17,11 +18,13 @@ enum UserState { server, client, none }
 class NearbyMusicSyncProvider with ChangeNotifier {
   String _name = 'undefined';
   final Nearby _nearby = Nearby();
-  final UiSettings _uiSettings = UiSettings();
+  late UiSettings _uiSettings;
 
   UserState _userState = UserState.none;
   bool _isServerDevice = false;
   Set<String> _connectedDeviceIds = {};
+  bool _isAdvertising = false;
+  bool _isDiscovering = false;
 
   void Function(String) _displaySnack = (_) {};
   void Function(int bpm, bool isPlaying, int tickCount)?
@@ -34,6 +37,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
   void Function(String) get displaySnack => _displaySnack;
   Function get sendDataToAll => _sendDataToAll;
+
+  void init(BuildContext context) {
+    _uiSettings = Provider.of<UiSettings>(context, listen: false);
+  }
 
   void defineName(String name) {
     _name = name;
@@ -72,9 +79,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   Future<bool> startAdvertising() async {
+    //if (!_isAdvertising) {
     try {
       _displaySnack("Starting advertising as: $_name");
-
+      _isAdvertising = true;
       bool advertisingResult = await _nearby.startAdvertising(
         _name,
         Strategy.P2P_CLUSTER,
@@ -87,11 +95,14 @@ class NearbyMusicSyncProvider with ChangeNotifier {
           if (status == Status.CONNECTED) {
             _connectedDeviceIds.add(id);
             _displaySnack("Successfully connected to $id");
+            _isAdvertising = false;
             notifyListeners();
           } else if (status == Status.REJECTED) {
             _displaySnack("Connection rejected by $id");
+            _isAdvertising = false;
           } else if (status == Status.ERROR) {
             _displaySnack("Error connecting to $id");
+            _isAdvertising = false;
           }
         },
         onDisconnected: (id) {
@@ -106,21 +117,18 @@ class NearbyMusicSyncProvider with ChangeNotifier {
           : "Failed to start advertising");
       return advertisingResult;
     } catch (e, stackTrace) {
-      if (e.toString().contains('STATUS_ALREADY_ADVERTISING')) {
-        // Maybe ich muss ändern ?
-        // Handle the "already advertising" case
-        _displaySnack("Already advertising");
-        return false;
-      } else {
-        // Handle any other errors
-        _displaySnack('Error starting advertising: $e\n$stackTrace');
-        return false;
-      }
+      _displaySnack('Error starting advertising: $e\n$stackTrace');
+      return false;
     }
+    //} else {
+    //  _displaySnack("Already advertising");
+    //  return false;
+    //}
   }
 
   Future<bool> startDiscovery(
       Function(String, String, String) onEndpointFound) async {
+    //if (!_isDiscovering) {
     try {
       _displaySnack("Starting discovery as: $_name");
 
@@ -146,6 +154,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       _displaySnack('Error starting discovery: $e\n$stackTrace');
       return false;
     }
+    //} else {
+    //  _displaySnack("Already discovering");
+    //  return false;
+    //}
   }
 
   void onConnectionInitiated(String id, ConnectionInfo info) {
@@ -156,8 +168,8 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       onPayLoadRecieved: (endid, payload) async {
         if (payload.type == PayloadType.BYTES) {
           String message = String.fromCharCodes(payload.bytes!);
-          _displaySnack(
-              "Received payload from $endid: ${message.substring(0, min(50, message.length))}...");
+          //_displaySnack(
+          //    "Received payload from $endid: ${message.substring(0, min(50, message.length))}...");
           handleIncomingMessage(message);
         }
       },
@@ -217,7 +229,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   void handleIncomingMessage(String message) {
-    //print('Did receive: $message');
+    print('Did receive: $message');
 
     try {
       Map<String, dynamic> data = json.decode(message.trim());
@@ -227,12 +239,18 @@ class NearbyMusicSyncProvider with ChangeNotifier {
         case 'update':
           String currentSongHash = data['content']['currentSongHash'];
           int index = data['content']['index'];
+          String group = data['content']['group'];
           _uiSettings.setCurrentSong(currentSongHash);
+          _uiSettings.setCurrentGroup(group);
           _uiSettings.getListOfDisplaySections(index);
+          _uiSettings.notifyListeners();
         case 'groupData':
           MultiJsonStorage.saveJsonsGroup(
               data['content']['group'], data['content']['songs']);
           _uiSettings.setCurrentGroup(data['content']['group']);
+
+          _uiSettings.setSongsDataMap(data['content']['songs']);
+          _uiSettings.notifyListeners();
           break;
         case 'metronomeUpdate':
           handleMetronomeUpdate(data);
@@ -244,18 +262,18 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> sendUpdateToClients(String currentSongHash, int index) async {
+  Future<bool> sendUpdateToClients(
+      String currentSongHash, int index, String groupName) async {
     Map<String, dynamic> data = {
       'type': 'update',
       'content': {
         'currentSongHash': currentSongHash,
-        'index': index
+        'index': index,
+        'group':
+            groupName, // group braucht man auch nicht, aber ka wie ich es sonst machen soll
       } // Index braucht man eigentlich nicht. Aber why not
     };
-    // FOR DEBUG !!!!!!!!!!!!
-    // --------------------
-    //handleIncomingMessage(jsonEncode(data));
-    // --------------------
+
     return _sendDataToAll(data);
   }
 

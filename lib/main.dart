@@ -50,219 +50,246 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const MainPage(),
+      home: MainPage(),
     );
   }
 }
 
-class MainPage extends StatelessWidget {
+class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final globalSongData = Provider.of<UiSettings>(context, listen: true);
-    final songSyncProvider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: true);
-    //songSyncProvider.updateDisplaySnack(); muss gemounted sein
-    //globalSongData.getListOfDisplaySections(2);
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.blue[300]!, Colors.purple[300]!],
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              BlinkingCircle(),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'P2P Test App',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    // Conditionally render "Songs spielen" or "Folge den Songs" button
-                    songSyncProvider.userState != UserState.client
-                        ? ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const GroupOverviewpage()),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.purple[700],
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 40, vertical: 15),
-                              textStyle: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                side: BorderSide(
-                                  color: Colors.blue[200] ??
-                                      Colors.blue, // Border color
-                                  width: 1, // Border width
-                                ),
-                              ),
-                            ),
-                            child: const Text('Songs spielen'),
-                          )
-                        :
-                        // If user is a client
-                        ElevatedButton(
-                            onPressed: () async {
-                              // Send data to the server when the user is a client
-                              if (songSyncProvider
-                                  .connectedDeviceIds.isNotEmpty) {
-                                if (globalSongData.currentGroup
-                                    .contains(globalSongData.currentSongHash)) {
-                                  // Navigate to the ChordSheetPage
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => ChordSheetPage()),
-                                  );
-                                }
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Do bist noch nicht mit einem Server verbunden')));
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor:
-                                  const Color.fromARGB(255, 196, 111, 233),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 40, vertical: 15),
-                              textStyle: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                side: BorderSide(
-                                  color: Colors.blue[200] ??
-                                      Colors.blue, // Border color
-                                  width: 1, // Border width
-                                ),
-                              ),
-                            ),
-                            child: const Text('Folge den Songs'),
-                          ),
+  _MainPageState createState() => _MainPageState();
+}
 
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ManageGroupPage()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 255, 255, 255),
-                        foregroundColor: Colors.blue[700],
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 15),
-                        textStyle: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: BorderSide(
-                            color:
-                                Colors.blue[200] ?? Colors.blue, // Border color
-                            width: 1, // Border width
-                          ),
+class _MainPageState extends State<MainPage> {
+  bool _loadedProider = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final songSyncProvider =
+          Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+      songSyncProvider.init(context);
+      //final globalSongData = Provider.of<UiSettings>(context, listen: false);
+      setState(() {
+        _loadedProider = true;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loadedProider) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    return Consumer2<NearbyMusicSyncProvider, UiSettings>(
+        builder: (context, buildSongSyncProvider, buildGlobalSongData, child) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.blue[300]!, Colors.purple[300]!],
+            ),
+          ),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                BlinkingCircle(),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'P2P Test App',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      child: const Text('Bearbeiten der Gruppen'),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
+                      const SizedBox(height: 40),
+                      // Conditionally render "Songs spielen" or "Folge den Songs" button
+                      buildSongSyncProvider.userState != UserState.client
+                          ? ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const GroupOverviewpage()),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.purple[700],
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 40, vertical: 15),
+                                textStyle: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                  side: BorderSide(
+                                    color: Colors.blue[200] ??
+                                        Colors.blue, // Border color
+                                    width: 1, // Border width
+                                  ),
+                                ),
+                              ),
+                              child: const Text('Songs spielen'),
+                            )
+                          :
+                          // If user is a client
+                          ElevatedButton(
+                              onPressed: () async {
+                                // Send data to the server when the user is a client
+                                if (buildSongSyncProvider
+                                    .connectedDeviceIds.isNotEmpty) {
+                                  if (buildGlobalSongData.currentGroup.contains(
+                                      buildGlobalSongData.currentSongHash)) {
+                                    // Navigate to the ChordSheetPage
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              ChordSheetPage()),
+                                    );
+                                  }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Do bist noch nicht mit einem Server verbunden')));
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor:
+                                    const Color.fromARGB(255, 196, 111, 233),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 40, vertical: 15),
+                                textStyle: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                  side: BorderSide(
+                                    color: Colors.blue[200] ??
+                                        Colors.blue, // Border color
+                                    width: 1, // Border width
+                                  ),
+                                ),
+                              ),
+                              child: const Text('Folge den Songs'),
+                            ),
+
+                      const SizedBox(height: 20),
+                      ElevatedButton(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => MetronomePage(),
-                            ),
+                                builder: (context) => ManageGroupPage()),
                           );
                         },
-                        child: const Text('Metronome')),
-
-                    ///
-                    //TEST BUTTON
-                    ///
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => UisettingsPage()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 255, 255, 255),
-                        foregroundColor: Colors.blue[700],
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 15),
-                        textStyle: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          side: BorderSide(
-                            color:
-                                Colors.blue[200] ?? Colors.blue, // Border color
-                            width: 1, // Border width
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 255, 255, 255),
+                          foregroundColor: Colors.blue[700],
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
+                          textStyle: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: BorderSide(
+                              color: Colors.blue[200] ??
+                                  Colors.blue, // Border color
+                              width: 1, // Border width
+                            ),
                           ),
                         ),
+                        child: const Text('Bearbeiten der Gruppen'),
                       ),
-                      child: const Text('Zu den Ui Settings'),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: 20,
-                right: 20,
-                child: ElevatedButton(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.settings),
-                      const SizedBox(width: 10),
-                      Text(songSyncProvider.userState.name.toString()),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MetronomePage(),
+                              ),
+                            );
+                          },
+                          child: const Text('Metronome')),
+
+                      ///
+                      //TEST BUTTON
+                      ///
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => UisettingsPage()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 255, 255, 255),
+                          foregroundColor: Colors.blue[700],
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
+                          textStyle: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: BorderSide(
+                              color: Colors.blue[200] ??
+                                  Colors.blue, // Border color
+                              width: 1, // Border width
+                            ),
+                          ),
+                        ),
+                        child: const Text('Zu den Ui Settings'),
+                      ),
                     ],
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChooseSCStatePage(),
-                      ),
-                    );
-                  },
                 ),
-              ),
-            ],
+                Positioned(
+                  top: 20,
+                  right: 20,
+                  child: ElevatedButton(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.settings),
+                        const SizedBox(width: 10),
+                        Text(buildSongSyncProvider.userState.name.toString()),
+                      ],
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChooseSCStatePage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

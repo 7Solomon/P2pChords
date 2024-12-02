@@ -1,5 +1,4 @@
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongDisplayScreen.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/displayFunctions.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/songsDrawerWidget.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
@@ -10,29 +9,33 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/loadData.
 import 'package:provider/provider.dart';
 
 class ChordSheetPage extends StatefulWidget {
-  //final Map<String, dynamic> songsData;
   const ChordSheetPage({Key? key}) : super(key: key);
+
   @override
   _ChordSheetPageState createState() => _ChordSheetPageState();
 }
 
 class _ChordSheetPageState extends State<ChordSheetPage> {
-  late UiSettings globalSongData;
-  late NearbyMusicSyncProvider musicSyncProvider;
-
   bool isLoadingMapping = true;
+  late final globalSongData;
+  late final songSyncProvider;
 
   void displaySnack(String str) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(str)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(str)));
+    });
   }
 
-  Future<void> _initializeData() async {
+  Future<void> _initializeData(UiSettings globalSongData) async {
     try {
       final loadedMappings = await loadMappings(
-          'assets/nashville_to_chord_by_key.json', displaySnack);
+        'assets/nashville_to_chord_by_key.json',
+        displaySnack,
+      );
+
       if (loadedMappings != null && loadedMappings.isNotEmpty) {
+        globalSongData.setNashvileMappings(loadedMappings);
         setState(() {
-          globalSongData.setNashvileMappings(loadedMappings);
           isLoadingMapping = false;
         });
       } else {
@@ -40,107 +43,176 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
       }
     } catch (e) {
       displaySnack("Error loading mappings: ${e.toString()}");
-      // Handle additional error cases as needed
     }
   }
 
-  // For Drawer
+  bool _isLoading = false;
+  Map<String, Map<String, Map>> _allGroupData = {};
+  Map<String, List<Map<String, String>>> _allGroups = {};
+  Future<void> _loadAllJsons() async {
+    //print('Loading all JSONs');
+
+    setState(() => _isLoading = true);
+    _allGroups = await MultiJsonStorage.getAllGroups();
+
+    for (MapEntry<String, List<Map<String, String>>> entry
+        in _allGroups.entries) {
+      String groupName = entry.key;
+      List<Map<String, String>> groupValue = entry.value;
+      _allGroupData[groupName] = {};
+
+      // Initialize the songs list for each group
+      for (Map<String, String> songValue in groupValue) {
+        String songHash = songValue['hash']!;
+
+        Map<String, dynamic>? songData =
+            await MultiJsonStorage.loadJson(songHash);
+        if (songData != null) {
+          _allGroupData[groupName]![songHash] = songData;
+        }
+      }
+    }
+    setState(() => _isLoading = false);
+  }
 
   @override
   void initState() {
     super.initState();
-    globalSongData = Provider.of<UiSettings>(context, listen: false);
-    musicSyncProvider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+    // Move initialization to post-frame callback to ensure context is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeData();
+      globalSongData = Provider.of<UiSettings>(context, listen: false);
+      //  songSyncProvider = Provider.of<NearbyMusicSyncProvider>(context);
+//
+      //  if (globalSongData.songsDataMap.isEmpty) {
+      //    print('Loading all JSONs');
+      //    _loadAllJsons();
+      //    print(globalSongData.currentGroup);
+      //    if (globalSongData.currentGroup != "") {
+      //      final Map<String, Map> songsDataMap =
+      //          _allGroupData[globalSongData.currentGroup] ?? {};
+//
+      //      globalSongData.setSongsDataMap(songsDataMap);
+      //    } else {
+      //      //songSyncProvider.askForGroup();
+      //    }
+      //  }
+      if (globalSongData.nashvileMappings.isEmpty) {
+        _initializeData(globalSongData);
+      }
     });
+  }
+
+  void _handleTapDown(TapDownDetails details, BuildContext context,
+      UiSettings globalData, NearbyMusicSyncProvider musicSyncProvider) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLeftSide = details.globalPosition.dx <= screenWidth * 3 / 4;
+
+    if (isLeftSide) {
+      if (details.globalPosition.dy < screenHeight / 2) {
+        globalData.updateListOfDisplaySectionsUp();
+      } else {
+        globalData.updateListOfDisplaySectionsDown();
+      }
+
+      if (musicSyncProvider.userState == UserState.server) {
+        musicSyncProvider.sendUpdateToClients(
+          globalData.currentSongHash,
+          globalData.startIndexofSection,
+          globalData.currentGroup,
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: const Text("Songs"),
-        ),
-        drawer: Consumer<UiSettings>(
-          builder: (context, globalData, child) {
-            return SongDrawer(
-              songData: globalData.songsDataMap[globalData.currentSongHash],
-              currentKey: globalData.currentKey,
-              onKeyChanged: (newKey) {
-                setState(() {
-                  globalData.setCurrentKey(newKey);
-                  _initializeData();
-                });
-              },
-            );
-          },
-        ),
-        body: GestureDetector(
-          onTapDown: (TapDownDetails details) {
-            // Get screen height
-            final screenHeight = MediaQuery.of(context).size.height;
-            final screenWidth = MediaQuery.of(context).size.width;
+    return Consumer2<UiSettings, NearbyMusicSyncProvider>(
+      builder: (context, globalData, musicSyncProvider, _) {
+        if (globalData.songsDataMap.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            await _loadAllJsons();
 
-            // Check if the tap occurred in the top half
-            if (details.globalPosition.dy < screenHeight / 2 &&
-                !(details.globalPosition.dx > screenWidth * 3 / 4)) {
-              globalSongData.updateListOfDisplaySectionsUp();
-              musicSyncProvider.sendUpdateToClients(
-                  globalSongData.currentSongHash,
-                  globalSongData.startIndexofSection);
-            } else if (details.globalPosition.dy > screenHeight / 2 &&
-                !(details.globalPosition.dx > screenWidth * 3 / 4)) {
-              globalSongData.updateListOfDisplaySectionsDown();
-              musicSyncProvider.sendUpdateToClients(
-                  globalSongData.currentSongHash,
-                  globalSongData.startIndexofSection);
+            if (globalData.currentGroup != "") {
+              print('globalData.currentGroup not ""');
+              final Map<String, Map> songsDataMap =
+                  _allGroupData[globalData.currentGroup] ?? {};
+
+              globalData.setSongsDataMap(songsDataMap);
+            } else {
+              //songSyncProvider.askForGroup();
             }
-          },
-          child: Consumer<UiSettings>(
-            builder: (context, globalData, child) {
-              return QuickSelectOverlay(
-                items: globalData.songsDataMap,
-                currentsong: globalData.currentSongHash,
-                onItemSelected: (String songHash) {
-                  setState(() {
-                    globalData.setCurrentSong(songHash);
-                    globalData.getListOfDisplaySections(0);
-                  });
-                },
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 9,
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: isLoadingMapping
-                              ? const Center(child: CircularProgressIndicator())
-                              : globalData.songsDataMap.isNotEmpty
-                                  ? Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: displaySectionContent(
-                                          globalData:
-                                              globalData, // was widget.globalData.groupSongMap before, viellecicht so schöner
+          });
+        } else {
+          print('globalData.songsDataMap not empty');
+        }
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text("Songs"),
+          ),
+          drawer: globalData.songsDataMap[globalData.currentSongHash] == null
+              ? const Drawer(
+                  child: Text('Not Available'),
+                )
+              : SongDrawer(
+                  songData: globalData.songsDataMap[globalData.currentSongHash],
+                  currentKey: globalData.currentKey,
+                  onKeyChanged: (newKey) {
+                    globalData.setCurrentKey(newKey);
+                    _initializeData(globalData);
+                  },
+                ),
+          body: GestureDetector(
+            onTapDown: (details) =>
+                _handleTapDown(details, context, globalData, musicSyncProvider),
+            child: QuickSelectOverlay(
+              items: globalData.songsDataMap,
+              currentsong: globalData.currentSongHash,
+              onItemSelected: (String songHash) {
+                globalData.setCurrentSong(songHash);
+                globalData.getListOfDisplaySections(0);
+                musicSyncProvider.sendUpdateToClients(
+                    globalData.currentSongHash,
+                    globalData.startIndexofSection,
+                    globalData.currentGroup);
+              },
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 9,
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child:
+                            isLoadingMapping //globalData.nashvileMappings.isEmpty
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : globalData.songsDataMap.isNotEmpty
+                                    ? Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: displaySectionContent(
+                                          globalData: globalData,
                                           uiDisplaySectionData:
                                               globalData.uiSectionData,
                                           key: globalData.currentKey,
-                                          mappings:
-                                              globalSongData.nashvileMappings,
-                                          displaySnack: displaySnack),
-                                    )
-                                  : const Text("Keine Daten um anzuzeigen"),
-                        ),
+                                          mappings: globalData.nashvileMappings,
+                                          displaySnack: displaySnack,
+                                        )
+                                            .map((widget) =>
+                                                Flexible(child: widget))
+                                            .toList(),
+                                      )
+                                    : const Text("Keine Daten um anzuzeigen"),
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                ],
+              ),
+            ),
           ),
-        ));
+        );
+      },
+    );
   }
 }

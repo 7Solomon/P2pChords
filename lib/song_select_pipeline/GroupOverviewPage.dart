@@ -103,6 +103,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                       onTap: () async {
                         final Map<String, Map> songsDataMap =
                             _allGroupData[key] ?? {};
+
                         globalData.setSongsDataMap(songsDataMap);
                         globalData.setCurrentGroup(key);
 

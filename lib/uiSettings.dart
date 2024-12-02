@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -13,8 +14,10 @@ class UiSettings extends ChangeNotifier {
 
   ///
   Map<String, Map<String, String>> _nashvileMappings = {};
-  Map _uiSectionData = {};
-  int _lengthOfSections = 2;
+  //Map _uiSectionData = {};
+  List<Map<String, List<int>>> _uiSectionData = [];
+  int _lengthOfSectionsRow = 1;
+  int _lengthOfSectionColumns = 2;
   int _startIndexofSection = 0;
 
   Map get songsDataMap => _songsDataMap;
@@ -22,76 +25,97 @@ class UiSettings extends ChangeNotifier {
   String get currentGroup => _currentGroup;
   String get currentSongHash => _currentSongHash;
   String get currentKey => _currentKey;
-  Map get uiSectionData => _uiSectionData;
-  int get lengthOfSections => _lengthOfSections;
+  //Map get uiSectionData => _uiSectionData;
+  List get uiSectionData => _uiSectionData;
+  int get lengthOfSectionsRow => _lengthOfSectionsRow;
   int get startIndexofSection => _startIndexofSection;
 
   void getListOfDisplaySections(int currentIndex) {
-    int maxLengthOfSections = _lengthOfSections;
+    //print("Starting with currentIndex: $currentIndex");
+
+    // Early return if no songs
+    if (_songsDataMap.isEmpty) {
+      //print("_songsDataMap is empty!");
+      _uiSectionData = [];
+      return;
+    }
+
+    int maxLengthOfSections = _lengthOfSectionsRow * _lengthOfSectionColumns;
+    //print("maxLengthOfSections: $maxLengthOfSections");
+
     Map<String, List<int>> displaySections = {};
 
     List<String> songHashes = _songsDataMap.keys.toList();
-    int startIndex = songHashes.indexOf(_currentSongHash);
-    List<String> elementsAfterKey =
-        startIndex != -1 ? songHashes.sublist(startIndex) : [];
+    //print("songHashes: $songHashes");
 
+    // Handle case where current song isn't in the map
+    int startIndex = songHashes.indexOf(_currentSongHash);
+    if (startIndex == -1) {
+      //print("Current song hash not found in map, using first song");
+      startIndex = 0;
+      _currentSongHash = songHashes.first;
+    }
+    //print("startIndex: $startIndex, _currentSongHash: $_currentSongHash");
+
+    // Create ordered list safely
+    List<String> orderedHashes = [
+      ...songHashes.sublist(startIndex),
+      if (startIndex > 0) ...songHashes.sublist(0, startIndex)
+    ];
+    //print("orderedHashes: $orderedHashes");
+
+    // Rest of your function remains the same...
     int sectionsAdded = 0;
     bool isFirstSong = true;
-    bool needMoreSections = true;
-    List<String> currentList = elementsAfterKey;
 
-    while (needMoreSections) {
-      for (String songHash in currentList) {
-        int lengthOfCurrentSong = _songsDataMap[songHash]?['data']?.length ?? 0;
-        int indexOfCurrentLength =
-            displaySections.values.fold(0, (sum, list) => sum + list.length);
+    for (String songHash in orderedHashes) {
+      if (sectionsAdded >= maxLengthOfSections) break;
 
-        int startingIndex = isFirstSong ? currentIndex : 0;
+      int lengthOfCurrentSong = _songsDataMap[songHash]?['data']?.length ?? 0;
+      int startingIndex = isFirstSong ? currentIndex : 0;
 
-        List<int> sections = [];
-        for (int i = startingIndex;
-            i < lengthOfCurrentSong &&
-                sections.length < maxLengthOfSections &&
-                indexOfCurrentLength < maxLengthOfSections;
-            i++) {
-          sections.add(i);
-        }
-
-        // Handle remaining sections
-        if (sectionsAdded + sections.length > maxLengthOfSections) {
-          final int remainingSections = maxLengthOfSections - sectionsAdded;
-          final List<int> takeSections = sections.sublist(0, remainingSections);
-          displaySections[songHash] = takeSections;
-          sectionsAdded += takeSections.length;
-          needMoreSections = false;
-          break;
-        } else if (sections.isNotEmpty) {
-          displaySections[songHash] = sections;
-          sectionsAdded += sections.length;
-
-          if (sectionsAdded >= maxLengthOfSections) {
-            needMoreSections = false;
-            break;
-          }
-        }
-
-        isFirstSong = false;
-
-        // If we've reached the end of the current list and still need more sections
-        if (songHash == currentList.last &&
-            sectionsAdded < maxLengthOfSections) {
-          currentList = songHashes;
-          if (displaySections.length >= songHashes.length) {
-            //  Is good to have this check, because loop dont go vroooom
-            needMoreSections = false;
-            break;
-          }
-        }
+      List<int> sections = [];
+      for (int i = startingIndex;
+          i < lengthOfCurrentSong &&
+              sectionsAdded < maxLengthOfSections &&
+              sections.length < maxLengthOfSections;
+          i++) {
+        sections.add(i);
+        sectionsAdded++;
       }
+
+      if (sections.isNotEmpty) {
+        displaySections[songHash] = sections;
+      }
+
+      isFirstSong = false;
     }
 
+    final flatList = displaySections.entries.expand((entry) {
+      return entry.value.map((value) => MapEntry(entry.key, value));
+    }).toList();
+
+    final columnSections = List.generate(
+        (flatList.length / _lengthOfSectionColumns).ceil(), (columnIndex) {
+      final startIndex = columnIndex * _lengthOfSectionColumns;
+      final endIndex =
+          min(startIndex + _lengthOfSectionColumns, flatList.length);
+      final chunk = flatList.sublist(startIndex, endIndex);
+
+      return chunk.fold<Map<String, List<int>>>(
+        {},
+        (columnMap, item) => columnMap
+          ..update(
+            item.key,
+            (list) => list..add(item.value),
+            ifAbsent: () => [item.value],
+          ),
+      );
+    });
+
+    //print("Final columnSections: $columnSections");
     _startIndexofSection = currentIndex;
-    _uiSectionData = displaySections;
+    _uiSectionData = columnSections;
   }
 
   void updateListOfDisplaySectionsUp() {
@@ -104,14 +128,17 @@ class UiSettings extends ChangeNotifier {
             .length; // Vielleicht -1 und ! kann zu Red Screen führen???
         // Update Section
         getListOfDisplaySections(_startIndexofSection - 1);
+        //getListOfDisplaySectionsExperimental(_startIndexofSection - 1);
         notifyListeners();
       } else {
         _startIndexofSection = 0;
         getListOfDisplaySections(_startIndexofSection);
+        //getListOfDisplaySectionsExperimental(_startIndexofSection);
         notifyListeners();
       }
     } else {
       getListOfDisplaySections(_startIndexofSection - 1);
+      //getListOfDisplaySectionsExperimental(_startIndexofSection - 1);
       notifyListeners();
     }
   }
@@ -124,31 +151,38 @@ class UiSettings extends ChangeNotifier {
         _currentSongHash = _songsDataMap.keys.toList()[0];
         _startIndexofSection = 0;
         getListOfDisplaySections(_startIndexofSection);
+        //getListOfDisplaySectionsExperimental(_startIndexofSection);
         notifyListeners();
       } else {
         _currentSongHash = _songsDataMap.keys.toList()[
             _songsDataMap.keys.toList().indexOf(_currentSongHash) + 1];
         _startIndexofSection = 0;
         getListOfDisplaySections(_startIndexofSection);
+        //getListOfDisplaySectionsExperimental(_startIndexofSection);
         notifyListeners();
       }
     } else {
       getListOfDisplaySections(_startIndexofSection + 1);
+      //getListOfDisplaySectionsExperimental(_startIndexofSection + 1);
       notifyListeners();
     }
   }
 
   void setSongsDataMap(Map<String, Map> data) {
+    if (_songsDataMap == data) return;
     _songsDataMap = data;
     notifyListeners();
   }
 
   void setCurrentGroup(String group) {
+    if (_currentGroup == group && group != '') return;
+    print(group);
     _currentGroup = group;
     notifyListeners();
   }
 
   void setCurrentSong(String songHash) {
+    if (_currentSongHash == songHash) return;
     _currentSongHash = songHash;
     notifyListeners();
   }

@@ -4,56 +4,6 @@ import 'package:P2pChords/song_select_pipeline/display_chords/lyricsChordsClass.
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
-/// Experimenetal
-Widget buildAdaptiveContent(
-  BuildContext context,
-  BoxConstraints constraints,
-  dynamic globalData,
-  dynamic uiDisplaySectionData,
-  dynamic key,
-  dynamic mappings,
-  void Function(String) displaySnack,
-) {
-  // Get the original content
-  List<Widget> content = displaySectionContent(
-    globalData: globalData,
-    uiDisplaySectionData: uiDisplaySectionData,
-    key: key,
-    mappings: mappings,
-    displaySnack: displaySnack,
-  );
-
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      // Start with normal size
-      double currentFontSize = 14.0; // Or whatever your default font size is
-
-      return Wrap(
-        direction: Axis.horizontal,
-        alignment: WrapAlignment.start,
-        spacing: 16.0, // Horizontal gap between elements
-        runSpacing: 16.0, // Vertical gap between lines
-        children: content.map((widget) {
-          // Wrap each item in a container with a maximum width
-          return Container(
-            constraints: BoxConstraints(
-              maxWidth: 200.0, // Adjust this value based on your needs
-            ),
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                textTheme: Theme.of(context).textTheme.apply(
-                      fontSizeFactor: currentFontSize / 14.0, // Scale font size
-                    ),
-              ),
-              child: widget,
-            ),
-          );
-        }).toList(),
-      );
-    },
-  );
-}
-
 List<Widget> displaySectionContent({
   required globalData,
   required uiDisplaySectionData, // How many Sections should be displayed should be regulated in here you understand
@@ -62,61 +12,79 @@ List<Widget> displaySectionContent({
   required final void Function(String) displaySnack,
 }) {
   List<Widget> displayData = [];
+  List<Widget> displayRow = [];
 
   //final currentSongHash = globalData.currentSongHash;
   //final currentSongData = globalData.songsDataMap[currentSongHash] ?? {};
   //final currentSongName = currentSongData['header']['name'] ?? 'noName';
-
+//
   //List currentSongDataList = currentSongData.entries.toList();
 
   // Add all requested sections
   final songsData = globalData.songsDataMap ?? {};
-  for (var toDisplaySong in uiDisplaySectionData.entries) {
-    String toDisplaySongHash = toDisplaySong.key;
-    List<int> toDisplaySections = toDisplaySong.value;
+  String lastDisplaySongHash = '';
+  String toDisplaySongHash = '';
+  for (var column in uiDisplaySectionData) {
+    for (var toDisplaySong in column.entries) {
+      toDisplaySongHash = toDisplaySong.key;
+      List<int> toDisplaySections = toDisplaySong.value;
 
-    final songData = songsData[toDisplaySongHash];
-    final SongName = songData['header']['name'] ?? 'noName';
-    final songDataList = songData['data'].entries.toList();
-    // adde den Songtitel
-    displayData.addAll([
-      Text(
-        SongName,
-        style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            fontStyle: FontStyle.italic),
-      ),
-      const SizedBox(
-        height: 20,
-      )
-    ]);
-    // Hier die Logic mit uiDisplay Data adden denke ich
+      final songData = songsData[toDisplaySongHash];
+      final SongName = songData['header']['name'] ?? 'noName';
+      final songDataList = songData['data'].entries.toList();
 
-    for (int index in toDisplaySections) {
-      final section = songDataList[index];
-      if (section != null) {
-        String sectionTitle = section.key;
-        List sectionContent = section.value;
+      // adde den Songtitel
+      if (lastDisplaySongHash != toDisplaySongHash) {
+        displayData.addAll([
+          Text(
+            SongName,
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                fontStyle: FontStyle.italic),
+          ),
+          const SizedBox(
+            height: 42,
+          )
+        ]);
+        //} else {   // Unnötig bzw functionert nicht wegen Flex glaube ich
+        //  displayData.add(const SizedBox(
+        //    height: 20,
+        //  ));
+      }
+      // Hier die Logic mit uiDisplay Data adden denke ich
 
-        displayData.add(buildSetionWidget(
-            sectionTitle,
-            sectionContent,
-            (chordsData) => parseChords(
-                  chordsData,
-                  mappings,
-                  key,
-                  displaySnack,
-                ),
-            displaySnack));
-      } else
-        print('Section not found');
-      //displaySnack('Section not found'); //     Eigeintlich besser aber fürht zu Noch bug wegen not build und so
+      for (int index in toDisplaySections) {
+        final section = songDataList[index];
+        if (section != null) {
+          String sectionTitle = section.key;
+          List sectionContent = section.value;
+
+          displayData.add(buildSetionWidget(
+              sectionTitle,
+              sectionContent,
+              (chordsData) => parseChords(
+                    chordsData,
+                    mappings,
+                    key,
+                    displaySnack,
+                  ),
+              displaySnack));
+        } else
+          print('Section not found');
+        //displaySnack('Section not found'); //     Eigeintlich besser aber fürht zu Noch bug wegen not build und so
+      }
+    }
+    lastDisplaySongHash = toDisplaySongHash;
+    if (displayData.isEmpty) {
+      return [const Text('Keine Songdaten verfügbar')];
+    } else {
+      displayRow.add(Column(
+        children: displayData,
+      ));
+      displayData = [];
     }
   }
 
-  if (displayData.isEmpty) {
-    return [const Text('Keine Songdaten verfügbar')];
-  }
-  return displayData;
+  return displayRow;
 }
