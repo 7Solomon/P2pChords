@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:P2pChords/dataManagment/useFullStorageFunctions.dart';
+import 'package:P2pChords/navigator.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:crypto/crypto.dart'; // Add this package to generate the hash
@@ -20,11 +23,38 @@ class MultiJsonStorage {
     }
   }
 
-  static Future<Map<String, dynamic>> saveJson(
-      String displayName, Map<String, dynamic> jsonData,
+  static Future<bool> _openDialogWindow(String msg) async {
+    return await showDialog(
+          context: NavigationService.navigatorKey.currentState!.context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Bestätige bitte'),
+              content: Text(msg),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Nein'),
+                  onPressed: () {
+                    Navigator.of(context).pop(false); // Return false
+                  },
+                ),
+                TextButton(
+                  child: const Text('Ja'),
+                  onPressed: () {
+                    Navigator.of(context).pop(true); // Return true
+                  },
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Default to false if dialog is dismissed
+  }
+
+  //static Future<Map<String, dynamic>> saveJson(
+  static saveJson(String displayName, Map<String, dynamic> jsonData,
       {String group = 'default', String jsonHash = 'undefined'}) async {
     final prefs = await SharedPreferences.getInstance();
-
+    bool doContinue = true;
     // Convert the JSON data to string
     String jsonString = jsonEncode(jsonData);
     if (jsonHash == 'undefined') {
@@ -32,41 +62,56 @@ class MultiJsonStorage {
     }
 
     // Speichern der Json unter dem Hash Key
-    bool result = await prefs.setString('$_keyPrefix:$jsonHash', jsonString);
-
-    if (result) {
-      // Retrieve the map of groups to hashes
-      String? groupMapString = prefs.getString('$_groupPrefix:group_map');
-      Map<String, List<Map<String, String>>> groupMap = {};
-
-      // If the map exists, decode it
-      if (groupMapString != null) {
-        Map<String, dynamic> decodedMap = jsonDecode(groupMapString);
-        groupMap = decodedMap.map((key, value) {
-          return MapEntry(
-            key,
-            (value as List<dynamic>)
-                .map((item) => Map<String, String>.from(item))
-                .toList(),
-          );
-        });
+    // In your existing code
+    final String saveString = '$_keyPrefix:$jsonHash';
+    if (prefs.containsKey(saveString)) {
+      final songData = prefs.getString(saveString);
+      if (songData != jsonString) {
+        Map<String, dynamic> differences = compareJson(songData, jsonString);
+        String confTxt =
+            'Ein Song mit dem Namen $displayName existiert bereits. Möchtest du ihn überschreiben?';
+        doContinue =
+            await openDiffrenceWindow(confTxt, differences: differences);
+      } else {
+        doContinue = false;
+        //print('Song existiert bereits');
       }
-
-      // Get the list of hashes associated with the group, or create a new list
-      List<Map<String, String>> songMap = groupMap[group] ?? [];
-      // Add the hash to the group if it's not already there
-      if (!songMap.any((map) => map['hash'] == jsonHash)) {
-        songMap.add({'name': displayName, 'hash': jsonHash});
-      }
-
-      // Update the group map with the new list of hashes
-      groupMap[group] = songMap;
-
-      // Save the updated group map back to SharedPreferences
-      await prefs.setString('$_groupPrefix:group_map', jsonEncode(groupMap));
     }
+    if (doContinue) {
+      bool result = await prefs.setString(saveString, jsonString);
 
-    return {'result': result, 'hash': jsonHash};
+      if (result) {
+        // Retrieve the map of groups to hashes
+        String? groupMapString = prefs.getString('$_groupPrefix:group_map');
+        Map<String, List<Map<String, String>>> groupMap = {};
+        // If the map exists, decode it
+        if (groupMapString != null) {
+          Map<String, dynamic> decodedMap = jsonDecode(groupMapString);
+          groupMap = decodedMap.map((key, value) {
+            return MapEntry(
+              key,
+              (value as List<dynamic>)
+                  .map((item) => Map<String, String>.from(item))
+                  .toList(),
+            );
+          });
+        }
+
+        // Get the list of hashes associated with the group, or create a new list
+        List<Map<String, String>> songMap = groupMap[group] ?? [];
+        // Add the hash to the group if it's not already there
+        if (!songMap.any((map) => map['hash'] == jsonHash)) {
+          songMap.add({'name': displayName, 'hash': jsonHash});
+        }
+
+        // Update the group map with the new list of hashes
+        groupMap[group] = songMap;
+
+        // Save the updated group map back to SharedPreferences
+        await prefs.setString('$_groupPrefix:group_map', jsonEncode(groupMap));
+      }
+    }
+    //return {'result': result, 'hash': jsonHash};
   }
 
   static Future<void> saveNewGroup(String name) async {

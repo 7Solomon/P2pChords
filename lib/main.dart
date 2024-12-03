@@ -2,6 +2,7 @@ import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
 import 'package:P2pChords/customeWidgets/MetronomeBlinkWidget.dart';
 import 'package:P2pChords/metronome/MetronomePage.dart';
 import 'package:P2pChords/metronome/test.dart';
+import 'package:P2pChords/navigator.dart';
 import 'package:P2pChords/song_select_pipeline/UiSettingsPage.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
 import 'package:flutter/material.dart';
@@ -45,13 +46,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'P2P Connection App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: MainPage(),
-    );
+        title: 'P2P Connection App',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: MainPage(),
+        navigatorKey: NavigationService.navigatorKey);
   }
 }
 

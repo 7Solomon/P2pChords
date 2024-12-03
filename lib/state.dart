@@ -82,7 +82,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     //if (!_isAdvertising) {
     try {
       _displaySnack("Starting advertising as: $_name");
-      _isAdvertising = true;
+      //_isAdvertising = true;
       bool advertisingResult = await _nearby.startAdvertising(
         _name,
         Strategy.P2P_CLUSTER,
@@ -95,14 +95,14 @@ class NearbyMusicSyncProvider with ChangeNotifier {
           if (status == Status.CONNECTED) {
             _connectedDeviceIds.add(id);
             _displaySnack("Successfully connected to $id");
-            _isAdvertising = false;
+            //_isAdvertising = false;
             notifyListeners();
           } else if (status == Status.REJECTED) {
             _displaySnack("Connection rejected by $id");
-            _isAdvertising = false;
+            //_isAdvertising = false;
           } else if (status == Status.ERROR) {
             _displaySnack("Error connecting to $id");
-            _isAdvertising = false;
+            //_isAdvertising = false;
           }
         },
         onDisconnected: (id) {

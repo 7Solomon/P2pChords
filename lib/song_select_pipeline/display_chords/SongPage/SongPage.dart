@@ -16,7 +16,7 @@ class ChordSheetPage extends StatefulWidget {
 }
 
 class _ChordSheetPageState extends State<ChordSheetPage> {
-  bool isLoadingMapping = true;
+  late bool isLoadingMapping;
   late final globalSongData;
   late final songSyncProvider;
 
@@ -81,23 +81,12 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
     // Move initialization to post-frame callback to ensure context is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       globalSongData = Provider.of<UiSettings>(context, listen: false);
-      //  songSyncProvider = Provider.of<NearbyMusicSyncProvider>(context);
-//
-      //  if (globalSongData.songsDataMap.isEmpty) {
-      //    print('Loading all JSONs');
-      //    _loadAllJsons();
-      //    print(globalSongData.currentGroup);
-      //    if (globalSongData.currentGroup != "") {
-      //      final Map<String, Map> songsDataMap =
-      //          _allGroupData[globalSongData.currentGroup] ?? {};
-//
-      //      globalSongData.setSongsDataMap(songsDataMap);
-      //    } else {
-      //      //songSyncProvider.askForGroup();
-      //    }
-      //  }
       if (globalSongData.nashvileMappings.isEmpty) {
         _initializeData(globalSongData);
+      } else {
+        setState(() {
+          isLoadingMapping = false;
+        });
       }
     });
   }
