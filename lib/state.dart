@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/metronome/test.dart';
-import 'package:P2pChords/uiSettings.dart';
+import 'package:P2pChords/UiSettings/page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,33 +15,28 @@ import 'package:provider/provider.dart';
 
 enum UserState { server, client, none }
 
-//enum SenderType { ble, wifi, none }
-
 class NearbyMusicSyncProvider with ChangeNotifier {
-  String _name = 'undefined';
+  String _name = 'Joe Mo';
+  Set<String> _connectedDeviceIds = {};
   final Nearby _nearby = Nearby();
-  late UiSettings _uiSettings;
+  late CurrentSelectionProvider _currentSectionProvider;
+  late DataLoadeProvider _dataLoader;
 
   UserState _userState = UserState.none;
-  bool _isServerDevice = false;
-  Set<String> _connectedDeviceIds = {};
-  bool _isAdvertising = false;
-  bool _isDiscovering = false;
 
   void Function(String) _displaySnack = (_) {};
-  void Function(int bpm, bool isPlaying, int tickCount)?
-      onMetronomeUpdateReceived;
 
   String get name => _name;
 
-  bool get isServerDevice => _isServerDevice;
   UserState get userState => _userState;
   Set<String> get connectedDeviceIds => _connectedDeviceIds;
   void Function(String) get displaySnack => _displaySnack;
   Function get sendDataToAll => _sendDataToAll;
 
   void init(BuildContext context) {
-    _uiSettings = Provider.of<UiSettings>(context, listen: false);
+    _currentSectionProvider =
+        Provider.of<CurrentSelectionProvider>(context, listen: false);
+    _dataLoader = Provider.of<DataLoadeProvider>(context, listen: false);
   }
 
   void defineName(String name) {
@@ -52,11 +49,10 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setAsServerDevice(bool isServer) {
-    _isServerDevice = isServer;
-    _userState = isServer ? UserState.server : UserState.client;
+  void setUserState(UserState state) {
+    _userState = state;
 
-    // Delay the notifyListeners() call until after the current frame.
+    // Delay the notifyListeners() call until after the current frame. vielliecht nicht nötig
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();
     });
@@ -79,10 +75,8 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   Future<bool> startAdvertising() async {
-    //if (!_isAdvertising) {
     try {
       _displaySnack("Starting advertising as: $_name");
-      //_isAdvertising = true;
       bool advertisingResult = await _nearby.startAdvertising(
         _name,
         Strategy.P2P_CLUSTER,
@@ -120,10 +114,6 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       _displaySnack('Error starting advertising: $e\n$stackTrace');
       return false;
     }
-    //} else {
-    //  _displaySnack("Already advertising");
-    //  return false;
-    //}
   }
 
   Future<bool> startDiscovery(
@@ -177,9 +167,12 @@ class NearbyMusicSyncProvider with ChangeNotifier {
       _displaySnack("Error accepting connection: $e");
     });
 
-    if (_isServerDevice && _uiSettings.currentGroup.isNotEmpty) {
-      _displaySnack("Sending current group data to new device $id");
-      //sendGroupData(id);
+    if (_userState == UserState.server) {
+      if (_currentSectionProvider.currentGroup != null) {
+        _displaySnack("Sending current group data to new device $id");
+        sendSongDataToClient(
+            id, _dataLoader.getSongData(_currentSectionProvider.currentGroup!));
+      }
     }
   }
 
@@ -229,31 +222,21 @@ class NearbyMusicSyncProvider with ChangeNotifier {
   }
 
   void handleIncomingMessage(String message) {
-    print('Did receive: $message');
-
     try {
       Map<String, dynamic> data = json.decode(message.trim());
       displaySnack("Received message: ${data['type']}");
 
       switch (data['type']) {
         case 'update':
-          String currentSongHash = data['content']['currentSongHash'];
-          int index = data['content']['index'];
-          String group = data['content']['group'];
-          _uiSettings.setCurrentSong(currentSongHash);
-          _uiSettings.setCurrentGroup(group);
-          _uiSettings.getListOfDisplaySections(index);
-          _uiSettings.notifyListeners();
-        case 'groupData':
-          MultiJsonStorage.saveJsonsGroup(
-              data['content']['group'], data['content']['songs']);
-          _uiSettings.setCurrentGroup(data['content']['group']);
-
-          _uiSettings.setSongsDataMap(data['content']['songs']);
-          _uiSettings.notifyListeners();
+          Map<String, dynamic> updateContent =
+              data['content'] as Map<String, dynamic>;
+          _currentSectionProvider.fromJson(updateContent);
+        case 'songData':
+          SongData songData = SongData.fromMap(data['content']['songData']);
+          MultiJsonStorage.saveSongsData(songData);
           break;
         case 'metronomeUpdate':
-          handleMetronomeUpdate(data);
+          //handleMetronomeUpdate(data);
           break;
       }
       notifyListeners();
@@ -262,69 +245,37 @@ class NearbyMusicSyncProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> sendUpdateToClients(
-      String currentSongHash, int index, String groupName) async {
-    Map<String, dynamic> data = {
-      'type': 'update',
-      'content': {
-        'currentSongHash': currentSongHash,
-        'index': index,
-        'group':
-            groupName, // group braucht man auch nicht, aber ka wie ich es sonst machen soll
-      } // Index braucht man eigentlich nicht. Aber why not
-    };
-
+  Future<bool> sendUpdateToClients(Map updateData) async {
+    Map<String, dynamic> data = {'type': 'update', 'content': updateData};
     return _sendDataToAll(data);
   }
 
-  Future<bool> sendCurrentGroupDataToIdDevice(String id) async {
-    Map<String, dynamic> groupSongData =
-        await MultiJsonStorage.loadJsonsFromGroup(_uiSettings.currentGroup);
+  Future<bool> sendSongDataToClients(SongData songData) async {
     Map<String, dynamic> data = {
-      'type': 'groupData',
+      'type': 'songData',
       'content': {
-        'group': _uiSettings.currentGroup,
-        'songs': groupSongData,
+        'songData': songData,
       }
     };
-    // FOR DEBUG !!!!!!!!!!!!
-    // --------------------
-    //handleIncomingMessage(jsonEncode(data));
-    // --------------------
-
-    return sendDataToDevice(id, data);
-  }
-
-  //Future<bool> sendSongsDataMap(Map dataMap) {
-  //  Map<String, dynamic> data = {
-  //    'type': 'groupData',
-  //    'content': {
-  //      'group': _uiSettings.currentGroup,
-  //      'songs': dataMap,
-  //    }
-  //  };
-//
-  //  return _sendDataToAll(data);
-  //}
-
-  Future<bool> sendGroupData(
-      String groupName, Map<String, dynamic> groupSongData) async {
-    Map<String, dynamic> data = {
-      'type': 'groupData',
-      'content': {
-        'group': groupName,
-        'songs': groupSongData,
-      }
-    };
-    // FOR DEBUG !!!!!!!!!!!!
-    // --------------------
-    //handleIncomingMessage(jsonEncode(data));
-    // --------------------
-
     return _sendDataToAll(data);
   }
 
-  Future<bool> sendDataToDevice(
+  Future<bool> sendUpdateToClient(String deviceId, Map updateData) {
+    Map<String, dynamic> data = {'type': 'update', 'content': updateData};
+    return _sendDataToDevice(deviceId, data);
+  }
+
+  Future<bool> sendSongDataToClient(String deviceId, SongData songData) async {
+    Map<String, dynamic> data = {
+      'type': 'songData',
+      'content': {
+        'songData': songData,
+      }
+    };
+    return _sendDataToDevice(deviceId, data);
+  }
+
+  Future<bool> _sendDataToDevice(
       String deviceId, Map<String, dynamic> data) async {
     try {
       final bytes = Uint8List.fromList(utf8.encode(json.encode(data)));
@@ -342,7 +293,7 @@ class NearbyMusicSyncProvider with ChangeNotifier {
 
     try {
       for (String id in _connectedDeviceIds) {
-        bool result = await sendDataToDevice(id, data);
+        bool result = await _sendDataToDevice(id, data);
         if (!result) {
           allSuccess = false;
           _displaySnack('Error sending data to device with id: $id');

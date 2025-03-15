@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -19,52 +21,39 @@ Future<void> importGroup() async {
 
     Map<String, dynamic> jsonData = jsonDecode(fileContent);
 
-    if (jsonData.containsKey('header') &&
-        jsonData['header'].containsKey('group_name')) {
-      // Assuming the JSON contains a group name and its songs
-      String groupName = jsonData['group_name'] ?? 'Imported Group';
-      Map<String, dynamic> songs = jsonData['songs'] ?? {};
+    SongData songData = SongData.fromMap(jsonData);
 
-      // Save the songs into the storage under the group name
-      for (String songName in songs.keys) {
-        await MultiJsonStorage.saveJson(songName, songs[songName],
-            group: groupName);
+    for (var data in songData.groups.entries) {
+      await MultiJsonStorage.saveNewGroup(data.key);
+      for (String hash in data.value) {
+        await MultiJsonStorage.saveJson(songData.songs[hash]!, group: data.key);
       }
     }
   }
 }
 
-Future<void> exportGroup(String groupName, BuildContext context) async {
-  // Load the group data
-  Map<String, Map<String, dynamic>> jsons =
-      await MultiJsonStorage.loadJsonsFromGroup(groupName);
-
-  // Initialize the group JSON with a header
-  Map<String, dynamic> groupJson = {
-    'header': {'group_name': groupName, 'anzahl': jsons.length},
-    'data': {} // Initialize 'data' as an empty map
-  };
-
+Future<void> exportGroupsData(SongData songsData) async {
+  // In exportGroupsData function
+  String groups = songsData.groups.keys.join('-');
+  String groupHash =
+      sha256.convert(utf8.encode(groups)).toString().substring(0, 8);
   try {
     Directory? downloadsDirectory = await getDownloadsDirectory();
     String filePath =
-        '${downloadsDirectory!.path}/${groupName}_p2pController.json';
-    //Directory? downloadsDirectory = Directory('/storage/emulated/0/Download');
-    //String filePath =
-    '${downloadsDirectory.path}/${groupName}_p2pController.json';
+        '${downloadsDirectory!.path}/${groupHash}_p2pController.json';
+
     // Convert the Map to a JSON string
-    String jsonString = jsonEncode(groupJson);
+    String jsonString = jsonEncode(songsData.toMap());
 
     // Write the JSON string to the file
     File file = File(filePath);
     await file.writeAsString(jsonString);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('File saved to $filePath')));
-    //print('File saved to $filePath');
+
+    print('File saved to: $filePath');
+    print('HERE ADD SNACKBAR');
   } catch (e) {
-    //print('Error saving file: $e');
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    print('Error saving file: $e');
+    print('HERE ADD SNACKBAR');
   }
 }
 

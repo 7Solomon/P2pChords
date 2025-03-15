@@ -2,78 +2,71 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
+import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
 import 'package:P2pChords/state.dart';
-import 'package:P2pChords/uiSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../dataManagment/storageManager.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/SongPage.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/ChordSheetPage.dart';
 
 import 'package:P2pChords/customeWidgets/TileWidget.dart';
 
 class Songoverviewpage extends StatelessWidget {
-  //final VoidCallback onGroupDeleted;
-  //final Map<String, dynamic> songsData;
-
   const Songoverviewpage({super.key});
 
   @override
   Widget build(BuildContext context) {
     //final songSyncProvider =
     //    Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-    final globalSongData = context.watch<UiSettings>();
+    final currentData = context.watch<CurrentSelectionProvider>();
+    final dataProvider = context.watch<DataLoadeProvider>();
     final musicSyncProvider = context.watch<NearbyMusicSyncProvider>();
 
     //print(songSyncProvider.currentGroup);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Songs in ${globalSongData.currentGroup}'),
+        title: Text('Songs in ${currentData.currentGroup}'),
       ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
-              itemCount: globalSongData.songsDataMap.length,
+              itemCount: dataProvider
+                  .getSongsInGroup(currentData.currentGroup!)
+                  .length,
               itemBuilder: (context, index) {
-                final hash = globalSongData.songsDataMap.keys.elementAt(index);
-                final song = globalSongData.songsDataMap[hash]!;
-                final name = song['header']['name'] ?? 'noName';
-
+                final song = dataProvider
+                    .getSongsInGroup(currentData.currentGroup!)[index];
+                final name = song.header.name;
+                final hash = song.hash;
                 return CustomListTile(
                   title: name,
                   contentPadding:
                       const EdgeInsets.symmetric(vertical: 0, horizontal: 16.0),
                   iconBool: false,
                   onTap: () {
-                    // FOR DEBUGGING
-                    globalSongData.setCurrentSong(hash);
-                    globalSongData.getListOfDisplaySections(0);
-                    //globalSongData.getListOfDisplaySectionsExperimental(0);
-                    musicSyncProvider.sendUpdateToClients(
-                        globalSongData.currentSongHash,
-                        globalSongData.startIndexofSection,
-                        globalSongData.currentGroup);
-                    //musicSyncProvider.sendUpdateToClients(hash, 0);
+                    currentData.setCurrentSong(hash);
+                    currentData.setCurrentSongIndex(0);
 
-                    ///
+                    musicSyncProvider.sendUpdateToClients(currentData.toJson());
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ChordSheetPage(),
+                        builder: (context) => const ChordSheetPage(),
                       ),
                     );
                   },
                   onLongPress: () {
-                    // Edit Json Data
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => JsonEditPage(
-                          jsonData: song,
+                          song: song,
                           saveJson: (String json) {
-                            MultiJsonStorage.saveJson(hash, jsonDecode(json),
-                                group: globalSongData.currentGroup);
+                            print('Not implemented');
+                            //MultiJsonStorage.saveJson(hash, jsonDecode(json),
+                            //    group: globalSongData.currentGroup);
                           },
                         ),
                       ),

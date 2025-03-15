@@ -1,19 +1,20 @@
+import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 
 class QuickSelectOverlay extends StatefulWidget {
-  final Map items; // Changed to Map
-  final String currentsong; // Current selected key
-  final Function(String) onItemSelected; // Now passes the key instead of value
+  final List<Song> songs;
+  final String currentsong;
+  final Function(String) onItemSelected;
   final Widget child;
 
   const QuickSelectOverlay({
-    Key? key,
-    required this.items,
+    super.key,
+    required this.songs,
     required this.currentsong,
     required this.onItemSelected,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   State<QuickSelectOverlay> createState() => _QuickSelectOverlayState();
@@ -23,7 +24,7 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
   OverlayEntry? _overlayEntry;
   double _startY = 0;
   double _currentY = 0;
-  late List<String> _orderedKeys; // Store keys in order
+
   late int _selectedIndex;
   final double _itemHeight = 56.0;
   ScrollController? _scrollController;
@@ -32,47 +33,22 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _initializeOrderedKeys();
-  }
 
-  void _initializeOrderedKeys() {
-    // Get all keys and sort them into before and after current
-    List<String> beforeCurrent = [];
-    List<String> afterCurrent = [];
-
-    widget.items.keys.forEach((key) {
-      if (key == widget.currentsong) return;
-      if (key.compareTo(widget.currentsong) < 0) {
-        beforeCurrent.add(key);
-      } else {
-        afterCurrent.add(key);
-      }
-    });
-
-    // Sort both lists
-    beforeCurrent.sort();
-    afterCurrent.sort();
-
-    // Combine lists with current key in the middle
-    _orderedKeys = [...beforeCurrent, widget.currentsong, ...afterCurrent];
-    _selectedIndex = beforeCurrent.length; // Index of current key
+    _selectedIndex =
+        widget.songs.indexWhere((song) => song.hash == widget.currentsong);
+    if (_selectedIndex < 0) _selectedIndex = 0;
   }
 
   @override
   void didUpdateWidget(QuickSelectOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.currentsong != widget.currentsong ||
-        oldWidget.items != widget.items) {
-      _initializeOrderedKeys();
-
-      if (_overlayEntry != null) {
-        // Delay the rebuild until after the current build phase
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _overlayEntry!.markNeedsBuild();
-          _scrollToSelectedIndex();
-        });
-      }
+    if (_overlayEntry != null) {
+      // Delay the rebuild until after the current build phase
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _overlayEntry!.markNeedsBuild();
+        _scrollToSelectedIndex();
+      });
     }
   }
 
@@ -161,7 +137,7 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
                         },
                         child: ListView.builder(
                           controller: _scrollController,
-                          itemCount: _orderedKeys.length,
+                          itemCount: widget.songs.length,
                           itemBuilder: (context, index) {
                             final isSelected = index == _selectedIndex;
                             final distanceFromSelected =
@@ -172,8 +148,7 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
                                     ? 0.3
                                     : 0.1;
 
-                            final key = _orderedKeys[index];
-                            final value = widget.items[key]!;
+                            final selectedSong = widget.songs[index];
 
                             return AnimatedOpacity(
                               duration: const Duration(milliseconds: 150),
@@ -193,8 +168,7 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
                                   ),
                                   child: ListTile(
                                     title: Text(
-                                      value['header']['name'] ??
-                                          'no Name Found', // Display the value from the map
+                                      selectedSong.header.name,
                                       style: TextStyle(
                                         fontSize: isSelected ? 16 : 14,
                                         fontWeight: isSelected
@@ -254,12 +228,13 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
     final middleOffset =
         scrollPixels + (MediaQuery.of(context).size.height / 2);
     final newIndex =
-        (middleOffset / _itemHeight).round().clamp(0, _orderedKeys.length - 1);
+        (middleOffset / _itemHeight).round().clamp(0, widget.songs.length - 1);
 
     if (newIndex != _selectedIndex) {
       setState(() {
         _selectedIndex = newIndex;
-        widget.onItemSelected(_orderedKeys[_selectedIndex]); // Pass the key
+        // Pass the song hash instead of the key
+        widget.onItemSelected(widget.songs[_selectedIndex].hash);
       });
     }
   }
@@ -270,12 +245,13 @@ class _QuickSelectOverlayState extends State<QuickSelectOverlay> {
     _currentY = dy;
     final difference = _currentY - _startY;
     final newIndex =
-        (difference / _itemHeight).round().clamp(0, _orderedKeys.length - 1);
+        (difference / _itemHeight).round().clamp(0, widget.songs.length - 1);
 
     if (newIndex != _selectedIndex) {
       setState(() {
         _selectedIndex = newIndex;
-        widget.onItemSelected(_orderedKeys[_selectedIndex]); // Pass the key
+        // Pass the song hash instead of the key
+        widget.onItemSelected(widget.songs[_selectedIndex].hash);
         _scrollToSelectedIndex();
       });
     }

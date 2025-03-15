@@ -1,9 +1,12 @@
 import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
+import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/groupManagement/songGroupPage.dart';
+import 'package:P2pChords/groupManagement/Pages/songGroupPage.dart';
 import 'package:P2pChords/groupManagement/groupFunctions.dart'; // Import your group functions here
 import 'package:P2pChords/customeWidgets/TileWidget.dart';
+import 'package:provider/provider.dart';
 
 class ManageGroupPage extends StatefulWidget {
   const ManageGroupPage({super.key});
@@ -13,10 +16,12 @@ class ManageGroupPage extends StatefulWidget {
 }
 
 class _ManageGroupPageState extends State<ManageGroupPage> {
-  Future<Map<String, List<Map<String, String>>>> _fetchGroups() async {
-    final test = await MultiJsonStorage.getAllGroups();
-    print(test);
-    return await test;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DataLoadeProvider>(context, listen: false).refreshData();
+    });
   }
 
   Future<void> _createNewGroup() async {
@@ -42,16 +47,20 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
               onPressed: () async {
                 String newGroup = controller.text.trim();
                 if (newGroup.isNotEmpty) {
-                  //await MultiJsonStorage.saveJson(
-                  //  newGroup,
-                  //  {},          /// Das hier ist ganz quatschig, weil es keine Songs in der neuen gruppe gibt
-                  //  group: newGroup,
-                  //);
-
-                  MultiJsonStorage.saveNewGroup(newGroup);
-                  setState(() {});
+                  await MultiJsonStorage.saveNewGroup(newGroup);
+                  final dataProvider =
+                      Provider.of<DataLoadeProvider>(context, listen: false);
+                  await dataProvider.refreshData();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gruppe "$newGroup" erstellt'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    Navigator.of(context).pop();
+                  }
                 }
-                Navigator.of(context).pop();
               },
             ),
           ],
@@ -86,20 +95,15 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
           ),
         ],
       ),
-      body: FutureBuilder<Map<String, List<Map<String, String>>>>(
-        future: _fetchGroups(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Consumer<DataLoadeProvider>(
+        builder: (context, dataProvider, child) {
+          if (dataProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          final groups = dataProvider.groups;
+          if (groups == null || groups.isEmpty) {
             return const Center(child: Text('Keine Gruppen vorhanden'));
           }
-
-          final groups = snapshot.data!;
           return ListView(
             children: groups.keys.map((group) {
               return Dismissible(
@@ -119,7 +123,8 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                 direction: DismissDirection.horizontal,
                 confirmDismiss: (direction) async {
                   if (direction == DismissDirection.endToStart) {
-                    await exportGroup(group, context);
+                    SongData songsdata = dataProvider.getSongData(group);
+                    await exportGroupsData(songsdata);
                     return false; // Don't remove the item from the list
                   } else if (direction == DismissDirection.startToEnd) {
                     bool? deleteConfirmed = await showDialog<bool>(
@@ -148,6 +153,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                     );
                     if (deleteConfirmed == true) {
                       await MultiJsonStorage.removeGroup(group);
+                      dataProvider.refreshData();
                       setState(() {});
                       return true; // Remove the item from the list
                     } else {

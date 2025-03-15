@@ -1,14 +1,15 @@
+import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/KeySelectPage.dart'; // Adjust the import as per your file structure
 
 class SongDrawer extends StatelessWidget {
-  final Map<String, dynamic> songData;
+  final Song song;
   final String currentKey;
   final ValueChanged<String> onKeyChanged;
 
   const SongDrawer({
     super.key,
-    required this.songData,
+    required this.song,
     required this.currentKey,
     required this.onKeyChanged,
   });
@@ -24,7 +25,7 @@ class SongDrawer extends StatelessWidget {
               color: Colors.blue,
             ),
             child: Text(
-              '${songData['header']['name']}',
+              song.header.name,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -34,21 +35,21 @@ class SongDrawer extends StatelessWidget {
           // Song Data
           ListTile(
             title: Text(
-              'Key: ${songData['header']['key']}',
+              'Tonart: ${song.header.key}',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
           ListTile(
             title: Text(
-              'BPM: ${songData['header']['bpm']}',
+              'BPM: ${song.header.bpm}',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
           ListTile(
-            title: Text('Rhythmus: ${songData['header']['time_signature']}'),
+            title: Text('Rhythmus: ${song.header.timeSignature}'),
           ),
           ListTile(
-            title: Text('Autoren: ${songData['header']['authors'].join(', ')}'),
+            title: Text('Autoren: ${song.header.authors.join(', ')}'),
           ),
           const SizedBox(height: 20),
           ListTile(

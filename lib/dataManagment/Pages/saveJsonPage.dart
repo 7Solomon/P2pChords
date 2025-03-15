@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
@@ -19,9 +20,16 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
   String? _fileName;
   String? _fileContent;
   bool _isLoading = false;
+  final _scaffoldKey = GlobalKey<ScaffoldMessengerState>();
 
-  final TextEditingController _nameSelector = TextEditingController();
   final TextEditingController _groupSelector = TextEditingController();
+
+  void _showSnackBar(String message) {
+    // Instead of using context, use the ScaffoldMessengerState directly
+    _scaffoldKey.currentState?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   Future<void> _pickFile() async {
     setState(() => _isLoading = true);
@@ -50,9 +58,7 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      _showSnackBar('Error: ${e.toString()}');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -60,41 +66,26 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
 
   Future<void> _saveJson() async {
     if (_selectedFile == null || _fileName == null || _fileContent == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a valid JSON file first')),
+      _showSnackBar(
+        'Please select a valid JSON file first',
       );
       return;
     }
 
     setState(() => _isLoading = true);
+    Map<String, dynamic> jsonData = jsonDecode(_fileContent!);
+    Song song = Song.fromMap(jsonData);
 
-    try {
-      Map<String, dynamic> jsonData = jsonDecode(_fileContent!);
-      String groupIndex =
-          _groupSelector.text.isEmpty ? 'default' : _groupSelector.text;
-      final returnJson = await MultiJsonStorage.saveJson(
-          _nameSelector.text, jsonData,
-          group: groupIndex);
+    String groupIndex =
+        _groupSelector.text.isEmpty ? 'default' : _groupSelector.text;
 
-      if (returnJson['result'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'JSON file saved successfully, with hash ${returnJson['hash']}')),
-        );
-        Navigator.of(context).pop(); // Return to the previous page
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error saving JSON: ')));
-      }
-    } catch (e) {
-      //print(e.toString());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving JSON: ${e.toString()}')),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    await MultiJsonStorage.saveJson(song, group: groupIndex);
+
+    _showSnackBar('JSON file saved successfully');
+
+    Navigator.of(context).pop();
+
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -133,26 +124,13 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
                     child: Text(_fileContent!),
                   ),
                 ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _nameSelector,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Name des Songs',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _groupSelector,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Willst du eine Gruppe',
-                ),
-              ),
-              const SizedBox(height: 16),
               ElevatedButton(
-                onPressed:
-                    _isLoading || _selectedFile == null ? null : _saveJson,
+                onPressed: () {
+                  print('Save JSON');
+                  print(_isLoading);
+                  print(_selectedFile);
+                  _isLoading || _selectedFile == null ? null : _saveJson();
+                },
                 child: const Text('Save JSON'),
               ),
             ],

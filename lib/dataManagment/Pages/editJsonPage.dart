@@ -1,12 +1,12 @@
 import 'dart:convert'; // To handle JSON encoding and decoding
+import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class JsonEditPage extends StatefulWidget {
-  const JsonEditPage(
-      {super.key, required this.jsonData, required this.saveJson});
+  const JsonEditPage({super.key, required this.song, required this.saveJson});
 
-  final Map<String, dynamic> jsonData;
+  final Song song;
   final void Function(String) saveJson;
 
   @override
@@ -19,7 +19,8 @@ class _JsonEditPageState extends State<JsonEditPage> {
   @override
   void initState() {
     super.initState();
-    _jsonController = TextEditingController(text: jsonEncode(widget.jsonData));
+    print(' Noch nicht überarbeitet');
+    _jsonController = TextEditingController(text: jsonEncode(widget.song));
   }
 
   @override

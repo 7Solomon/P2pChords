@@ -1,14 +1,10 @@
-import 'package:P2pChords/connect/connectionLogic/dataSendLogic.dart';
-import 'package:P2pChords/uiSettings.dart';
+import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../dataManagment/storageManager.dart';
-import '../dataManagment/Pages/saveJsonPage.dart';
 import 'SongOverviewPage.dart';
-import '../state.dart'; // Import the file containing GlobalMode
-
 import 'package:P2pChords/customeWidgets/TileWidget.dart';
 
 class GroupOverviewpage extends StatefulWidget {
@@ -19,64 +15,20 @@ class GroupOverviewpage extends StatefulWidget {
 }
 
 class _GroupOverviewpageState extends State<GroupOverviewpage> {
-  Map<String, Map<String, Map>> _allGroupData = {};
-  Map<String, List<Map<String, String>>> _allGroups = {};
-  bool _isLoading = true;
+  late DataLoadeProvider _dataProvider;
+  late CurrentSelectionProvider _currentSelectionProvider;
 
   @override
   void initState() {
     super.initState();
-    _loadAllJsons();
+    _dataProvider = Provider.of<DataLoadeProvider>(context, listen: false);
+    _currentSelectionProvider =
+        Provider.of<CurrentSelectionProvider>(context, listen: false);
   }
-
-  Future<void> _loadAllJsons() async {
-    //print('Loading all JSONs');
-
-    setState(() => _isLoading = true);
-    _allGroups = await MultiJsonStorage.getAllGroups();
-
-    for (MapEntry<String, List<Map<String, String>>> entry
-        in _allGroups.entries) {
-      String groupName = entry.key;
-      List<Map<String, String>> groupValue = entry.value;
-      _allGroupData[groupName] = {};
-
-      // Initialize the songs list for each group
-      for (Map<String, String> songValue in groupValue) {
-        String songHash = songValue['hash']!;
-
-        Map<String, dynamic>? songData =
-            await MultiJsonStorage.loadJson(songHash);
-        if (songData != null) {
-          _allGroupData[groupName]![songHash] = songData;
-        }
-      }
-    }
-    setState(() => _isLoading = false);
-  }
-
-  //void test(){
-  //  FutureBuilder(
-  //            future: MultiJsonStorage.loadJsonsFromGroup(
-  //                songSyncProvider.currentGroup),
-  //            builder: (context, snapshot) {
-  //              if (snapshot.connectionState == ConnectionState.waiting) {
-  //                return const Center(child: CircularProgressIndicator());
-  //              } else if (snapshot.hasError) {
-  //                return Center(child: Text('Error: ${snapshot.error}'));
-  //              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-  //                return const Center(child: Text('No songs available'));
-  //              }
-  //              // Extract the data from snapshot
-  //              final Map<String, Map<String, dynamic>> songsData =
-  //                  snapshot.data!;
-  //              //
-  //}
 
   @override
   Widget build(BuildContext context) {
     final nearbyProvider = Provider.of<NearbyMusicSyncProvider>(context);
-    final globalData = Provider.of<UiSettings>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -84,29 +36,25 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadAllJsons,
+            onPressed: _dataProvider.refreshData,
           ),
         ],
       ),
-      body: _isLoading
+      body: _dataProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _allGroups.isEmpty
-              ? const Center(child: Text('No saved JSONs'))
+          : _dataProvider.groups!.isEmpty
+              ? const Center(child: Text('Keine Gruppen vorhanden'))
               : ListView.builder(
-                  itemCount: _allGroups.length,
+                  itemCount: _dataProvider.groups!.length,
                   itemBuilder: (context, index) {
-                    String key = _allGroups.keys.elementAt(index);
+                    String name = _dataProvider.groups!.keys.elementAt(index);
+                    SongData songData = _dataProvider.getSongData(name);
                     return CustomListTile(
-                      title: key,
+                      title: name,
                       subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                       icon: Icons.file_copy,
                       onTap: () async {
-                        final Map<String, Map> songsDataMap =
-                            _allGroupData[key] ?? {};
-
-                        globalData.setSongsDataMap(songsDataMap);
-                        globalData.setCurrentGroup(key);
-
+                        _currentSelectionProvider.setCurrentGroup(name);
                         if (nearbyProvider.userState != UserState.client) {
                           if (nearbyProvider.userState == UserState.server) {
                             bool? shouldSend = await showDialog<bool>(
@@ -138,10 +86,9 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
 
                             // If the user presses Yes, send the data
                             if (shouldSend == true) {
-                              bool success = await nearbyProvider.sendGroupData(
-                                  key, songsDataMap);
+                              bool success = await nearbyProvider
+                                  .sendSongDataToClients(songData);
 
-                              // Optionally show a success message
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: success
@@ -155,12 +102,14 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                           }
 
                           // Navigate to the SongOverviewPage
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => Songoverviewpage(),
-                            ),
-                          );
+                          if (mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const Songoverviewpage(),
+                              ),
+                            );
+                          }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
