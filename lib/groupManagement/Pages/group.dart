@@ -2,8 +2,8 @@ import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/groupManagement/Pages/allSongsPage.dart';
-import 'package:P2pChords/customeWidgets/TileWidget.dart';
+import 'package:P2pChords/groupManagement/Pages/songs.dart';
+import 'package:P2pChords/styling/Tiles.dart';
 import 'package:provider/provider.dart';
 
 class GroupSongsPage extends StatefulWidget {
@@ -87,51 +87,35 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                     final songName = songHeader.name;
 
                     final songData = entry.sections;
-                    if (songData.isEmpty) {
-                      return Dismissible(
-                          key: Key(songHash),
-                          background: Container(color: Colors.red),
-                          direction: DismissDirection.startToEnd,
-                          confirmDismiss: (direction) async {
-                            if (widget.group == 'default') {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Lieder können nicht aus der Standardgruppe gelöscht werden.'),
-                                  backgroundColor: Colors.red,
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                              return false;
-                            }
-                            return true;
-                          },
-                          onDismissed: (direction) async {
-                            await _removeSongFromGroup(songHash);
-                          },
-                          child: CustomListTile(
-                            title: 'Unknown SongData Please Fix!',
-                            subtitle: songHash,
-                            arrowBool: false,
-                            iconBool: false,
-                          ));
-                    }
-                    return Dismissible(
-                      key: Key(songHash),
-                      background: Container(color: Colors.red),
-                      direction: DismissDirection.startToEnd,
-                      onDismissed: (direction) async {
-                        await _removeSongFromGroup(songHash);
-                      },
-                      child: CustomListTile(
-                        title: songName,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8.0, horizontal: 16.0),
-                        subtitle: songHash,
-                        arrowBool: false,
-                        iconBool: false,
-                      ),
-                    );
+
+                    return CDissmissible.deleteAndAction(
+                        key: Key(songHash),
+                        deleteConfirmation: () =>
+                            CDissmissible.showDeleteConfirmationDialog(context),
+                        confirmDeleteDismiss: () async {
+                          if (widget.group == 'default') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Lieder können nicht aus der Standardgruppe gelöscht werden.'),
+                                backgroundColor: Colors.red,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                            return false;
+                          }
+                          await _removeSongFromGroup(songHash);
+                          return true;
+                        },
+                        confirmActionDismiss: () {
+                          return Future.value(false);
+                        },
+                        child: CListTile(
+                          title: songData.isNotEmpty
+                              ? songName
+                              : 'Unknown SongData Please Fix!',
+                          subtitle: songHash,
+                        ));
                   }).toList(),
                 );
               },

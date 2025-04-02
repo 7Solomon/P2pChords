@@ -1,11 +1,10 @@
 import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/displayFunctions.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/songsDrawerWidget.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/song_selection.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
-import 'package:P2pChords/UiSettings/page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -34,9 +33,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer4<CurrentSelectionProvider, DataLoadeProvider, UIProvider,
-        NearbyMusicSyncProvider>(
+        ConnectionProvider>(
       builder: (context, currentSelection, dataLoader, uiProvider,
-          musicSyncProvider, _) {
+          connectionProvider, _) {
         if (currentSelection.currentGroup == null) {
           return const Scaffold(
             body: Center(
@@ -47,6 +46,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
         final List<Song> songs =
             dataLoader.getSongsInGroup(currentSelection.currentGroup!);
+        final int songIndex = dataLoader.getSongIndex(
+            currentSelection.currentGroup!, currentSelection.currentSongHash!);
+
         if (songs.isEmpty) {
           return const Scaffold(
             body: Center(
@@ -70,18 +72,34 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     uiProvider.setCurrentKey(newKey);
                   },
                 ),
+          //body: QuickSelectOverlay(
+          //  key: _quickSelectKey,
+          //  songs: dataLoader.getSongsInGroup(currentSelection.currentGroup!),
+          //  currentsong: currentSelection.currentSongHash!,
+          //  onItemSelected: (songHash) {
+          //    // Handle song selection
+          //  },
           body: SongSheetDisplay(
-            song: dataLoader.getSongByHash(currentSelection.currentSongHash!),
+            songs: songs,
+            songIndex: songIndex,
+            sectionIndex: currentSelection.currentSectionIndex!,
             currentKey: uiProvider.currentKey ?? 'C',
             startFontSize: uiProvider.fontSize ?? 16.0,
+            startSectionCount: uiProvider.sectionCount ?? 2,
             onSectionChanged: (index) {
-              // Update current section index
-              currentSelection.setCurrentSongIndex(index);
-
-              // If this is a server, notify clients
-              if (musicSyncProvider.userState == UserState.server) {
-                musicSyncProvider
-                    .sendUpdateToClients(currentSelection.toJson());
+              currentSelection.setCurrentSectionIndex(index);
+              if (connectionProvider.userState == UserState.server) {
+                connectionProvider.dataSyncService
+                    .sendUpdateToAllClients(currentSelection.toJson());
+              }
+            },
+            onSongChanged: (index) {
+              String hash = dataLoader.getHashByIndex(
+                  currentSelection.currentGroup!, index);
+              currentSelection.setCurrentSong(hash);
+              if (connectionProvider.userState == UserState.server) {
+                connectionProvider.dataSyncService
+                    .sendUpdateToAllClients(currentSelection.toJson());
               }
             },
           ),

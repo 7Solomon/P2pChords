@@ -19,9 +19,8 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final songSyncProvider =
-          Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-      songSyncProvider.init(context);
+      //final connectionProvider =
+      //    Provider.of<ConnectionProvider>(context, listen: false);
       setState(() {
         _loadedProvider = true;
       });
@@ -36,8 +35,8 @@ class _MainPageState extends State<MainPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
               Text(
                 'Initializing...',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -48,9 +47,10 @@ class _MainPageState extends State<MainPage> {
       );
     }
 
-    return Consumer3<NearbyMusicSyncProvider, CurrentSelectionProvider,
+    return Consumer3<ConnectionProvider, CurrentSelectionProvider,
         DataLoadeProvider>(
-      builder: (context, songSyncProvider, currentSection, dataLoader, child) {
+      builder:
+          (context, connectionProvider, currentSection, dataLoader, child) {
         return Scaffold(
           appBar: AppBar(
             title: const Text('P2P Chords'),
@@ -58,7 +58,7 @@ class _MainPageState extends State<MainPage> {
               // Status indicator
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: buildConnectionStatusChip(context, songSyncProvider),
+                child: buildConnectionStatusChip(context, connectionProvider),
               ),
             ],
           ),
@@ -75,7 +75,7 @@ class _MainPageState extends State<MainPage> {
             ),
             child: SafeArea(
               child: buildMainContent(
-                  context, songSyncProvider, currentSection, dataLoader),
+                  context, connectionProvider, currentSection, dataLoader),
             ),
           ),
         );

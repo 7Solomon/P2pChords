@@ -3,9 +3,9 @@ import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/groupManagement/Pages/songGroupPage.dart';
-import 'package:P2pChords/groupManagement/groupFunctions.dart'; // Import your group functions here
-import 'package:P2pChords/customeWidgets/TileWidget.dart';
+import 'package:P2pChords/groupManagement/Pages/group.dart';
+import 'package:P2pChords/groupManagement/functions.dart'; // Import your group functions here
+import 'package:P2pChords/styling/Tiles.dart';
 import 'package:provider/provider.dart';
 
 class ManageGroupPage extends StatefulWidget {
@@ -106,63 +106,22 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
           }
           return ListView(
             children: groups.keys.map((group) {
-              return Dismissible(
+              return CDissmissible.deleteAndAction(
                 key: Key(group),
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                secondaryBackground: Container(
-                  color: Colors.blue,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.download, color: Colors.white),
-                ),
-                direction: DismissDirection.horizontal,
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.endToStart) {
-                    SongData songsdata = dataProvider.getSongData(group);
-                    await exportGroupsData(songsdata);
-                    return false; // Don't remove the item from the list
-                  } else if (direction == DismissDirection.startToEnd) {
-                    bool? deleteConfirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text('Bestätige das Löschen'),
-                          content: const Text(
-                              'Bist du sicher, dass du die Gruppe permanent löschen willst? Das kann nicht mehr rückgängig gemacht werden.'),
-                          actions: <Widget>[
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(false); // Cancel
-                              },
-                              child: const Text('Abbrechen'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(true); // Confirm
-                              },
-                              child: const Text('Löschen'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                    if (deleteConfirmed == true) {
-                      await MultiJsonStorage.removeGroup(group);
-                      dataProvider.refreshData();
-                      setState(() {});
-                      return true; // Remove the item from the list
-                    } else {
-                      return false; // Don't remove the item
-                    }
-                  }
-                  return false;
+                deleteIcon: Icons.delete,
+                actionIcon: Icons.download,
+                deleteConfirmation: () =>
+                    CDissmissible.showDeleteConfirmationDialog(context),
+                confirmActionDismiss: () async {
+                  SongData songsdata = dataProvider.getSongData(group);
+                  await exportGroupsData(songsdata);
                 },
-                child: CustomListTile(
+                confirmDeleteDismiss: () async {
+                  await MultiJsonStorage.removeGroup(group);
+                  dataProvider.refreshData();
+                  setState(() {});
+                },
+                child: CListTile(
                   title: group,
                   icon: Icons.file_copy,
                   subtitle: 'Klicke um die Songs der Gruppe anzusehen',
@@ -173,14 +132,6 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                         builder: (context) => GroupSongsPage(group: group),
                       ),
                     );
-                  },
-                  onLongPress: () => {
-                    //Navigator.push(
-                    //  context,
-                    //  MaterialPageRoute(
-                    //    builder: (context) => JsonEditPage(jsonData: ,),
-                    //  ),
-                    //)
                   },
                 ),
               );

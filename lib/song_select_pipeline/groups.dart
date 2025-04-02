@@ -4,8 +4,8 @@ import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'SongOverviewPage.dart';
-import 'package:P2pChords/customeWidgets/TileWidget.dart';
+import 'group.dart';
+import 'package:P2pChords/styling/Tiles.dart';
 
 class GroupOverviewpage extends StatefulWidget {
   const GroupOverviewpage({Key? key}) : super(key: key);
@@ -26,9 +26,35 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
         Provider.of<CurrentSelectionProvider>(context, listen: false);
   }
 
+  Future<bool?> showShouldSendDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Senden der Gruppen Daten'),
+          content: const Text('Willst du die Datein zu den clients Senden?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // User pressed No
+              },
+              child: const Text('Nein'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // User pressed Yes
+              },
+              child: const Text('Ja'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final nearbyProvider = Provider.of<NearbyMusicSyncProvider>(context);
+    final connectionProvider = Provider.of<ConnectionProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -49,45 +75,22 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                   itemBuilder: (context, index) {
                     String name = _dataProvider.groups!.keys.elementAt(index);
                     SongData songData = _dataProvider.getSongData(name);
-                    return CustomListTile(
+                    return CListTile(
                       title: name,
                       subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                       icon: Icons.file_copy,
                       onTap: () async {
                         _currentSelectionProvider.setCurrentGroup(name);
-                        if (nearbyProvider.userState != UserState.client) {
-                          if (nearbyProvider.userState == UserState.server) {
-                            bool? shouldSend = await showDialog<bool>(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: const Text('Senden der Gruppen Daten'),
-                                  content: const Text(
-                                      'Willst du die Datein zu den clients Senden?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context)
-                                            .pop(false); // User pressed No
-                                      },
-                                      child: const Text('Nein'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context)
-                                            .pop(true); // User pressed Yes
-                                      },
-                                      child: const Text('Ja'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
+                        if (connectionProvider.userState != UserState.client) {
+                          if (connectionProvider.userState ==
+                              UserState.server) {
+                            bool? shouldSend = await showShouldSendDialog();
 
-                            // If the user presses Yes, send the data
+                            // If Yes, send data
                             if (shouldSend == true) {
-                              bool success = await nearbyProvider
-                                  .sendSongDataToClients(songData);
+                              bool success = await connectionProvider
+                                  .dataSyncService
+                                  .sendSongDataToAllClients(songData);
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(

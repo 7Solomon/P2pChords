@@ -1,5 +1,5 @@
 import 'package:P2pChords/dataManagment/dataClass.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/chord_painter.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
 import 'package:flutter/material.dart';
 
 class _LineSegment {
@@ -11,17 +11,25 @@ class _LineSegment {
 }
 
 class SongSheetDisplay extends StatefulWidget {
-  final Song song;
+  final List<Song> songs;
+  final int songIndex;
+  final int sectionIndex;
   final String currentKey;
   final double startFontSize;
+  final int startSectionCount;
   final Function(int) onSectionChanged;
+  final Function(int) onSongChanged;
 
   const SongSheetDisplay({
     super.key,
-    required this.song,
+    required this.songs,
+    required this.songIndex,
+    required this.sectionIndex,
     required this.currentKey,
     required this.startFontSize,
+    required this.startSectionCount,
     required this.onSectionChanged,
+    required this.onSongChanged,
   });
 
   @override
@@ -29,75 +37,125 @@ class SongSheetDisplay extends StatefulWidget {
 }
 
 class _SongSheetDisplayState extends State<SongSheetDisplay> {
-  late PageController _pageController;
-  int _currentPage = 0;
+  int _currentSectionIndex = 0;
+  int _currentSongIndex = 0;
   double _fontSize = 16.0;
+  late List<SongSection> _sections;
+
+  Song get currentSong => widget.songs[_currentSongIndex];
 
   @override
   void initState() {
     super.initState();
     _fontSize = widget.startFontSize;
-    _pageController = PageController();
+    _currentSectionIndex = widget.sectionIndex;
+    _currentSongIndex = widget.songIndex;
+    _loadSections();
+  }
+
+  @override
+  void didUpdateWidget(SongSheetDisplay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Check for section changes
+    if (widget.sectionIndex != _currentSectionIndex) {
+      setState(() {
+        _currentSectionIndex = widget.sectionIndex;
+      });
+    }
+
+    // Check for song changes
+    if (oldWidget.songIndex != widget.songIndex ||
+        oldWidget.songs != widget.songs) {
+      _currentSongIndex = widget.songIndex;
+      _loadSections();
+    }
+  }
+
+  void _loadSections() {
+    _sections = currentSong.sections;
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
     super.dispose();
   }
 
   void _handleScreenTap(BuildContext context, TapDownDetails details) {
     // Determine if tap is in top or bottom half of screen
     final screenHeight = MediaQuery.of(context).size.height;
-    final tapPosition = details.globalPosition.dy;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final tapPositionY = details.globalPosition.dy;
+    final tapPositionX = details.globalPosition.dx;
 
-    if (tapPosition < screenHeight / 2) {
-      // Tap on top half - go to next page
-      if (_currentPage > 0) {
-        _pageController.previousPage(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+    if (tapPositionX > screenWidth / 2) {
+      // Tap on right half
+      setState(() {
+        //openSongDrawer();
+      });
+    }
+
+    if (tapPositionY < screenHeight / 2) {
+      // Tap on top half - go to previous section
+      if (_currentSectionIndex > 0) {
+        setState(() {
+          _currentSectionIndex--;
+          widget.onSectionChanged(_currentSectionIndex);
+        });
+      } else if (_currentSongIndex > 0) {
+        // Move to previous song
+        setState(() {
+          _currentSongIndex--;
+          _loadSections();
+          _currentSectionIndex = _sections.length - 1;
+          widget.onSongChanged(_currentSongIndex);
+        });
       }
     } else {
-      // Tap on bottom half - go to previous page
-      if (_currentPage < widget.song.sections.length - 1) {
-        _pageController.nextPage(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+      // Tap on bottom half - go to next section
+      if (_currentSectionIndex < _sections.length - 1) {
+        setState(() {
+          _currentSectionIndex++;
+          widget.onSectionChanged(_currentSectionIndex);
+        });
+      } else if (_currentSongIndex < widget.songs.length - 1) {
+        // Move to next song
+        setState(() {
+          _currentSongIndex++;
+          _loadSections();
+          _currentSectionIndex = 0;
+          widget.onSongChanged(_currentSongIndex);
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Song header
-        _buildSongHeader(),
+    return GestureDetector(
+      onTapDown: (details) => _handleScreenTap(context, details),
+      child: Column(
+        children: [
+          // Song header
+          _buildSongHeader(),
 
-        // Main content
-        Expanded(
-          child: GestureDetector(
-            onTapDown: (details) => _handleScreenTap(context, details),
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.vertical,
-              itemCount: widget.song.sections.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-                widget.onSectionChanged(index);
-              },
-              itemBuilder: (context, index) {
-                return _buildSection(widget.song.sections[index]);
+          Expanded(
+            child: AnimatedSectionView(
+              sections: _sections,
+              currentIndex: _currentSectionIndex,
+              sectionsPerView: widget.startSectionCount,
+              fontSize: _fontSize,
+              buildSection: (section, fontSize) {
+                return SectionBuilder.buildSection(
+                  section,
+                  fontSize,
+                  (line) => _buildLine(line),
+                );
               },
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -108,7 +166,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
         children: [
           Expanded(
             child: Text(
-              widget.song.header.name,
+              currentSong.header.name,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -123,10 +181,10 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
               color: Colors.grey[700],
             ),
           ),
-          // Small page indicator
+          // Page indicator with song number
           const SizedBox(width: 12),
           Text(
-            '${_currentPage + 1}/${widget.song.sections.length}',
+            'Section ${_currentSectionIndex + 1}/${_sections.length} • Song ${_currentSongIndex + 1}/${widget.songs.length}',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],
@@ -137,27 +195,42 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     );
   }
 
-  Widget _buildSection(SongSection section) {
+  Widget _buildSectionView(int currentIndex) {
+    // Calculate how many sections to display
+    List<SongSection> sectionsToShow = [];
+
+    // Add current section and subsequent sections up to startSectionCount
+    for (int i = currentIndex;
+        i < currentIndex + widget.startSectionCount && i < _sections.length;
+        i++) {
+      sectionsToShow.add(_sections[i]);
+    }
+
     return SingleChildScrollView(
+      physics:
+          const NeverScrollableScrollPhysics(), // Disable scrolling within the page
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            section.title.toUpperCase(),
-            style: TextStyle(
-              fontSize: _fontSize + 2,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...section.lines.map((line) => _buildLyricLine(line)),
+          ...sectionsToShow.expand((section) => [
+                Text(
+                  section.title.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: _fontSize + 2,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...section.lines.map((line) => _buildLine(line)),
+                const SizedBox(height: 24),
+              ]),
         ],
       ),
     );
   }
 
-  Widget _buildLyricLine(LyricLine line) {
+  Widget _buildLine(LyricLine line) {
     // If no chords, just return the lyrics
     if (line.chords.isEmpty) {
       return Padding(
@@ -310,8 +383,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
       }
 
       // Calculate chord width
-      double chordWidth =
-          _getTextWidth(_translateChord(chord.value), _fontSize - 2);
+      double chordWidth = _getTextWidth(_translateChord(chord), _fontSize - 2);
 
       // Check if adding this chord would exceed available width
       if (currentWidth + chordWidth > maxWidth - 10) {
@@ -322,7 +394,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
       // Add chord text
       result.add(
         Text(
-          _translateChord(chord.value),
+          _translateChord(chord),
           style: TextStyle(
             fontSize: _fontSize - 2,
             fontWeight: FontWeight.bold,
@@ -356,8 +428,9 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
   }
 
   // Translate chord if needed
-  String _translateChord(String chord) {
-    // Implement your chord translation logic here
-    return chord;
+  String _translateChord(Chord chord) {
+    String chordString =
+        ChordUtils.nashvilleToChord(chord.value, widget.currentKey);
+    return chordString;
   }
 }

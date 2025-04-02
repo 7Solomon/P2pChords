@@ -37,7 +37,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
 
     if (dataLoader.songs != null && dataLoader.songs!.isNotEmpty) {
       currentSelection.setCurrentGroup('default');
-      currentSelection.setCurrentSongIndex(0);
+      currentSelection.setCurrentSectionIndex(0);
       currentSelection.setCurrentSong(dataLoader.songs!.keys.first);
     }
   }
@@ -45,9 +45,9 @@ class _UisettingsPageState extends State<UisettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer4<CurrentSelectionProvider, DataLoadeProvider, UIProvider,
-        NearbyMusicSyncProvider>(
+        ConnectionProvider>(
       builder: (context, currentSelection, dataLoader, uiProvider,
-          musicSyncProvider, _) {
+          connectionProvider, _) {
         if (dataLoader.songs == null || dataLoader.songs!.isEmpty) {
           return const Scaffold(
             body: Center(
@@ -61,7 +61,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
             // Using a post-frame callback to avoid modifying state during build
             WidgetsBinding.instance.addPostFrameCallback((_) {
               currentSelection.setCurrentGroup('default');
-              currentSelection.setCurrentSongIndex(0);
+              currentSelection.setCurrentSectionIndex(0);
               currentSelection.setCurrentSong(dataLoader.songs!.keys.first);
             });
           }
@@ -165,11 +165,20 @@ class _UisettingsPageState extends State<UisettingsPage> {
               ],
             ),
             body: SongSheetWithControls(
-              song: dataLoader.getSongByHash(currentSelection.currentSongHash!),
+              songs: dataLoader.getSongsInGroup(currentSelection.currentGroup!),
+              songIndex: dataLoader.getSongIndex(currentSelection.currentGroup!,
+                  currentSelection.currentSongHash!),
+              sectionIndex: currentSelection.currentSectionIndex!,
               currentKey: uiProvider.currentKey ?? 'C',
               startFontSize: uiProvider.fontSize ?? 16.0,
+              startSectionCount: uiProvider.sectionCount ?? 2,
               onSectionChanged: (index) {
-                currentSelection.setCurrentSongIndex(index);
+                currentSelection.setCurrentSectionIndex(index);
+              },
+              onSongChanged: (index) {
+                String hash = dataLoader.getHashByIndex(
+                    currentSelection.currentGroup!, index);
+                currentSelection.setCurrentSong(hash);
               },
               onFontSizeChanged: (fontSize) {
                 _currentFontSize = fontSize;

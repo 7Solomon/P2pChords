@@ -58,5 +58,8 @@
 	<string>Need location permission for nearby connections</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Need location permission for nearby connections</string>
+
+	<key>NSCameraUsageDescription</key>
+<string>This app needs camera access to scan QR codes</string>
 </dict>
 </plist>

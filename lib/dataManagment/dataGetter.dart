@@ -9,9 +9,15 @@ import 'package:P2pChords/dataManagment/dataClass.dart';
 class UIProvider extends ChangeNotifier {
   String? _currentKey;
   double? _fontSize;
+  int? _sectionCount;
 
-  setFontSize(double size) {
+  void setFontSize(double size) {
     _fontSize = size;
+    notifyListeners();
+  }
+
+  void setSectionCount(int count) {
+    _sectionCount = count;
     notifyListeners();
   }
 
@@ -22,15 +28,21 @@ class UIProvider extends ChangeNotifier {
 
   double? get fontSize => _fontSize;
   String? get currentKey => _currentKey;
+  int? get sectionCount => _sectionCount;
 
   fromJson(Map<String, dynamic> json) {
     _currentKey = json['currentKey'];
     _fontSize = json['fontSize'];
+    _sectionCount = json['sectionCount'];
     notifyListeners();
   }
 
   Map<String, dynamic> toJson() {
-    return {'currentKey': _currentKey, 'fontSize': _fontSize};
+    return {
+      'currentKey': _currentKey,
+      'fontSize': _fontSize,
+      'sectionCount': _sectionCount
+    };
   }
 }
 
@@ -54,7 +66,7 @@ class CurrentSelectionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCurrentSongIndex(int index) {
+  void setCurrentSectionIndex(int index) {
     _currentSectionIndex = index;
     notifyListeners();
   }
@@ -104,12 +116,25 @@ class DataLoadeProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> saveDataToStorage(SongData songData) async {
+    await MultiJsonStorage.saveSongsData(songData);
+  }
+
   Future<void> refreshData() async {
     await _loadDataFromStorage();
   }
 
   Song getSongByHash(String hash) {
     return _songs![hash]!;
+  }
+
+  int getSongIndex(String group, String hash) {
+    print(groups);
+    return _groups![group]!.indexOf(hash);
+  }
+
+  String getHashByIndex(String group, int index) {
+    return _groups![group]![index];
   }
 
   List<Song> getSongsInGroup(String group) {

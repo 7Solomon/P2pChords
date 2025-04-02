@@ -3,26 +3,23 @@ import 'dart:math';
 
 import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
 import 'package:P2pChords/dataManagment/dataGetter.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/drawerWidget.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/ChordSheetPage.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 
-import 'package:P2pChords/customeWidgets/TileWidget.dart';
+import 'package:P2pChords/styling/Tiles.dart';
 
 class Songoverviewpage extends StatelessWidget {
   const Songoverviewpage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    //final songSyncProvider =
-    //    Provider.of<NearbyMusicSyncProvider>(context, listen: false);
     final currentData = context.watch<CurrentSelectionProvider>();
     final dataProvider = context.watch<DataLoadeProvider>();
-    final musicSyncProvider = context.watch<NearbyMusicSyncProvider>();
+    final musicSyncProvider = context.watch<ConnectionProvider>();
 
-    //print(songSyncProvider.currentGroup);
     return Scaffold(
       appBar: AppBar(
         title: Text('Songs in ${currentData.currentGroup}'),
@@ -39,16 +36,14 @@ class Songoverviewpage extends StatelessWidget {
                     .getSongsInGroup(currentData.currentGroup!)[index];
                 final name = song.header.name;
                 final hash = song.hash;
-                return CustomListTile(
+                return CListTile(
                   title: name,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16.0),
-                  iconBool: false,
                   onTap: () {
                     currentData.setCurrentSong(hash);
-                    currentData.setCurrentSongIndex(0);
+                    currentData.setCurrentSectionIndex(0);
 
-                    musicSyncProvider.sendUpdateToClients(currentData.toJson());
+                    musicSyncProvider.dataSyncService
+                        .sendUpdateToAllClients(currentData.toJson());
 
                     Navigator.push(
                       context,

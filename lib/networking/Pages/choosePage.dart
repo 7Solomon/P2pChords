@@ -1,4 +1,4 @@
-import 'package:P2pChords/customeWidgets/ButtonWidget.dart';
+import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/mainPage/page.dart';
 import 'package:P2pChords/networking/Pages/client/clientPage.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +12,13 @@ class ChooseSCStatePage extends StatelessWidget {
 
   void _setUserStateAndNavigate(BuildContext context, UserState state) {
     final songSyncProvider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+        Provider.of<ConnectionProvider>(context, listen: false);
+    songSyncProvider.setUserState(state);
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) {
-          songSyncProvider.setUserState(state);
           if (state == UserState.server) {
             return const ServerPage(); // Navigate to ServerPage
           }

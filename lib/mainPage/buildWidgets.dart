@@ -1,16 +1,19 @@
+import 'dart:io';
+
 import 'package:P2pChords/UiSettings/page.dart';
-import 'package:P2pChords/customeWidgets/ButtonWidget.dart';
+import 'package:P2pChords/song_select_pipeline/beamer.dart';
+import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/dataManagment/dataGetter.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/ChordSheetPage.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/utils/test.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/Pages/choosePage.dart';
-import 'package:P2pChords/song_select_pipeline/GroupOverviewPage.dart';
-import 'package:P2pChords/groupManagement/Pages/manageGroupPage.dart';
+import 'package:P2pChords/song_select_pipeline/groups.dart';
+import 'package:P2pChords/groupManagement/Pages/groups.dart';
 
 Widget buildConnectionStatusChip(
-    BuildContext context, NearbyMusicSyncProvider provider) {
+    BuildContext context, ConnectionProvider provider) {
   Color chipColor;
   String statusText;
 
@@ -25,7 +28,7 @@ Widget buildConnectionStatusChip(
       break;
     default:
       chipColor = Colors.grey;
-      statusText = "Disconnected";
+      statusText = "Offline";
   }
 
   return GestureDetector(
@@ -49,11 +52,10 @@ Widget buildConnectionStatusChip(
 
 Widget buildMainContent(
     BuildContext context,
-    NearbyMusicSyncProvider songSyncProvider,
+    ConnectionProvider songSyncProvider,
     CurrentSelectionProvider currentSection,
     DataLoadeProvider dataLoader) {
   final isClient = songSyncProvider.userState == UserState.client;
-
   return Center(
     child: Padding(
       padding: const EdgeInsets.all(24.0),
@@ -78,10 +80,24 @@ Widget buildMainContent(
           AppButton(
             text: isClient ? 'Folge den Lider' : 'Spiele Lieder',
             icon: isClient ? Icons.queue_music : Icons.library_music,
-            onPressed: () {
+            onPressed: () async {
               if (isClient) {
-                _handleClientSongAction(
-                    context, songSyncProvider, currentSection, dataLoader);
+                if (Platform.isWindows || Platform.isLinux) {
+                  bool beamer = await _handleBeamer(context) ?? false;
+                  if (beamer) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const BeamerPage()),
+                    );
+                  } else {
+                    _handleClientSongAction(
+                        context, songSyncProvider, currentSection, dataLoader);
+                  }
+                } else {
+                  _handleClientSongAction(
+                      context, songSyncProvider, currentSection, dataLoader);
+                }
               } else {
                 Navigator.push(
                   context,
@@ -142,19 +158,43 @@ Widget buildMainContent(
   );
 }
 
+Future<bool?> _handleBeamer(BuildContext context) async {
+  return showDialog<bool>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Beamer Option'),
+        content: const Text(
+            'Du bist auf einem PC: Willst du eine Beamer Display, oder die Normale Seitenansicht?'),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Normale ansicht'),
+            onPressed: () {
+              Navigator.of(context).pop(false);
+            },
+          ),
+          TextButton(
+            child: const Text('Beamer ansicht'),
+            onPressed: () {
+              Navigator.of(context).pop(true);
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 void _handleClientSongAction(
     BuildContext context,
-    NearbyMusicSyncProvider songSyncProvider,
+    ConnectionProvider songSyncProvider,
     CurrentSelectionProvider currentSection,
     DataLoadeProvider dataLoader) {
   if (songSyncProvider.connectedDeviceIds.isNotEmpty) {
-    if (dataLoader.groups != null &&
-        dataLoader.groups!.keys.contains(currentSection.currentGroup)) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ChordSheetPage()),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ChordSheetPage()),
+    );
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

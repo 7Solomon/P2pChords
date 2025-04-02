@@ -1,5 +1,7 @@
+import 'package:P2pChords/dataManagment/converter/page.dart';
 import 'package:P2pChords/dataManagment/dataClass.dart';
 import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/dataManagment/Pages/saveJsonPage.dart';
@@ -74,13 +76,16 @@ class _AllSongsPageState extends State<AllSongsPage> {
               final key = entry.key;
               final songData = entry.value;
               final isInGroup = groupSongs.contains(key);
-
-              return Dismissible(
+              return CDissmissible.deleteAndAction(
                 key: Key(key),
-                background: Container(color: Colors.blue),
-                direction: DismissDirection.endToStart,
-                confirmDismiss: (direction) async {
+                deleteConfirmation: () =>
+                    CDissmissible.showDeleteConfirmationDialog(context),
+                confirmDeleteDismiss: () async {
+                  Future.value(false);
+                },
+                confirmActionDismiss: () async {
                   await _addSongToGroup(key);
+                  return Future.value(false);
                 },
                 child: Container(
                   color: isInGroup
@@ -102,25 +107,86 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   ),
                 ),
               );
+              //return Dismissible(
+              //  key: Key(key),
+              //  background: Container(color: Colors.blue),
+              //  direction: DismissDirection.endToStart,
+              //  confirmDismiss: (direction) async {
+              //    await _addSongToGroup(key);
+              //  },
+              //  child: Container(
+              //    color: isInGroup
+              //        ? Colors.blue.withOpacity(0.8)
+              //        : Colors.transparent,
+              //    child: ListTile(
+              //      title: Text(
+              //        songData.header.name,
+              //        style: TextStyle(
+              //          color: isInGroup ? Colors.white : Colors.black,
+              //        ),
+              //      ),
+              //      subtitle: Text(
+              //        key,
+              //        style: TextStyle(
+              //          color: isInGroup ? Colors.white70 : Colors.black54,
+              //        ),
+              //      ),
+              //    ),
+              //  ),
+              //);
             }).toList(),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => JsonFilePickerPage(onSongAdded: () {
-                      // Hier aktualisieren wir die Daten über den Provider
-                      Provider.of<DataLoadeProvider>(context, listen: false)
-                          .refreshData();
-                    })),
-          );
+          _showOptionsMenu();
         },
-        tooltip: 'Neues Lied Hinnzufügen',
+        tooltip: 'Optionen',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  void _showOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.file_upload),
+              title: const Text('Lied aus Datei importieren'),
+              onTap: () {
+                Navigator.pop(context); // Close the bottom sheet
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JsonFilePickerPage(onSongAdded: () {
+                      Provider.of<DataLoadeProvider>(context, listen: false)
+                          .refreshData();
+                    }),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.create),
+              title: const Text('Neues Lied erstellen'),
+              onTap: () {
+                Navigator.pop(context); // Close the bottom sheet
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ConverterPage(),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

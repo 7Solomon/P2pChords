@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:P2pChords/networking/Pages/components.dart';
-import 'package:P2pChords/networking/Pages/server/_components.dart';
+import 'package:P2pChords/networking/Pages/server/functions.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/state.dart';
-import 'package:P2pChords/customeWidgets/ButtonWidget.dart';
+import 'package:P2pChords/styling/Button.dart';
+import 'package:P2pChords/networking/Pages/components.dart';
 
 class ServerPage extends StatefulWidget {
   const ServerPage({Key? key}) : super(key: key);
@@ -16,163 +16,279 @@ class ServerPage extends StatefulWidget {
 
 class _ServerPageState extends State<ServerPage>
     with SingleTickerProviderStateMixin {
-  bool _isSearching = false;
-  bool _searchComplete = false;
+  // State variables
+  bool _isStarting = false;
   bool _permissionsChecked = false;
-  int _searchProgress = 0;
-  late AnimationController _searchAnimationController;
-  Timer? _searchTimer;
+
+  // Animation variables
+  int _animationProgress = 0;
+  late AnimationController _animationController;
+  Timer? _animationTimer;
+  bool _isModeSelectorExpanded = false;
+
+  // Connection variables
+  ConnectionMode? _selectedMode;
+  late Future<void> _initFuture;
 
   @override
   void initState() {
     super.initState();
-    _searchAnimationController = AnimationController(
+    _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..addListener(() {
         setState(() {});
       });
-    // Move permissions check to after the build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_permissionsChecked) {
-        _checkPermissions();
-        _permissionsChecked = true;
-      }
-    });
+
+    _initFuture = _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final provider = Provider.of<ConnectionProvider>(context, listen: false);
+    //provider.setUserState(UserState.server);
+    await _checkPermissions();
+    _selectedMode = provider.connectionMode;
   }
 
   @override
   void dispose() {
-    _searchAnimationController.dispose();
-    _searchTimer?.cancel();
+    _animationController.dispose();
+    _animationTimer?.cancel();
     super.dispose();
   }
 
-  /// Check required permissions for nearby connections
+  /// Check required permissions
   Future<void> _checkPermissions() async {
-    if (!mounted) return;
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
-    provider.updateDisplaySnack(_showSnackBar);
-    await provider.checkPermissions();
-    if (mounted) {
-      _showSnackBar("Permissions checked");
-    }
+    final provider = Provider.of<ConnectionProvider>(context, listen: false);
+    bool status = await provider.checkPermissions();
+    _showSnackBar(
+        status ? "Berechtigungen erteilt" : "Berechtigungen nicht erteilt");
+    if (!status) return;
+    setState(() {
+      _permissionsChecked = true;
+    });
   }
 
-  /// Display a snackbar message
+  /// Show a snackbar message
   void _showSnackBar(String message) {
     if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            margin: const EdgeInsets.all(12),
-          ),
-        );
-      }
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(12),
+      ),
+    );
   }
 
-  /// Start the server advertising
-  void _startServer() async {
-    final provider =
-        Provider.of<NearbyMusicSyncProvider>(context, listen: false);
+  /// Start the server based on selected connection mode
+  Future<void> _startServer() async {
+    final provider = Provider.of<ConnectionProvider>(context, listen: false);
 
+    // Maybe good
+    provider.setUserState(UserState.server);
+
+    // Update connection mode in provider
+    provider.setConnectionMode(_selectedMode!);
+
+    // Start animation
     setState(() {
-      _isSearching = true;
-      _searchComplete = false;
-      _searchProgress = 0;
+      _isStarting = true;
+      _animationProgress = 0;
     });
 
-    // Start the loading animation
-    _searchAnimationController.repeat();
-
-    // Create a periodic timer to update search progress
-    _searchTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (_searchProgress < 3 && mounted) {
+    _animationController.repeat();
+    _animationTimer =
+        Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (_animationProgress < 3 && mounted) {
         setState(() {
-          _searchProgress++;
+          _animationProgress++;
         });
       }
     });
 
     try {
-      await provider.startAdvertising();
+      bool success = false;
+
+      // Start appropriate services based on mode
+      if (_selectedMode == ConnectionMode.nearby ||
+          _selectedMode == ConnectionMode.hybrid) {
+        success = await provider.nearbyService.startServer();
+      }
+
+      if (_selectedMode == ConnectionMode.webSocket ||
+          _selectedMode == ConnectionMode.hybrid) {
+        success = await provider.webSocketService.startServer();
+      }
 
       // Ensure the loading animation plays for at least 2 seconds
       await Future.delayed(const Duration(seconds: 2));
 
       if (mounted) {
         setState(() {
-          _isSearching = false;
-          _searchComplete = true;
+          _isStarting = false;
+          provider.setServerRunning(success);
         });
 
-        _searchAnimationController.stop();
-        _searchTimer?.cancel();
+        _animationController.stop();
+        _animationTimer?.cancel();
 
-        if (provider.connectedDeviceIds.isEmpty) {
-          _showSnackBar("No clients connected");
+        if (!success) {
+          _showSnackBar("Server konnte nicht gestartet werden");
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isSearching = false;
-          _searchComplete = true;
+          _isStarting = false;
+          provider.setServerRunning(false);
         });
-        _searchAnimationController.stop();
-        _searchTimer?.cancel();
-        _showSnackBar("Error starting server: ${e.toString()}");
+        _animationController.stop();
+        _animationTimer?.cancel();
+        _showSnackBar("Fehler beim Starten des Servers: ${e.toString()}");
       }
     }
   }
 
-  /// Get the current server status text based on progress
-  String _getSearchingText() {
-    switch (_searchProgress % 4) {
-      case 0:
-        return 'Starting server';
-      case 1:
-        return 'Making server discoverable';
-      case 2:
-        return 'Waiting for connections';
-      case 3:
-        return 'Ready for devices';
-      default:
-        return 'Starting server...';
+  /// Stop the server
+  Future<void> _stopServer() async {
+    final provider = Provider.of<ConnectionProvider>(context, listen: false);
+
+    try {
+      if (_selectedMode == ConnectionMode.nearby ||
+          _selectedMode == ConnectionMode.hybrid) {
+        await provider.nearbyService.stopServer();
+      }
+
+      if (_selectedMode == ConnectionMode.webSocket ||
+          _selectedMode == ConnectionMode.hybrid) {
+        await provider.webSocketService.stopServer();
+      }
+
+      setState(() {
+        provider.setServerRunning(false);
+      });
+
+      _showSnackBar("Server gestoppt");
+    } catch (e) {
+      _showSnackBar("Fehler beim Stoppen des Servers: ${e.toString()}");
     }
+  }
+
+  /// Get status text based on current state
+  String _getStatusText(bool isServerRunning) {
+    if (_isStarting) {
+      switch (_animationProgress % 4) {
+        case 0:
+          return 'Starte Server...';
+        case 1:
+          return 'Mache Server entdeckbar...';
+        case 2:
+          return 'Initialisiere Verbindungen...';
+        case 3:
+          return 'Bereit für Verbindungen...';
+        default:
+          return 'Starte Server...';
+      }
+    } else if (isServerRunning) {
+      return 'Server läuft (${_getModeName(_selectedMode!)})';
+    } else {
+      return 'Server ist nicht aktiv';
+    }
+  }
+
+  /// Get German name for connection mode
+  String _getModeName(ConnectionMode mode) {
+    switch (mode) {
+      case ConnectionMode.nearby:
+        return 'Nearby';
+      case ConnectionMode.webSocket:
+        return 'WLAN';
+      case ConnectionMode.hybrid:
+        return 'Hybrid';
+      default:
+        return 'Unbekannt';
+    }
+  }
+
+  /// Build the connected clients list
+  Widget _buildConnectedClientsList(Set<String> connectedDeviceIds) {
+    final provider = Provider.of<ConnectionProvider>(context, listen: false);
+    final isServerRunning = provider.isServerRunning;
+
+    return Expanded(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: connectedDeviceIds.isNotEmpty
+            ? listViewClientList(connectedDeviceIds)
+            : buildEmptyState(
+                context: context,
+                icon: Icons.devices_other,
+                message: _isStarting
+                    ? 'Warte auf Client-Verbindungen...'
+                    : isServerRunning
+                        ? 'Keine Clients verbunden'
+                        : 'Starte den Server, um Verbindungen zu ermöglichen',
+                submessage: isServerRunning && !_isStarting
+                    ? 'Clients müssen nach diesem Server suchen, um zu verbinden'
+                    : null,
+              ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final songSyncProvider = Provider.of<NearbyMusicSyncProvider>(context);
-    final theme = Theme.of(context);
-    final connectedDeviceIds = songSyncProvider.connectedDeviceIds;
+    return FutureBuilder(
+        future: _initFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Fehler: ${snapshot.error}'),
+            );
+          } else {
+            return _buildMainContent();
+          }
+        });
+  }
 
+  Widget _buildMainContent() {
+    final provider = Provider.of<ConnectionProvider>(context);
+    final theme = Theme.of(context);
+    final connectedDeviceIds = provider.connectedDeviceIds;
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: const Text('Server'),
         centerTitle: true,
         elevation: 0,
         actions: [
+          // Status chip
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: buildServerStatusChip(context, _searchComplete),
+            child: Chip(
+              label: Text(
+                provider.isServerRunning ? 'Aktiv' : 'Inaktiv',
+                style: TextStyle(
+                  color:
+                      provider.isServerRunning ? Colors.white : Colors.white70,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor:
+                  provider.isServerRunning ? Colors.green : Colors.grey,
+            ),
           ),
         ],
-        bottom: _isSearching
+        bottom: _isStarting
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(4),
-                child: buildSearchAnimation(
-                    context, _searchAnimationController.value),
+                child:
+                    buildLoadingIndicator(context, _animationController.value),
               )
             : null,
       ),
@@ -193,22 +309,70 @@ class _ServerPageState extends State<ServerPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Server card
-                buildServerCard(
+                // Connection mode selector
+                if (!provider.isServerRunning)
+                  buildConnectionModeSelector(
+                    context: context,
+                    selectedMode: _selectedMode!,
+                    onModeChanged: (mode) {
+                      if (mode != null) {
+                        setState(() {
+                          _selectedMode = mode;
+                        });
+                      }
+                    },
+                    isDisabled: provider.isServerRunning,
+                    isExpanded: _isModeSelectorExpanded,
+                    onExpandChanged: (expanded) {
+                      setState(() {
+                        _isModeSelectorExpanded = expanded;
+                      });
+                    },
+                  ),
+
+                const SizedBox(height: 16),
+
+                // Server control card
+                buildConnectionCard(
                   context: context,
-                  isStarting: _isSearching,
-                  serverRunning: _searchComplete,
-                  onStartServer: _startServer,
-                  statusText: _getSearchingText(),
+                  isConnecting: _isStarting,
+                  isConnected: provider.isServerRunning,
+                  statusText: _getStatusText(provider.isServerRunning),
+                  onAction:
+                      provider.isServerRunning ? _stopServer : _startServer,
+                  actionText: 'Server starten',
+                  connectedText: 'Server stoppen',
                 ),
 
+                // Server IP address display
+                if (provider.isServerRunning &&
+                    provider.connectionMode == ConnectionMode.webSocket)
+                  FutureBuilder<String?>(
+                    future: provider.webSocketService.getServerAddress(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      } else if (snapshot.hasError) {
+                        return Text(
+                            'Error getting server address: ${snapshot.error}');
+                      } else {
+                        print('snapshot.data: ${snapshot.data}');
+                        return serverIpDisplay(snapshot.data, context);
+                      }
+                    },
+                  ),
                 // Connected clients section
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Connected Clients',
+                      'Verbundene Clients',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -231,27 +395,20 @@ class _ServerPageState extends State<ServerPage>
                       ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
 
                 // Clients list
-                buildConnectedClientsList(
-                  context: context,
-                  connectedDeviceIds: connectedDeviceIds,
-                  isStarting: _isSearching,
-                  serverRunning: _searchComplete,
-                ),
+                _buildConnectedClientsList(connectedDeviceIds),
 
-                // Debug permission check button
+                // Permission check button
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: AppButton(
-                    text: 'Check Permissions',
+                    text: 'Berechtigungen prüfen',
                     icon: Icons.security,
                     type: AppButtonType.tertiary,
-                    onPressed: () {
-                      _permissionsChecked = false;
-                      _checkPermissions();
-                    },
+                    onPressed: _checkPermissions,
                   ),
                 ),
               ],

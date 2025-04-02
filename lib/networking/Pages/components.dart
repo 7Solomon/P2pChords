@@ -1,166 +1,353 @@
-import 'package:P2pChords/customeWidgets/ButtonWidget.dart';
 import 'package:flutter/material.dart';
+import 'package:P2pChords/styling/Button.dart';
+import 'package:P2pChords/state.dart';
 
-/// Build a linear progress animation (used by both client and server)
-Widget buildSearchAnimation(BuildContext context, double value) {
-  return SizedBox(
-    height: 4,
-    child: LinearProgressIndicator(
-      value: value,
-      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-      valueColor:
-          AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+/// Builds a collapsible card for connection mode selection with radio buttons in German
+Widget buildConnectionModeSelector({
+  required BuildContext context,
+  required ConnectionMode selectedMode,
+  required Function(ConnectionMode?) onModeChanged,
+  required bool isDisabled,
+  bool isExpanded = false,
+  Function(bool)? onExpandChanged,
+}) {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header with expand/collapse button
+        InkWell(
+          onTap: onExpandChanged != null
+              ? () => onExpandChanged(!isExpanded)
+              : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                const Text(
+                  'Verbindungsmodus',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Expandable content
+        if (isExpanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(),
+                // Nearby Only option
+                RadioListTile<ConnectionMode>(
+                  title: const Text('Nur Nearby'),
+                  subtitle: const Text('Verbindung zu Geräten in der Nähe'),
+                  value: ConnectionMode.nearby,
+                  groupValue: selectedMode,
+                  onChanged: isDisabled ? null : onModeChanged,
+                  dense: true,
+                ),
+
+                // WebSocket Only option
+                RadioListTile<ConnectionMode>(
+                  title: const Text('Nur WLAN'),
+                  subtitle: const Text('Verbindung über WLAN-Netzwerk'),
+                  value: ConnectionMode.webSocket,
+                  groupValue: selectedMode,
+                  onChanged: isDisabled ? null : onModeChanged,
+                  dense: true,
+                ),
+
+                // Hybrid Option
+                RadioListTile<ConnectionMode>(
+                  title: const Text('Beides (Hybrid)'),
+                  subtitle: const Text('Nutze Nearby und WLAN gleichzeitig'),
+                  value: ConnectionMode.hybrid,
+                  groupValue: selectedMode,
+                  onChanged: isDisabled ? null : onModeChanged,
+                  dense: true,
+                ),
+              ],
+            ),
+          ),
+
+        // Show current selection when collapsed
+        if (!isExpanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+            child: Chip(
+              backgroundColor:
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              label: Text(
+                _getModeName(selectedMode),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     ),
   );
 }
 
-/// Display a standard snackbar message
-void showSnackBar(BuildContext context, String message) {
-  if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(12),
-      ),
-    );
+/// Get the German name for the connection mode
+String _getModeName(ConnectionMode mode) {
+  switch (mode) {
+    case ConnectionMode.nearby:
+      return 'Nearby';
+    case ConnectionMode.webSocket:
+      return 'WLAN';
+    case ConnectionMode.hybrid:
+      return 'Hybrid';
+    default:
+      return 'Unbekannt';
   }
 }
 
-/// Generic action card with progress indicator
-Widget buildActionCard({
+/// Builds a card for showing connection status with action button
+Widget buildConnectionCard({
   required BuildContext context,
-  required bool isInProgress,
-  required bool actionComplete,
+  required bool isConnecting,
+  required bool isConnected,
+  required String statusText,
   required VoidCallback onAction,
   required String actionText,
-  required String inProgressText,
-  required String completeActionText,
-  required IconData actionIcon,
+  required String connectedText,
 }) {
+  final theme = Theme.of(context);
+
   return Card(
-    elevation: 4,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(15),
-    ),
+    elevation: 3,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     child: Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppButton(
-            text: isInProgress
-                ? inProgressText
-                : actionComplete
-                    ? completeActionText
-                    : actionText,
-            icon: isInProgress ? null : actionIcon,
-            onPressed: () {
-              isInProgress ? null : onAction();
-            },
-            type: AppButtonType.primary,
-          ),
-          if (isInProgress)
-            AnimatedOpacity(
-              opacity: isInProgress ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 16),
+          // Status section
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isConnected
+                      ? Colors.green.withOpacity(0.1)
+                      : theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isConnected ? Icons.check_circle : Icons.power_settings_new,
+                  color: isConnected ? Colors.green : theme.colorScheme.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      inProgressText,
-                      style: TextStyle(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.7),
-                        fontSize: 14,
+                      isConnected ? 'Connected' : 'Connection',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      statusText,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+
+          // Button section
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: AppButton(
+              text: isConnected ? connectedText : actionText,
+              icon: isConnected ? Icons.refresh : Icons.send,
+              onPressed: onAction,
+              //isLoading: isConnecting,
+              type:
+                  isConnected ? AppButtonType.tertiary : AppButtonType.primary,
             ),
+          ),
         ],
       ),
     ),
   );
 }
 
-/// Generic status badge for app bar
-Widget buildStatusChip(
-    BuildContext context, String label, Color color, bool isActive) {
+/// Builds a progress loader with animation
+Widget buildLoadingIndicator(BuildContext context, double value) {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    height: 4,
     decoration: BoxDecoration(
-      color: isActive ? color.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(
-        color: isActive ? color : Colors.grey,
-        width: 1,
+      gradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary,
+          Theme.of(context).colorScheme.secondary,
+        ],
       ),
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          isActive ? Icons.circle : Icons.circle_outlined,
-          size: 10,
-          color: isActive ? color : Colors.grey,
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? color : Colors.grey,
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-        ),
-      ],
+    child: LinearProgressIndicator(
+      value: value,
+      backgroundColor: Colors.transparent,
+      valueColor: AlwaysStoppedAnimation<Color>(
+        Theme.of(context).colorScheme.primary.withOpacity(0.5),
+      ),
     ),
   );
 }
 
-/// Generic empty state placeholder
-Widget buildEmptyStatePlaceholder({
+/// Builds an empty state placeholder with an icon and message
+Widget buildEmptyState({
   required BuildContext context,
   required IconData icon,
   required String message,
   String? submessage,
 }) {
+  final theme = Theme.of(context);
+
   return Center(
-    key: const ValueKey('empty-state'),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          size: 64,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          message,
-          style: TextStyle(
-            fontSize: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-          ),
-        ),
-        if (submessage != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0),
-            child: Text(
-              submessage,
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+    child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // Use minimum space needed
+          children: [
+            Icon(
+              icon,
+              size: 56,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
-          ),
-      ],
+            if (submessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                submessage,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Builds a server card for the client page that can be tapped to connect
+Widget buildServerCard({
+  required BuildContext context,
+  required String serverId,
+  required String serverName,
+  required String connectionType,
+  required VoidCallback onConnect,
+  required bool isConnecting,
+}) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 8),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: InkWell(
+      onTap: onConnect,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                connectionType == 'websocket' ? Icons.wifi : Icons.bluetooth,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    serverName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    connectionType == 'websocket'
+                        ? 'WLAN-Verbindung'
+                        : 'Bluetooth-Verbindung',
+                    style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            isConnecting
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.5),
+                  ),
+          ],
+        ),
+      ),
     ),
   );
 }
