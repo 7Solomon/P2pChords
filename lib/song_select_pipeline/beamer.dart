@@ -3,8 +3,6 @@ import 'package:P2pChords/dataManagment/dataGetter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-// Import your SongData model
-// import '../models/song_data.dart';
 
 class BeamerPage extends StatelessWidget {
   const BeamerPage({

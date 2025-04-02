@@ -71,7 +71,6 @@ class ChordUtils {
   /// Check if the ChordUtils has been properly initialized
   static bool _checkInitialized() {
     if (!_initialized) {
-      print('ChordUtils not initialized! Call ChordUtils.initialize() first.');
       return false;
     }
     return true;

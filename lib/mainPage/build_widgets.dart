@@ -8,7 +8,7 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/utils/test.dart';
 import 'package:flutter/material.dart';
-import 'package:P2pChords/networking/Pages/choosePage.dart';
+import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
 import 'package:P2pChords/groupManagement/Pages/groups.dart';
 

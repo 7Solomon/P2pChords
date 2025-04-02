@@ -1,11 +1,11 @@
 import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/mainPage/page.dart';
-import 'package:P2pChords/networking/Pages/client/clientPage.dart';
+import 'package:P2pChords/networking/Pages/client/page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/state.dart';
 
-import 'server/serverPage.dart';
+import 'server/page.dart';
 
 class ChooseSCStatePage extends StatelessWidget {
   const ChooseSCStatePage({super.key});

@@ -120,6 +120,47 @@ class UIComponents {
       ),
     );
   }
+
+  Widget createSaveDialog({
+    required BuildContext context,
+    required TextEditingController groupController,
+    required Function(String) onSave,
+    String title = 'Song speichern',
+    String message = 'Möchtest du diesen Song wirklich speichern?',
+  }) {
+    return AlertDialog(
+      title: Text(title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: groupController,
+            decoration: InputDecoration(
+              labelText: 'Gruppe',
+              border: textFieldBorder,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(message),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context); // Close dialog
+          },
+          child: const Text('Abbrechen'),
+        ),
+        TextButton(
+          onPressed: () {
+            onSave(groupController.text);
+            Navigator.pop(context); // Close dialog
+          },
+          child: const Text('Speichern'),
+        ),
+      ],
+    );
+  }
 }
 
 // singleton instance for easy access

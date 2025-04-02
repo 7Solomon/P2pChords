@@ -126,9 +126,6 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
                 ),
               ElevatedButton(
                 onPressed: () {
-                  print('Save JSON');
-                  print(_isLoading);
-                  print(_selectedFile);
                   _isLoading || _selectedFile == null ? null : _saveJson();
                 },
                 child: const Text('Save JSON'),

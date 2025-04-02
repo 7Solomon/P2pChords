@@ -25,9 +25,6 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ChordUtils.initialize(context);
-    });
   }
 
   @override

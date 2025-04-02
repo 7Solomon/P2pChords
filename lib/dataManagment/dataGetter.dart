@@ -61,7 +61,6 @@ class CurrentSelectionProvider extends ChangeNotifier {
   }
 
   void setCurrentGroup(String group) {
-    print("Setting group from: $_currentGroup to: $group");
     _currentGroup = group;
     notifyListeners();
   }
@@ -101,13 +100,11 @@ class DataLoadeProvider extends ChangeNotifier {
   Future<void> _loadDataFromStorage() async {
     isLoading = true;
     notifyListeners();
-    print('Loading data');
 
     try {
       SongData groupsData = await MultiJsonStorage.getSavedSongsData();
       _groups = groupsData.groups;
       _songs = groupsData.songs;
-      print('Found ${_songs!.length} songs in ${_groups!.length} groups');
     } catch (e) {
       throw ('Error loading data: $e');
     } finally {
@@ -129,7 +126,6 @@ class DataLoadeProvider extends ChangeNotifier {
   }
 
   int getSongIndex(String group, String hash) {
-    print(groups);
     return _groups![group]!.indexOf(hash);
   }
 
