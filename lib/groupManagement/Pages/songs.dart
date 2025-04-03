@@ -83,12 +83,13 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 confirmDeleteDismiss: () async {
                   await MultiJsonStorage.removeJson(key);
                   dataProvider.refreshData();
-                  return Future.value(false);
+                  return Future.value(true);
                 },
                 confirmActionDismiss: () async {
                   await _addSongToGroup(key);
                   return Future.value(false);
                 },
+                actionIcon: Icons.add,
                 child: Container(
                   color: isInGroup
                       ? Colors.blue.withOpacity(0.8)
@@ -109,33 +110,6 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   ),
                 ),
               );
-              //return Dismissible(
-              //  key: Key(key),
-              //  background: Container(color: Colors.blue),
-              //  direction: DismissDirection.endToStart,
-              //  confirmDismiss: (direction) async {
-              //    await _addSongToGroup(key);
-              //  },
-              //  child: Container(
-              //    color: isInGroup
-              //        ? Colors.blue.withOpacity(0.8)
-              //        : Colors.transparent,
-              //    child: ListTile(
-              //      title: Text(
-              //        songData.header.name,
-              //        style: TextStyle(
-              //          color: isInGroup ? Colors.white : Colors.black,
-              //        ),
-              //      ),
-              //      subtitle: Text(
-              //        key,
-              //        style: TextStyle(
-              //          color: isInGroup ? Colors.white70 : Colors.black54,
-              //        ),
-              //      ),
-              //    ),
-              //  ),
-              //);
             }).toList(),
           );
         },

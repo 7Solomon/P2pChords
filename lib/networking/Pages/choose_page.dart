@@ -40,7 +40,7 @@ class ChooseSCStatePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Gerätetyp wählen'),
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        //backgroundColor: Colors.transparent,
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

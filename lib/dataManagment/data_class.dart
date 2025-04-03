@@ -42,7 +42,14 @@ class ChordUtils {
     if (rootNote == null) {
       return nashvilleNumber; // Return original if not found
     }
-    return rootNote + modifiers;
+
+    // Convert Nashville "-" to chord "m" for minor chords
+    String finalModifiers = modifiers;
+    if (modifiers.contains('-')) {
+      finalModifiers = modifiers.replaceAll('-', 'm');
+    }
+
+    return rootNote + finalModifiers;
   }
 
   /// Convert a standard chord to Nashville notation in the specified key
@@ -64,8 +71,17 @@ class ChordUtils {
       });
     }
 
-    // Return Nashville notation or original chord if not found
-    return nashvilleNumber != null ? nashvilleNumber! + modifiers : chord;
+    if (nashvilleNumber == null) {
+      return chord; // Return original if not found
+    }
+
+    // Convert chord "m" to Nashville "-" for minor chords
+    String finalModifiers = modifiers;
+    if (modifiers.startsWith('m')) {
+      finalModifiers = '-${modifiers.substring(1)}';
+    }
+
+    return nashvilleNumber! + finalModifiers;
   }
 
   /// Check if the ChordUtils has been properly initialized

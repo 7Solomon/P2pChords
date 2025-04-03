@@ -37,19 +37,20 @@ class CDissmissible extends Dismissible {
   }) {
     DismissDirection effectiveDirection = DismissDirection.none;
 
-    // Left-to-right swipe (delete) is available if confirmDeleteDismiss exists
-    if (confirmDeleteDismiss != null) {
-      effectiveDirection = DismissDirection.startToEnd;
+    // Enable both directions if both callbacks exist
+    if (confirmDeleteDismiss != null && confirmActionDismiss != null) {
+      effectiveDirection = DismissDirection.horizontal;
     }
-
-    // Right-to-left swipe (action) is available if confirmActionDismiss exists
-    if (confirmActionDismiss != null) {
+    // Otherwise, enable only the specific direction
+    else if (confirmDeleteDismiss != null) {
+      effectiveDirection = DismissDirection.startToEnd;
+    } else if (confirmActionDismiss != null) {
       effectiveDirection = DismissDirection.endToStart;
     }
 
-    // If both options are disabled or a specific direction is provided
-    if (effectiveDirection == DismissDirection.none || direction != null) {
-      effectiveDirection = direction ?? DismissDirection.none;
+    // Override with explicit direction if provided
+    if (direction != null) {
+      effectiveDirection = direction;
     }
     return CDissmissible(
       key: key,
