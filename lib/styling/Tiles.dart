@@ -1,5 +1,4 @@
 import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 
 class CDissmissible extends Dismissible {
@@ -7,9 +6,9 @@ class CDissmissible extends Dismissible {
     required super.key,
     required super.child,
     VoidCallback? onDismissed,
-    Widget? background,
-    Widget? secondaryBackground,
-    Future<bool?> Function(DismissDirection)? confirmDismiss,
+    super.background,
+    super.secondaryBackground,
+    super.confirmDismiss,
     super.direction,
   }) : super(
           onDismissed: (direction) {
@@ -17,9 +16,6 @@ class CDissmissible extends Dismissible {
               onDismissed();
             }
           },
-          background: background,
-          secondaryBackground: secondaryBackground,
-          confirmDismiss: confirmDismiss,
         );
 
 // Factory for delete/action pattern
@@ -31,10 +27,17 @@ class CDissmissible extends Dismissible {
     Future<bool?> Function()? confirmActionDismiss,
     IconData deleteIcon = Icons.delete,
     IconData actionIcon = Icons.download,
-    Color deleteColor = Colors.red,
-    Color actionColor = Colors.blue,
+    Color? deleteColor,
+    Color? actionColor,
     DismissDirection? direction,
+    BuildContext? context,
   }) {
+    // Use theme colors if context is provided, otherwise use fallbacks
+    final Color effectiveDeleteColor = deleteColor ??
+        (context != null ? Theme.of(context).colorScheme.error : Colors.red);
+    final Color effectiveActionColor = actionColor ??
+        (context != null ? Theme.of(context).colorScheme.primary : Colors.blue);
+
     DismissDirection effectiveDirection = DismissDirection.none;
 
     // Enable both directions if both callbacks exist
@@ -63,21 +66,20 @@ class CDissmissible extends Dismissible {
           bool? deleteConfirmed = await deleteConfirmation();
 
           if (deleteConfirmed == true) {
-            return confirmDeleteDismiss
-                ?.call(); // Remove the item from the list
+            return confirmDeleteDismiss?.call();
           } else {
             return false;
           }
         }
       },
       background: Container(
-        color: deleteColor,
+        color: effectiveDeleteColor,
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20),
         child: Icon(deleteIcon, color: Colors.white),
       ),
       secondaryBackground: Container(
-        color: actionColor,
+        color: effectiveActionColor,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: Icon(actionIcon, color: Colors.white),
@@ -87,13 +89,17 @@ class CDissmissible extends Dismissible {
   }
 
   static Future<bool?> showDeleteConfirmationDialog(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
     return showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Bestätige das Löschen'),
-          content: const Text(
-              'Bist du sicher, dass du das Element löschen willst? Das kann nicht mehr rückgängig gemacht werden.'),
+          title:
+              Text('Bestätige das Löschen', style: theme.textTheme.titleLarge),
+          content: Text(
+              'Bist du sicher, dass du das Element löschen willst? Das kann nicht mehr rückgängig gemacht werden.',
+              style: theme.textTheme.bodyMedium),
           actions: <Widget>[
             TextButton(
               onPressed: () {
@@ -105,7 +111,8 @@ class CDissmissible extends Dismissible {
               onPressed: () {
                 Navigator.of(context).pop(true); // Confirm
               },
-              child: const Text('Löschen'),
+              child: Text('Löschen',
+                  style: TextStyle(color: theme.colorScheme.error)),
             ),
           ],
         );
@@ -117,39 +124,30 @@ class CDissmissible extends Dismissible {
 class CListTile extends ListTile {
   CListTile({
     super.key,
-    String title = '',
+    required String title,
+    required BuildContext context,
     String? subtitle,
     IconData? icon,
     double? iconSize,
-    Icons? arrowIcon,
+    IconData? trailingIcon,
     VoidCallback? onTap,
     VoidCallback? onLongPress,
   }) : super(
           leading: icon != null
               ? CircleAvatar(
-                  backgroundColor: Colors.blueAccent,
-                  child:
-                      Icon(icon, color: Colors.white, size: iconSize ?? 24.0),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Icon(icon,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: iconSize ?? 24.0),
                 )
               : null,
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
+          title: Text(title, style: Theme.of(context).textTheme.titleMedium),
           subtitle: subtitle != null
-              ? Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                )
+              ? Text(subtitle, style: Theme.of(context).textTheme.bodyMedium)
               : null,
-          trailing: arrowIcon != null
-              ? const Icon(Icons.arrow_forward_ios, size: 16)
+          trailing: trailingIcon != null
+              ? Icon(trailingIcon,
+                  size: 16, color: Theme.of(context).colorScheme.primary)
               : null,
           onTap: onTap ?? () {}, // Default no-op callback
           onLongPress: onLongPress ?? () {},

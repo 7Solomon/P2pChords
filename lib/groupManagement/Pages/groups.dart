@@ -123,6 +123,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                 },
                 child: CListTile(
                   title: group,
+                  context: context,
                   icon: Icons.file_copy,
                   subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                   onTap: () {

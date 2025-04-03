@@ -1,11 +1,7 @@
 import 'dart:convert';
+import 'package:P2pChords/dataManagment/comparer/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/songComparer.dart';
-import 'package:P2pChords/navigator.dart';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:crypto/crypto.dart'; // Add this package to generate the hash
 
 class MultiJsonStorage {
   static const String _keyPrefix = 'data';
@@ -30,10 +26,13 @@ class MultiJsonStorage {
 
   static Future<bool> compareSongData(prefs, string1, string2, songName) async {
     if (string2 != string1) {
-      Map<String, dynamic> differences = compareJson(string2, string1);
       String confTxt =
           'Ein Song mit dem Namen $songName existiert bereits. Möchtest du ihn überschreiben?';
-      return await openDiffrenceWindow(confTxt, differences: differences);
+      return await openSongComparisonDialog(
+        confTxt,
+        string1,
+        string2,
+      );
     } else {
       return true;
     }

@@ -8,7 +8,7 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/styling/Themes.dart';
 
 class AppUiProvider extends ChangeNotifier {
-  ThemeData _currentTheme = AppTheme.lightTheme;
+  ThemeData _currentTheme = AppTheme.trueTheme;
 
   void setTheme(ThemeData theme) {
     _currentTheme = theme;

@@ -40,6 +40,7 @@ class Songoverviewpage extends StatelessWidget {
                 final hash = song.hash;
                 return CListTile(
                   title: name,
+                  context: context,
                   onTap: () {
                     currentData.setCurrentSong(hash);
                     currentData.setCurrentSectionIndex(0);

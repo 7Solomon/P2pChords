@@ -121,6 +121,7 @@ class _SongDrawerState extends State<SongDrawer> {
 
                 CListTile(
                   title: 'Ansicht anpassen',
+                  context: context,
                   icon: Icons.visibility,
                   onTap: () {
                     Navigator.push(

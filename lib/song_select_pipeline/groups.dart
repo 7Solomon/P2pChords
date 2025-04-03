@@ -77,6 +77,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                     SongData songData = _dataProvider.getSongData(name);
                     return CListTile(
                       title: name,
+                      context: context,
                       subtitle: 'Klicke um die Songs der Gruppe anzusehen',
                       icon: Icons.file_copy,
                       onTap: () async {

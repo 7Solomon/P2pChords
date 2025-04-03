@@ -16,6 +16,8 @@ class ChordSheetPage extends StatefulWidget {
 }
 
 class _ChordSheetPageState extends State<ChordSheetPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   void displaySnack(String str) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(str)));
@@ -54,21 +56,27 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
           );
         }
         return Scaffold(
+          key: _scaffoldKey,
           appBar: AppBar(
-            title: const Text("Songs"),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.settings),
+                onPressed: () =>
+                    _scaffoldKey.currentState?.openEndDrawer(), // Open drawer
+              )
+            ],
           ),
-          drawer: songs.isEmpty
-              ? const Drawer(
-                  child: Text('Keine Songs in der Gruppe'),
-                )
-              : SongDrawer(
-                  song: dataLoader
-                      .getSongByHash(currentSelection.currentSongHash!),
-                  currentKey: sheetUiProvider.currentKey ?? 'C',
-                  onKeyChanged: (newKey) {
-                    sheetUiProvider.setCurrentKey(newKey);
-                  },
-                ),
+          endDrawer: SongDrawer(
+            song: dataLoader.getSongByHash(currentSelection.currentSongHash!),
+            currentKey: sheetUiProvider.currentKey,
+            onKeyChanged: (newKey) {
+              sheetUiProvider.setCurrentKey(newKey);
+            },
+          ),
           //body: QuickSelectOverlay(
           //  key: _quickSelectKey,
           //  songs: dataLoader.getSongsInGroup(currentSelection.currentGroup!),
