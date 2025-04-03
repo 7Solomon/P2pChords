@@ -80,9 +80,10 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             songs: songs,
             songIndex: songIndex,
             sectionIndex: currentSelection.currentSectionIndex!,
-            currentKey: sheetUiProvider.currentKey ?? 'C',
-            startFontSize: sheetUiProvider.fontSize ?? 16.0,
-            startSectionCount: sheetUiProvider.sectionCount ?? 2,
+            currentKey: sheetUiProvider.currentKey,
+            startFontSize: sheetUiProvider.fontSize,
+            startMinColumnWidth: sheetUiProvider.minColumnWidth,
+            startSectionCount: sheetUiProvider.sectionCount,
             onSectionChanged: (index) {
               currentSelection.setCurrentSectionIndex(index);
               if (connectionProvider.userState == UserState.server) {

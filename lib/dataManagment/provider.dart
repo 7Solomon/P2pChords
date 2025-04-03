@@ -19,12 +19,18 @@ class AppUiProvider extends ChangeNotifier {
 }
 
 class SheetUiProvider extends ChangeNotifier {
-  String? _currentKey;
-  double? _fontSize;
-  int? _sectionCount;
+  String _currentKey = 'C';
+  double _fontSize = 16.0;
+  double _minColumnWidth = 300.0;
+  int _sectionCount = 2;
 
   void setFontSize(double size) {
     _fontSize = size;
+    notifyListeners();
+  }
+
+  void setMinColumnWidth(double width) {
+    _minColumnWidth = width;
     notifyListeners();
   }
 
@@ -38,13 +44,15 @@ class SheetUiProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  double? get fontSize => _fontSize;
-  String? get currentKey => _currentKey;
-  int? get sectionCount => _sectionCount;
+  double get fontSize => _fontSize;
+  double get minColumnWidth => _minColumnWidth;
+  String get currentKey => _currentKey;
+  int get sectionCount => _sectionCount;
 
   fromJson(Map<String, dynamic> json) {
     _currentKey = json['currentKey'];
     _fontSize = json['fontSize'];
+    _minColumnWidth = json['minColumnWidth'];
     _sectionCount = json['sectionCount'];
     notifyListeners();
   }
@@ -53,6 +61,7 @@ class SheetUiProvider extends ChangeNotifier {
     return {
       'currentKey': _currentKey,
       'fontSize': _fontSize,
+      'minColumnWidth': _minColumnWidth,
       'sectionCount': _sectionCount
     };
   }

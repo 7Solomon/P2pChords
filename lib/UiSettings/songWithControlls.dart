@@ -9,10 +9,12 @@ class SongSheetWithControls extends StatefulWidget {
   final int sectionIndex;
   final String currentKey;
   final double startFontSize;
+  final double startMinColumnWidth;
   final int startSectionCount;
   final Function(int) onSectionChanged;
   final Function(int) onSongChanged;
   final Function(double) onFontSizeChanged;
+  final Function(double) onMinColumnWidthChanged;
   final Function(int) onSectionCountChanged;
 
   const SongSheetWithControls({
@@ -22,10 +24,12 @@ class SongSheetWithControls extends StatefulWidget {
     required this.sectionIndex,
     required this.currentKey,
     required this.startFontSize,
+    required this.startMinColumnWidth,
     required this.startSectionCount,
     required this.onSectionChanged,
     required this.onSongChanged,
     required this.onFontSizeChanged,
+    required this.onMinColumnWidthChanged,
     required this.onSectionCountChanged,
   });
 
@@ -34,14 +38,16 @@ class SongSheetWithControls extends StatefulWidget {
 }
 
 class _SongSheetWithControlsState extends State<SongSheetWithControls> {
-  double _fontSize = 16.0;
-  int _sectionCount = 2;
+  late double _fontSize;
+  late double _minColumnWidth;
+  late int _sectionCount;
 
   @override
   void initState() {
     super.initState();
     _fontSize = widget.startFontSize;
     _sectionCount = widget.startSectionCount;
+    _minColumnWidth = widget.startMinColumnWidth;
   }
 
   Widget _buildFooter() {
@@ -84,6 +90,23 @@ class _SongSheetWithControlsState extends State<SongSheetWithControls> {
               });
             },
           ),
+          const SizedBox(height: 8.0),
+          ControlsRow(
+            label: 'Minimum Column Width',
+            value: _minColumnWidth.toString(),
+            onDecrease: () {
+              setState(() {
+                _minColumnWidth = (_minColumnWidth - 10).clamp(100, 600);
+                widget.onMinColumnWidthChanged(_minColumnWidth);
+              });
+            },
+            onIncrease: () {
+              setState(() {
+                _minColumnWidth = (_minColumnWidth + 10).clamp(100, 600);
+                widget.onMinColumnWidthChanged(_minColumnWidth);
+              });
+            },
+          ),
         ],
       ),
     );
@@ -102,6 +125,7 @@ class _SongSheetWithControlsState extends State<SongSheetWithControls> {
             currentKey: widget.currentKey,
             startSectionCount: _sectionCount,
             startFontSize: _fontSize,
+            startMinColumnWidth: _minColumnWidth,
             onSectionChanged: widget.onSectionChanged,
             onSongChanged: widget.onSongChanged,
           ),

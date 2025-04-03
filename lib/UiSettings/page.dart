@@ -15,10 +15,13 @@ class UisettingsPage extends StatefulWidget {
 }
 
 class _UisettingsPageState extends State<UisettingsPage> {
-  double _currentFontSize = 16.0;
-  int _currentSectionCount = 2;
+  late double _currentFontSize;
+  late int _currentSectionCount;
+  late double _currentMinColumnWidth;
+
   late Future<bool> _initFuture;
   bool _hasUnsavedChanges = false;
+  bool _initialized = false;
 
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -53,8 +56,11 @@ class _UisettingsPageState extends State<UisettingsPage> {
   void _saveSettings() {
     final sheetUiProvider =
         Provider.of<SheetUiProvider>(context, listen: false);
+    print(
+        'Speichere Einstellungen: $_currentFontSize, $_currentSectionCount, $_currentMinColumnWidth');
     sheetUiProvider.setFontSize(_currentFontSize);
     sheetUiProvider.setSectionCount(_currentSectionCount);
+    sheetUiProvider.setMinColumnWidth(_currentMinColumnWidth);
     _hasUnsavedChanges = false;
     _showSnackbar('Einstellungen gespeichert');
   }
@@ -76,13 +82,14 @@ class _UisettingsPageState extends State<UisettingsPage> {
   }
 
   void _checkForChanges(SheetUiProvider sheetUiProvider) {
-    final bool fontSizeChanged =
-        _currentFontSize != (sheetUiProvider.fontSize ?? 16.0);
+    final bool fontSizeChanged = _currentFontSize != (sheetUiProvider.fontSize);
     final bool sectionCountChanged =
-        _currentSectionCount != (sheetUiProvider.sectionCount ?? 2);
-
+        _currentSectionCount != (sheetUiProvider.sectionCount);
+    final bool minColumnWidthChanged =
+        _currentMinColumnWidth != (sheetUiProvider.minColumnWidth);
     setState(() {
-      _hasUnsavedChanges = fontSizeChanged || sectionCountChanged;
+      _hasUnsavedChanges =
+          fontSizeChanged || sectionCountChanged | minColumnWidthChanged;
     });
   }
 
@@ -117,6 +124,18 @@ class _UisettingsPageState extends State<UisettingsPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final sheetUiProvider = Provider.of<SheetUiProvider>(context);
+      _currentFontSize = sheetUiProvider.fontSize;
+      _currentSectionCount = sheetUiProvider.sectionCount;
+      _currentMinColumnWidth = sheetUiProvider.minColumnWidth;
+      _initialized = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
       future: _initFuture,
@@ -137,10 +156,6 @@ class _UisettingsPageState extends State<UisettingsPage> {
             SheetUiProvider, ConnectionProvider>(
           builder: (context, currentSelection, dataLoader, sheetUiProvider,
               connectionProvider, _) {
-            // Initialize current values from provider
-            _currentSectionCount = sheetUiProvider.sectionCount ?? 2;
-            _currentFontSize = sheetUiProvider.fontSize ?? 16.0;
-
             // Error handling for missing data
             if (dataLoader.songs == null || dataLoader.songs!.isEmpty) {
               return const Scaffold(
@@ -185,6 +200,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
                   sectionIndex: currentSelection.currentSectionIndex!,
                   currentKey: sheetUiProvider.currentKey ?? 'C',
                   startFontSize: sheetUiProvider.fontSize ?? 16.0,
+                  startMinColumnWidth: sheetUiProvider.minColumnWidth ?? 100.0,
                   startSectionCount: sheetUiProvider.sectionCount ?? 2,
                   onSectionChanged: (index) {
                     currentSelection.setCurrentSectionIndex(index);
@@ -196,6 +212,10 @@ class _UisettingsPageState extends State<UisettingsPage> {
                   },
                   onFontSizeChanged: (fontSize) {
                     _currentFontSize = fontSize;
+                    _checkForChanges(sheetUiProvider);
+                  },
+                  onMinColumnWidthChanged: (minColumnWidth) {
+                    _currentMinColumnWidth = minColumnWidth;
                     _checkForChanges(sheetUiProvider);
                   },
                   onSectionCountChanged: (sectionCount) {

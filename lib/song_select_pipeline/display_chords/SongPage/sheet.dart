@@ -16,6 +16,7 @@ class SongSheetDisplay extends StatefulWidget {
   final int sectionIndex;
   final String currentKey;
   final double startFontSize;
+  final double startMinColumnWidth;
   final int startSectionCount;
   final Function(int) onSectionChanged;
   final Function(int) onSongChanged;
@@ -27,6 +28,7 @@ class SongSheetDisplay extends StatefulWidget {
     required this.sectionIndex,
     required this.currentKey,
     required this.startFontSize,
+    required this.startMinColumnWidth,
     required this.startSectionCount,
     required this.onSectionChanged,
     required this.onSongChanged,
@@ -37,9 +39,10 @@ class SongSheetDisplay extends StatefulWidget {
 }
 
 class _SongSheetDisplayState extends State<SongSheetDisplay> {
-  int _currentSectionIndex = 0;
-  int _currentSongIndex = 0;
-  double _fontSize = 16.0;
+  late int _currentSectionIndex;
+  late int _currentSongIndex;
+  late double _fontSize;
+  late double _minColumnWidth;
   late List<SongSection> _sections;
 
   Song get currentSong => widget.songs[_currentSongIndex];
@@ -48,6 +51,8 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
   void initState() {
     super.initState();
     _fontSize = widget.startFontSize;
+
+    _minColumnWidth = widget.startMinColumnWidth;
     _currentSectionIndex = widget.sectionIndex;
     _currentSongIndex = widget.songIndex;
     _loadSections();
@@ -145,6 +150,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
               currentIndex: _currentSectionIndex,
               sectionsPerView: widget.startSectionCount,
               fontSize: _fontSize,
+              minColumnWidth: _minColumnWidth,
               buildSection: (section, fontSize) {
                 return SectionBuilder.buildSection(
                   section,
@@ -195,40 +201,40 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     );
   }
 
-  Widget _buildSectionView(int currentIndex) {
-    // Calculate how many sections to display
-    List<SongSection> sectionsToShow = [];
-
-    // Add current section and subsequent sections up to startSectionCount
-    for (int i = currentIndex;
-        i < currentIndex + widget.startSectionCount && i < _sections.length;
-        i++) {
-      sectionsToShow.add(_sections[i]);
-    }
-
-    return SingleChildScrollView(
-      physics:
-          const NeverScrollableScrollPhysics(), // Disable scrolling within the page
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ...sectionsToShow.expand((section) => [
-                Text(
-                  section.title.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: _fontSize + 2,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...section.lines.map((line) => _buildLine(line)),
-                const SizedBox(height: 24),
-              ]),
-        ],
-      ),
-    );
-  }
+  //Widget _buildSectionView(int currentIndex) {
+  //  // Calculate how many sections to display
+  //  List<SongSection> sectionsToShow = [];
+//
+  //  // Add current section and subsequent sections up to startSectionCount
+  //  for (int i = currentIndex;
+  //      i < currentIndex + widget.startSectionCount && i < _sections.length;
+  //      i++) {
+  //    sectionsToShow.add(_sections[i]);
+  //  }
+//
+  //  return SingleChildScrollView(
+  //    physics:
+  //        const NeverScrollableScrollPhysics(), // Disable scrolling within the page
+  //    padding: const EdgeInsets.all(16.0),
+  //    child: Column(
+  //      crossAxisAlignment: CrossAxisAlignment.start,
+  //      children: [
+  //        ...sectionsToShow.expand((section) => [
+  //              Text(
+  //                section.title.toUpperCase(),
+  //                style: TextStyle(
+  //                  fontSize: _fontSize + 2,
+  //                  fontWeight: FontWeight.bold,
+  //                ),
+  //              ),
+  //              const SizedBox(height: 16),
+  //              ...section.lines.map((line) => _buildLine(line)),
+  //              const SizedBox(height: 24),
+  //            ]),
+  //      ],
+  //    ),
+  //  );
+  //}
 
   Widget _buildLine(LyricLine line) {
     // If no chords, just return the lyrics
