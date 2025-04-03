@@ -1,5 +1,5 @@
-import 'package:P2pChords/dataManagment/dataClass.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/song_selection.dart';
@@ -29,9 +29,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer4<CurrentSelectionProvider, DataLoadeProvider, UIProvider,
-        ConnectionProvider>(
-      builder: (context, currentSelection, dataLoader, uiProvider,
+    return Consumer4<CurrentSelectionProvider, DataLoadeProvider,
+        SheetUiProvider, ConnectionProvider>(
+      builder: (context, currentSelection, dataLoader, sheetUiProvider,
           connectionProvider, _) {
         if (currentSelection.currentGroup == null) {
           return const Scaffold(
@@ -64,9 +64,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
               : SongDrawer(
                   song: dataLoader
                       .getSongByHash(currentSelection.currentSongHash!),
-                  currentKey: uiProvider.currentKey ?? 'C',
+                  currentKey: sheetUiProvider.currentKey ?? 'C',
                   onKeyChanged: (newKey) {
-                    uiProvider.setCurrentKey(newKey);
+                    sheetUiProvider.setCurrentKey(newKey);
                   },
                 ),
           //body: QuickSelectOverlay(
@@ -80,9 +80,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             songs: songs,
             songIndex: songIndex,
             sectionIndex: currentSelection.currentSectionIndex!,
-            currentKey: uiProvider.currentKey ?? 'C',
-            startFontSize: uiProvider.fontSize ?? 16.0,
-            startSectionCount: uiProvider.sectionCount ?? 2,
+            currentKey: sheetUiProvider.currentKey ?? 'C',
+            startFontSize: sheetUiProvider.fontSize ?? 16.0,
+            startSectionCount: sheetUiProvider.sectionCount ?? 2,
             onSectionChanged: (index) {
               currentSelection.setCurrentSectionIndex(index);
               if (connectionProvider.userState == UserState.server) {

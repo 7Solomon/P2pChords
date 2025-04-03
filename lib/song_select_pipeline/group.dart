@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:P2pChords/dataManagment/Pages/editJsonPage.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
@@ -56,12 +58,11 @@ class Songoverviewpage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => JsonEditPage(
+                        builder: (context) => SongEditPage(
                           song: song,
-                          saveJson: (String json) {
-                            print('Not implemented');
-                            //MultiJsonStorage.saveJson(hash, jsonDecode(json),
-                            //    group: globalSongData.currentGroup);
+                          saveSong: (Song song) async {
+                            await MultiJsonStorage.saveJson(song,
+                                group: currentData.currentGroup!);
                           },
                         ),
                       ),

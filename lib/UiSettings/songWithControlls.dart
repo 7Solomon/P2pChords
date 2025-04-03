@@ -1,4 +1,5 @@
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/UiSettings/ui_styles.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,7 @@ class SongSheetWithControls extends StatefulWidget {
   final Function(int) onSectionChanged;
   final Function(int) onSongChanged;
   final Function(double) onFontSizeChanged;
+  final Function(int) onSectionCountChanged;
 
   const SongSheetWithControls({
     super.key,
@@ -24,6 +26,7 @@ class SongSheetWithControls extends StatefulWidget {
     required this.onSectionChanged,
     required this.onSongChanged,
     required this.onFontSizeChanged,
+    required this.onSectionCountChanged,
   });
 
   @override
@@ -32,40 +35,52 @@ class SongSheetWithControls extends StatefulWidget {
 
 class _SongSheetWithControlsState extends State<SongSheetWithControls> {
   double _fontSize = 16.0;
+  int _sectionCount = 2;
 
   @override
   void initState() {
     super.initState();
     _fontSize = widget.startFontSize;
+    _sectionCount = widget.startSectionCount;
   }
 
   Widget _buildFooter() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      decoration: UiStyles.controlsCardDecoration,
+      padding: UiStyles.standardPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.remove),
-            onPressed: () {
+          ControlsRow(
+            label: 'Text Size',
+            value: _fontSize.toStringAsFixed(1),
+            onDecrease: () {
               setState(() {
                 _fontSize = (_fontSize - 1).clamp(12.0, 24.0);
                 widget.onFontSizeChanged(_fontSize);
               });
             },
-          ),
-          const Flexible(
-            child: Text(
-              'Text Size',
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
+            onIncrease: () {
               setState(() {
                 _fontSize = (_fontSize + 1).clamp(12.0, 24.0);
                 widget.onFontSizeChanged(_fontSize);
+              });
+            },
+          ),
+          const SizedBox(height: 8.0),
+          ControlsRow(
+            label: 'Section Count',
+            value: _sectionCount.toString(),
+            onDecrease: () {
+              setState(() {
+                _sectionCount = (_sectionCount - 1).clamp(1, 5);
+                widget.onSectionCountChanged(_sectionCount);
+              });
+            },
+            onIncrease: () {
+              setState(() {
+                _sectionCount = (_sectionCount + 1).clamp(1, 5);
+                widget.onSectionCountChanged(_sectionCount);
               });
             },
           ),
@@ -80,12 +95,12 @@ class _SongSheetWithControlsState extends State<SongSheetWithControls> {
       children: [
         Expanded(
           child: SongSheetDisplay(
-            key: ValueKey(_fontSize),
+            key: ValueKey('${_fontSize}_$_sectionCount'),
             songs: widget.songs,
             songIndex: widget.songIndex,
             sectionIndex: widget.sectionIndex,
             currentKey: widget.currentKey,
-            startSectionCount: widget.startSectionCount,
+            startSectionCount: _sectionCount,
             startFontSize: _fontSize,
             onSectionChanged: widget.onSectionChanged,
             onSongChanged: widget.onSongChanged,

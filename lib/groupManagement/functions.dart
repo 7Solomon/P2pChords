@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';

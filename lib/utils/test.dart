@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 
 class TestPage extends StatefulWidget {
   const TestPage({Key? key}) : super(key: key);

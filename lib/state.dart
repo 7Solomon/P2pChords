@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 
-import 'package:P2pChords/dataManagment/dataClass.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/networking/services/permission_service.dart';
 import 'package:P2pChords/networking/nearby_service.dart';

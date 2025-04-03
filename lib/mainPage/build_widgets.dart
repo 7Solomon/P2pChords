@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:P2pChords/UiSettings/page.dart';
 import 'package:P2pChords/song_select_pipeline/beamer.dart';
 import 'package:P2pChords/styling/Button.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/utils/test.dart';

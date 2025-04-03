@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:nearby_connections/nearby_connections.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 
 class MessageHandlerService {
   // Singleton pattern

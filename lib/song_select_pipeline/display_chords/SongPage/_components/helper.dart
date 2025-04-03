@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 
 import 'package:flutter/material.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 
 /// Helper class to build section widgets consistently across the app
 class SectionBuilder {

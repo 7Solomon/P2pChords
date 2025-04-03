@@ -1,5 +1,5 @@
-import 'package:P2pChords/dataManagment/dataClass.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';

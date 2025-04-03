@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/networking/nearby_service.dart';
 
 class DataSyncService {

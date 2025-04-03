@@ -1,5 +1,5 @@
 import 'package:P2pChords/styling/Themes.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/mainPage/page.dart';
 import 'package:P2pChords/navigator.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +24,8 @@ void main() async {
                       Provider.of<CurrentSelectionProvider>(context,
                           listen: false),
                 )),
-        ChangeNotifierProvider(create: (_) => UIProvider()),
+        ChangeNotifierProvider(create: (_) => SheetUiProvider()),
+        ChangeNotifierProvider(create: (_) => AppUiProvider()),
       ],
       child: const MyApp(),
     ),
@@ -36,13 +37,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'P2P Chords',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
-      home: const MainPage(),
-      navigatorKey: NavigationService.navigatorKey,
+    return Consumer<AppUiProvider>(
+      builder: (context, appUiProvider, _) {
+        return MaterialApp(
+          title: 'P2P Chords',
+          theme: appUiProvider.currentTheme,
+          home: const MainPage(),
+          navigatorKey: NavigationService.navigatorKey,
+        );
+      },
     );
   }
 }

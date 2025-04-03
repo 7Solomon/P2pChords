@@ -4,9 +4,21 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/styling/Themes.dart';
 
-class UIProvider extends ChangeNotifier {
+class AppUiProvider extends ChangeNotifier {
+  ThemeData _currentTheme = AppTheme.lightTheme;
+
+  void setTheme(ThemeData theme) {
+    _currentTheme = theme;
+    notifyListeners();
+  }
+
+  ThemeData? get currentTheme => _currentTheme;
+}
+
+class SheetUiProvider extends ChangeNotifier {
   String? _currentKey;
   double? _fontSize;
   int? _sectionCount;
@@ -136,6 +148,18 @@ class DataLoadeProvider extends ChangeNotifier {
   List<Song> getSongsInGroup(String group) {
     List<String> songHashes = _groups![group] ?? [];
     return songHashes.map((hash) => _songs![hash]!).toList();
+  }
+
+  String? getGroupOfSong(String hash) {
+    /* Just first group that contains the song 
+    Musst aufpassen du kek
+    */
+    for (var group in _groups!.keys) {
+      if (_groups![group]!.contains(hash)) {
+        return group;
+      }
+    }
+    return null;
   }
 
   SongData getSongData(String group) {

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/songComparer.dart';
 import 'package:P2pChords/navigator.dart';
 import 'package:flutter/material.dart';

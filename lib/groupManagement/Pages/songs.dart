@@ -1,6 +1,6 @@
 import 'package:P2pChords/dataManagment/converter/page.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
-import 'package:P2pChords/dataManagment/dataGetter.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
@@ -81,7 +81,9 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 deleteConfirmation: () =>
                     CDissmissible.showDeleteConfirmationDialog(context),
                 confirmDeleteDismiss: () async {
-                  Future.value(false);
+                  await MultiJsonStorage.removeJson(key);
+                  dataProvider.refreshData();
+                  return Future.value(false);
                 },
                 confirmActionDismiss: () async {
                   await _addSongToGroup(key);

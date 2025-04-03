@@ -1,6 +1,6 @@
 import 'package:P2pChords/dataManagment/converter/components.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
-import 'package:P2pChords/dataManagment/dataClass.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:flutter/material.dart';
 
