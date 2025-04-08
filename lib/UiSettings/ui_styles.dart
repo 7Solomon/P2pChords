@@ -32,6 +32,24 @@ class UiStyles {
       BoxShadow(color: Colors.black12, offset: Offset(0, -2), blurRadius: 4.0),
     ],
   );
+  static const TextStyle valueStyle = TextStyle(
+    fontSize: 14.0,
+    fontWeight: FontWeight.w600,
+    color: primaryColor,
+  );
+
+  static const TextStyle smallTextStyle = TextStyle(
+    fontSize: 10.0,
+    color: Colors.grey,
+  );
+
+  static BoxDecoration floatingPanelDecoration = BoxDecoration(
+    color: Colors.white.withOpacity(0.9),
+    borderRadius: BorderRadius.circular(12.0),
+    boxShadow: const [
+      BoxShadow(color: Colors.black26, blurRadius: 8.0, offset: Offset(0, 2)),
+    ],
+  );
 }
 
 class ControlsRow extends StatelessWidget {
@@ -39,6 +57,8 @@ class ControlsRow extends StatelessWidget {
   final VoidCallback onDecrease;
   final VoidCallback onIncrease;
   final String value;
+  final String? minValue;
+  final String? maxValue;
 
   const ControlsRow({
     Key? key,
@@ -46,31 +66,80 @@ class ControlsRow extends StatelessWidget {
     required this.onDecrease,
     required this.onIncrease,
     required this.value,
+    this.minValue,
+    this.maxValue,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: UiStyles.smallPadding,
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            icon: const Icon(Icons.remove),
-            onPressed: onDecrease,
-            color: UiStyles.primaryColor,
-          ),
-          Flexible(
+          SizedBox(
+            width: 100, // Fixed width for labels
             child: Text(
-              '$label: $value',
+              label,
               style: UiStyles.labelStyle,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: onIncrease,
-            color: UiStyles.primaryColor,
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (minValue != null)
+                  Text(minValue!, style: UiStyles.smallTextStyle),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      overlayShape: SliderComponentShape.noOverlay,
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            icon: const Icon(Icons.remove, size: 16),
+                            onPressed: onDecrease,
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: UiStyles.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              value,
+                              style: UiStyles.valueStyle,
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            icon: const Icon(Icons.add, size: 16),
+                            onPressed: onIncrease,
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (maxValue != null)
+                  Text(maxValue!, style: UiStyles.smallTextStyle),
+              ],
+            ),
           ),
         ],
       ),

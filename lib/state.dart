@@ -135,6 +135,12 @@ class ConnectionProvider with ChangeNotifier {
     _messageHandlerService.onSongDataMessage = (songData) {
       _dataLoader.saveDataToStorage(songData);
     };
+
+    _messageHandlerService.onDisconnection = (deviceId) {
+      _notificationService.showInfo("Disconnected from $deviceId");
+      webSocketService.connectedDeviceIds.remove(deviceId);
+      notifyListeners();
+    };
   }
 
   // Getters

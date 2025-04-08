@@ -4,7 +4,6 @@ import 'package:P2pChords/mainPage/build_widgets.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:P2pChords/UiSettings/page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});

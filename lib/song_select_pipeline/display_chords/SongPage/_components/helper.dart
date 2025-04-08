@@ -1,14 +1,11 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-
-import 'package:flutter/material.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/UiSettings/data_class.dart';
 
 /// Helper class to build section widgets consistently across the app
 class SectionBuilder {
-  /// Builds a section widget with title and content
+  /// Builds a widget for a single section
   static Widget buildSection(SongSection section, double fontSize,
       Widget Function(LyricLine) buildLine) {
     return Column(
@@ -27,105 +24,116 @@ class SectionBuilder {
       ],
     );
   }
-}
 
-Widget buildMultiSectionLayout({
-  required List<SongSection> sections,
-  required double fontSize,
-  required double
-      minColumnWidth, // Keep for compatibility, can be removed later
-  required Widget Function(SongSection, double) buildSection,
-}) {
-  // Build complete section widgets
-  final List<Widget> sectionWidgets =
-      sections.map((section) => buildSection(section, fontSize)).toList();
+  /// Build sections with automatic song detection and section limits
+  static Widget buildSongSectionLayout({
+    required List<List<SongSection>> sections,
+    required UiVariables uiVariables,
+    required Widget Function(LyricLine) buildLine,
+  }) {
+    if (sections.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      // If only one section or narrow screen, use single column
-      if (sectionWidgets.length <= 1 || constraints.maxWidth < 500) {
-        return SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate how many columns we can fit based on available width
+        final availableWidth = constraints.maxWidth - 32; // Account for padding
+        final columnWidth = uiVariables.columnWidth.value;
+        final columnSpacing = uiVariables.columnSpacing.value;
+
+        // Calculate max number of columns that fit in the available width
+        final maxColumns = max(
+            1,
+            ((availableWidth + columnSpacing) / (columnWidth + columnSpacing))
+                .floor());
+
+        // Flatten sections and apply section count limit
+        final List<Widget> sectionWidgets = [];
+        int sectionCount = 0;
+        final maxSections = uiVariables.sectionCount.value;
+
+        // Process each song group and count sections
+        for (var songGroup in sections) {
+          // Start a new column for each song group
+          if (sectionWidgets.isNotEmpty && sectionCount % maxColumns == 0) {
+            // Need to start a new row
+          }
+
+          // Add each section from this song group
+          for (var section in songGroup) {
+            if (sectionCount >= maxSections) break; // Respect section limit
+
+            sectionWidgets.add(SizedBox(
+              width: columnWidth,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: (sectionCount % maxColumns) < maxColumns - 1
+                      ? columnSpacing
+                      : 0,
+                  bottom: uiVariables.rowSpacing.value,
+                ),
+                child: buildSection(
+                    section, uiVariables.fontSize.value, buildLine),
+              ),
+            ));
+            sectionCount++;
+          }
+        }
+
+        // Organize sections into a grid layout
+        return Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Wrap(
+            alignment: WrapAlignment.start,
+            spacing: 0, // We handle spacing in the individual widgets
+            runSpacing: 0, // We handle row spacing in the individual widgets
             children: sectionWidgets,
           ),
         );
-      }
-
-      // Calculate responsive section width
-      // Default to 2 columns on most screens, 3+ on wider screens
-      int columnCount = max(2, (constraints.maxWidth / 400).floor());
-      double sectionWidth = constraints.maxWidth / columnCount - 24;
-
-      return SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16.0),
-        child: Wrap(
-          spacing: 16.0, // horizontal gap between sections
-          runSpacing: 24.0, // vertical gap between rows
-          alignment: WrapAlignment.start,
-          children: sectionWidgets
-              .map((widget) => SizedBox(
-                    width: sectionWidth,
-                    child: widget,
-                  ))
-              .toList(),
-        ),
-      );
-    },
-  );
+      },
+    );
+  }
 }
 
-class AnimatedSectionView extends StatefulWidget {
-  final List<SongSection> sections;
+/// Animated view for sections with transitions
+class SectionView extends StatelessWidget {
+  final List<List<SongSection>> sections;
   final int currentIndex;
-  final int sectionsPerView;
-  final double fontSize;
-  final double minColumnWidth;
-  final Widget Function(SongSection, double) buildSection;
-  final Function(int)? onSectionChanged;
+  final UiVariables uiVariables;
+  final Widget Function(LyricLine) buildLineFunction;
+  final bool animate;
+  final int? previousIndex;
 
-  const AnimatedSectionView({
-    Key? key,
+  const SectionView({
+    super.key,
     required this.sections,
     required this.currentIndex,
-    required this.sectionsPerView,
-    required this.fontSize,
-    required this.minColumnWidth,
-    required this.buildSection,
-    this.onSectionChanged,
-  }) : super(key: key);
-
-  @override
-  State<AnimatedSectionView> createState() => _AnimatedSectionViewState();
-}
-
-class _AnimatedSectionViewState extends State<AnimatedSectionView> {
-  int _previousIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _previousIndex = widget.currentIndex;
-  }
-
-  @override
-  void didUpdateWidget(AnimatedSectionView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentIndex != widget.currentIndex) {
-      _previousIndex = oldWidget.currentIndex;
-    }
-  }
+    required this.uiVariables,
+    required this.buildLineFunction,
+    this.animate = true,
+    this.previousIndex,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Here we build the content for the sections
+    Widget content = SectionBuilder.buildSongSectionLayout(
+      sections: sections,
+      uiVariables: uiVariables,
+      buildLine: buildLineFunction,
+    );
+
+    // Apply animation if needed
+    if (!animate || previousIndex == null) {
+      return content;
+    }
+
+    // Animation logic
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (Widget child, Animation<double> animation) {
-        // Determine animation direction based on index change
-        final bool isForward = widget.currentIndex > _previousIndex;
+        final bool isForward = currentIndex > (previousIndex ?? 0);
 
         final offsetAnimation = Tween<Offset>(
           begin: Offset(0.0, isForward ? -1.0 : 1.0),
@@ -140,24 +148,10 @@ class _AnimatedSectionViewState extends State<AnimatedSectionView> {
           child: child,
         );
       },
-      child: _buildSectionContent(key: ValueKey<int>(widget.currentIndex)),
-    );
-  }
-
-  Widget _buildSectionContent({Key? key}) {
-    List<SongSection> sectionsToShow = [];
-    for (int i = widget.currentIndex;
-        i < widget.currentIndex + widget.sectionsPerView &&
-            i < widget.sections.length;
-        i++) {
-      sectionsToShow.add(widget.sections[i]);
-    }
-    // Use the new multi-section layout function.
-    return buildMultiSectionLayout(
-      sections: sectionsToShow,
-      fontSize: widget.fontSize,
-      minColumnWidth: widget.minColumnWidth,
-      buildSection: widget.buildSection,
+      child: KeyedSubtree(
+        key: ValueKey<int>(currentIndex),
+        child: content,
+      ),
     );
   }
 }

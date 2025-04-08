@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
@@ -20,22 +21,20 @@ class AppUiProvider extends ChangeNotifier {
 
 class SheetUiProvider extends ChangeNotifier {
   String _currentKey = 'C';
-  double _fontSize = 16.0;
-  double _minColumnWidth = 300.0;
-  int _sectionCount = 2;
+  UiVariables _uiVariables = UiVariables(
+    fontSize: 16.0,
+    lineSpacing: 0.0,
+    sectionCount: 1,
+  );
 
   void setFontSize(double size) {
-    _fontSize = size;
-    notifyListeners();
-  }
-
-  void setMinColumnWidth(double width) {
-    _minColumnWidth = width;
+    _uiVariables.fontSize.value = size;
     notifyListeners();
   }
 
   void setSectionCount(int count) {
-    _sectionCount = count;
+    _uiVariables.sectionCount.value = count;
+
     notifyListeners();
   }
 
@@ -44,25 +43,24 @@ class SheetUiProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  double get fontSize => _fontSize;
-  double get minColumnWidth => _minColumnWidth;
+  void setUiVariables(UiVariables uiVariables) {
+    _uiVariables = uiVariables;
+    notifyListeners();
+  }
+
+  UiVariables get uiVariables => _uiVariables;
   String get currentKey => _currentKey;
-  int get sectionCount => _sectionCount;
 
   fromJson(Map<String, dynamic> json) {
     _currentKey = json['currentKey'];
-    _fontSize = json['fontSize'];
-    _minColumnWidth = json['minColumnWidth'];
-    _sectionCount = json['sectionCount'];
+    _uiVariables = UiVariables.fromJson(json['uiVariables']);
     notifyListeners();
   }
 
   Map<String, dynamic> toJson() {
     return {
       'currentKey': _currentKey,
-      'fontSize': _fontSize,
-      'minColumnWidth': _minColumnWidth,
-      'sectionCount': _sectionCount
+      'uiVariables': _uiVariables.toJson(),
     };
   }
 }

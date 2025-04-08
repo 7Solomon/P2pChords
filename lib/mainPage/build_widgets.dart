@@ -6,11 +6,13 @@ import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 import 'package:P2pChords/state.dart';
-import 'package:P2pChords/utils/test.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
 import 'package:P2pChords/groupManagement/Pages/groups.dart';
+
+import 'package:P2pChords/dataManagment/local_manager/config_system_stub.dart'
+    if (dart.library.io) 'package:P2pChords/dataManagment/local_manager/config_system.dart';
 
 Widget buildConnectionStatusChip(
     BuildContext context, ConnectionProvider provider) {
@@ -137,6 +139,8 @@ Widget buildMainContent(
               );
             },
           ),
+          const SizedBox(height: 20),
+          buildLocalWidget(context),
 
           const Spacer(),
 
@@ -156,6 +160,15 @@ Widget buildMainContent(
       ),
     ),
   );
+}
+
+Widget buildLocalWidget(BuildContext context) {
+  final privateFeatures = PrivateFeatures();
+  if (privateFeatures.hasHalfLegalStuff) {
+    return privateFeatures.buildHalfLegalWidget(context);
+  }
+
+  return const SizedBox.shrink();
 }
 
 Future<bool?> _handleBeamer(BuildContext context) async {

@@ -1,3 +1,4 @@
+import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/UiSettings/songWithControlls.dart';
 import 'package:P2pChords/UiSettings/ui_styles.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
@@ -15,9 +16,7 @@ class UisettingsPage extends StatefulWidget {
 }
 
 class _UisettingsPageState extends State<UisettingsPage> {
-  late double _currentFontSize;
-  late int _currentSectionCount;
-  late double _currentMinColumnWidth;
+  late UiVariables _uiVariables;
 
   late Future<bool> _initFuture;
   bool _hasUnsavedChanges = false;
@@ -56,11 +55,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
   void _saveSettings() {
     final sheetUiProvider =
         Provider.of<SheetUiProvider>(context, listen: false);
-    print(
-        'Speichere Einstellungen: $_currentFontSize, $_currentSectionCount, $_currentMinColumnWidth');
-    sheetUiProvider.setFontSize(_currentFontSize);
-    sheetUiProvider.setSectionCount(_currentSectionCount);
-    sheetUiProvider.setMinColumnWidth(_currentMinColumnWidth);
+    sheetUiProvider.setUiVariables(_uiVariables);
     _hasUnsavedChanges = false;
     _showSnackbar('Einstellungen gespeichert');
   }
@@ -82,14 +77,11 @@ class _UisettingsPageState extends State<UisettingsPage> {
   }
 
   void _checkForChanges(SheetUiProvider sheetUiProvider) {
-    final bool fontSizeChanged = _currentFontSize != (sheetUiProvider.fontSize);
-    final bool sectionCountChanged =
-        _currentSectionCount != (sheetUiProvider.sectionCount);
-    final bool minColumnWidthChanged =
-        _currentMinColumnWidth != (sheetUiProvider.minColumnWidth);
+    final bool uiVariablesChanged = _uiVariables.isDifferent(
+      sheetUiProvider.uiVariables,
+    );
     setState(() {
-      _hasUnsavedChanges =
-          fontSizeChanged || sectionCountChanged | minColumnWidthChanged;
+      _hasUnsavedChanges = uiVariablesChanged;
     });
   }
 
@@ -128,9 +120,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
     super.didChangeDependencies();
     if (!_initialized) {
       final sheetUiProvider = Provider.of<SheetUiProvider>(context);
-      _currentFontSize = sheetUiProvider.fontSize;
-      _currentSectionCount = sheetUiProvider.sectionCount;
-      _currentMinColumnWidth = sheetUiProvider.minColumnWidth;
+      _uiVariables = sheetUiProvider.uiVariables;
       _initialized = true;
     }
   }
@@ -198,10 +188,8 @@ class _UisettingsPageState extends State<UisettingsPage> {
                       currentSelection.currentGroup!,
                       currentSelection.currentSongHash!),
                   sectionIndex: currentSelection.currentSectionIndex!,
-                  currentKey: sheetUiProvider.currentKey ?? 'C',
-                  startFontSize: sheetUiProvider.fontSize ?? 16.0,
-                  startMinColumnWidth: sheetUiProvider.minColumnWidth ?? 100.0,
-                  startSectionCount: sheetUiProvider.sectionCount ?? 2,
+                  currentKey: sheetUiProvider.currentKey,
+                  uiVariables: sheetUiProvider.uiVariables,
                   onSectionChanged: (index) {
                     currentSelection.setCurrentSectionIndex(index);
                   },
@@ -210,17 +198,11 @@ class _UisettingsPageState extends State<UisettingsPage> {
                         currentSelection.currentGroup!, index);
                     currentSelection.setCurrentSong(hash);
                   },
-                  onFontSizeChanged: (fontSize) {
-                    _currentFontSize = fontSize;
-                    _checkForChanges(sheetUiProvider);
-                  },
-                  onMinColumnWidthChanged: (minColumnWidth) {
-                    _currentMinColumnWidth = minColumnWidth;
-                    _checkForChanges(sheetUiProvider);
-                  },
-                  onSectionCountChanged: (sectionCount) {
-                    _currentSectionCount = sectionCount;
-                    _checkForChanges(sheetUiProvider);
+                  onUiVariablesChanged: (newUiVariables) {
+                    setState(() {
+                      _uiVariables = newUiVariables;
+                      _checkForChanges(sheetUiProvider);
+                    });
                   },
                 ),
               ),

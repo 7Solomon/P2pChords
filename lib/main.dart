@@ -7,10 +7,6 @@ import 'package:provider/provider.dart';
 import 'state.dart';
 
 void main() async {
-  // For Network Tools (MDNS)
-  //final appDocDirectory = await getApplicationDocumentsDirectory();
-  //await configureNetworkTools(appDocDirectory.path, enableDebugging: true);
-  // Normal run
   runApp(
     MultiProvider(
       providers: [

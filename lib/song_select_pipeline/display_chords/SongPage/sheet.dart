@@ -1,3 +1,4 @@
+import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
 import 'package:flutter/material.dart';
@@ -15,11 +16,10 @@ class SongSheetDisplay extends StatefulWidget {
   final int songIndex;
   final int sectionIndex;
   final String currentKey;
-  final double startFontSize;
-  final double startMinColumnWidth;
-  final int startSectionCount;
+  final UiVariables uiVariables;
   final Function(int) onSectionChanged;
   final Function(int) onSongChanged;
+  final Function(BuildContext, TapDownDetails)? onTapDown;
 
   const SongSheetDisplay({
     super.key,
@@ -27,11 +27,10 @@ class SongSheetDisplay extends StatefulWidget {
     required this.songIndex,
     required this.sectionIndex,
     required this.currentKey,
-    required this.startFontSize,
-    required this.startMinColumnWidth,
-    required this.startSectionCount,
+    required this.uiVariables,
     required this.onSectionChanged,
     required this.onSongChanged,
+    this.onTapDown,
   });
 
   @override
@@ -41,18 +40,21 @@ class SongSheetDisplay extends StatefulWidget {
 class _SongSheetDisplayState extends State<SongSheetDisplay> {
   late int _currentSectionIndex;
   late int _currentSongIndex;
-  late double _fontSize;
-  late double _minColumnWidth;
-  late List<SongSection> _sections;
+  late List<List<SongSection>> _sections;
+  late List<SongSection> _afterSongSections;
+  late List<SongSection> _currentSongSections;
 
   Song get currentSong => widget.songs[_currentSongIndex];
+  Song? get songAfter {
+    if (_currentSongIndex >= 0 && _currentSongIndex < widget.songs.length - 1) {
+      return widget.songs[_currentSongIndex + 1];
+    }
+    return null;
+  }
 
   @override
   void initState() {
     super.initState();
-    _fontSize = widget.startFontSize;
-
-    _minColumnWidth = widget.startMinColumnWidth;
     _currentSectionIndex = widget.sectionIndex;
     _currentSongIndex = widget.songIndex;
     _loadSections();
@@ -77,8 +79,59 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     }
   }
 
+  void navigateToPreviousSection() {
+    if (_currentSectionIndex > 0) {
+      setState(() {
+        _currentSectionIndex--;
+        widget.onSectionChanged(_currentSectionIndex);
+      });
+    } else if (_currentSongIndex > 0) {
+      setState(() {
+        _currentSongIndex--;
+        _loadSections();
+        _currentSectionIndex = _sections.length - 1;
+        widget.onSongChanged(_currentSongIndex);
+      });
+    }
+  }
+
+  void navigateToNextSection() {
+    if (_currentSectionIndex < _sections.length - 1) {
+      setState(() {
+        _currentSectionIndex++;
+        widget.onSectionChanged(_currentSectionIndex);
+      });
+    } else if (_currentSongIndex < widget.songs.length - 1) {
+      setState(() {
+        _currentSongIndex++;
+        _loadSections();
+        _currentSectionIndex = 0;
+        widget.onSongChanged(_currentSongIndex);
+      });
+    }
+  }
+
+  // Handle the tap event
+  void handleScreenTap(BuildContext context, TapDownDetails details) {
+    if (widget.onTapDown != null) {
+      widget.onTapDown!(context, details);
+      return;
+    }
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final tapPositionY = details.globalPosition.dy;
+
+    if (tapPositionY < screenHeight / 2) {
+      navigateToPreviousSection();
+    } else {
+      navigateToNextSection();
+    }
+  }
+
   void _loadSections() {
-    _sections = currentSong.sections;
+    _currentSongSections = currentSong.sections;
+    _afterSongSections = songAfter?.sections ?? [];
+    _sections = [_currentSongSections, _afterSongSections];
   }
 
   @override
@@ -86,80 +139,23 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     super.dispose();
   }
 
-  void _handleScreenTap(BuildContext context, TapDownDetails details) {
-    // Determine if tap is in top or bottom half of screen
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final tapPositionY = details.globalPosition.dy;
-    final tapPositionX = details.globalPosition.dx;
-
-    if (tapPositionX > screenWidth / 2) {
-      // Tap on right half
-      setState(() {
-        //openSongDrawer();
-      });
-    }
-
-    if (tapPositionY < screenHeight / 2) {
-      // Tap on top half - go to previous section
-      if (_currentSectionIndex > 0) {
-        setState(() {
-          _currentSectionIndex--;
-          widget.onSectionChanged(_currentSectionIndex);
-        });
-      } else if (_currentSongIndex > 0) {
-        // Move to previous song
-        setState(() {
-          _currentSongIndex--;
-          _loadSections();
-          _currentSectionIndex = _sections.length - 1;
-          widget.onSongChanged(_currentSongIndex);
-        });
-      }
-    } else {
-      // Tap on bottom half - go to next section
-      if (_currentSectionIndex < _sections.length - 1) {
-        setState(() {
-          _currentSectionIndex++;
-          widget.onSectionChanged(_currentSectionIndex);
-        });
-      } else if (_currentSongIndex < widget.songs.length - 1) {
-        // Move to next song
-        setState(() {
-          _currentSongIndex++;
-          _loadSections();
-          _currentSectionIndex = 0;
-          widget.onSongChanged(_currentSongIndex);
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (details) => _handleScreenTap(context, details),
+      onTapDown: (details) => handleScreenTap(context, details),
+      behavior: HitTestBehavior.translucent,
       child: Column(
         children: [
           // Song header
-          _buildSongHeader(),
+          //_buildSongHeader(),
 
           Expanded(
-            child: AnimatedSectionView(
-              sections: _sections,
-              currentIndex: _currentSectionIndex,
-              sectionsPerView: widget.startSectionCount,
-              fontSize: _fontSize,
-              minColumnWidth: _minColumnWidth,
-              buildSection: (section, fontSize) {
-                return SectionBuilder.buildSection(
-                  section,
-                  fontSize,
-                  (line) => _buildLine(line),
-                );
-              },
-            ),
-          ),
+              child: SectionView(
+            sections: _sections,
+            currentIndex: _currentSectionIndex,
+            uiVariables: widget.uiVariables,
+            buildLineFunction: _buildLine,
+          )),
         ],
       ),
     );
@@ -201,56 +197,21 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     );
   }
 
-  //Widget _buildSectionView(int currentIndex) {
-  //  // Calculate how many sections to display
-  //  List<SongSection> sectionsToShow = [];
-//
-  //  // Add current section and subsequent sections up to startSectionCount
-  //  for (int i = currentIndex;
-  //      i < currentIndex + widget.startSectionCount && i < _sections.length;
-  //      i++) {
-  //    sectionsToShow.add(_sections[i]);
-  //  }
-//
-  //  return SingleChildScrollView(
-  //    physics:
-  //        const NeverScrollableScrollPhysics(), // Disable scrolling within the page
-  //    padding: const EdgeInsets.all(16.0),
-  //    child: Column(
-  //      crossAxisAlignment: CrossAxisAlignment.start,
-  //      children: [
-  //        ...sectionsToShow.expand((section) => [
-  //              Text(
-  //                section.title.toUpperCase(),
-  //                style: TextStyle(
-  //                  fontSize: _fontSize + 2,
-  //                  fontWeight: FontWeight.bold,
-  //                ),
-  //              ),
-  //              const SizedBox(height: 16),
-  //              ...section.lines.map((line) => _buildLine(line)),
-  //              const SizedBox(height: 24),
-  //            ]),
-  //      ],
-  //    ),
-  //  );
-  //}
-
   Widget _buildLine(LyricLine line) {
     // If no chords, just return the lyrics
     if (line.chords.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
+        padding: EdgeInsets.only(bottom: widget.uiVariables.lineSpacing.value),
         child: Text(
           line.lyrics,
-          style: TextStyle(fontSize: _fontSize),
+          style: TextStyle(fontSize: widget.uiVariables.fontSize.value),
         ),
       );
     }
 
     // Process line with chords
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: EdgeInsets.only(bottom: widget.uiVariables.lineSpacing.value),
       child: _buildChordLyricLine(line),
     );
   }
@@ -282,7 +243,8 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
                   // Lyric line for this segment
                   Text(
                     segment.text,
-                    style: TextStyle(fontSize: _fontSize),
+                    style:
+                        TextStyle(fontSize: widget.uiVariables.fontSize.value),
                   ),
                 ])
             .toList(),
@@ -295,7 +257,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     final textPainter = TextPainter(
       text: TextSpan(
         text: line.lyrics,
-        style: TextStyle(fontSize: _fontSize),
+        style: TextStyle(fontSize: widget.uiVariables.fontSize.value),
       ),
       textDirection: TextDirection.ltr,
       maxLines: null,
@@ -360,7 +322,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     // Add maxWidth parameter
     if (segment.chords.isEmpty) {
       return [
-        SizedBox(height: _fontSize - 2)
+        SizedBox(height: widget.uiVariables.fontSize.value - 2)
       ]; // Empty chord line with some height
     }
 
@@ -376,7 +338,8 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
       // Add space before chord
       if (chord.position > lastPos) {
         String spaceBefore = segment.text.substring(lastPos, chord.position);
-        double spaceWidth = _getTextWidth(spaceBefore, _fontSize);
+        double spaceWidth =
+            _getTextWidth(spaceBefore, widget.uiVariables.fontSize.value);
 
         // Check if adding this space would exceed available width
         if (currentWidth + spaceWidth > maxWidth - 10) {
@@ -389,7 +352,8 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
       }
 
       // Calculate chord width
-      double chordWidth = _getTextWidth(_translateChord(chord), _fontSize - 2);
+      double chordWidth = _getTextWidth(
+          _translateChord(chord), widget.uiVariables.fontSize.value - 2);
 
       // Check if adding this chord would exceed available width
       if (currentWidth + chordWidth > maxWidth - 10) {
@@ -402,7 +366,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
         Text(
           _translateChord(chord),
           style: TextStyle(
-            fontSize: _fontSize - 2,
+            fontSize: widget.uiVariables.fontSize.value - 2,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).primaryColor,
           ),
@@ -414,7 +378,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     }
 
     // Add flexible spacer at the end to fill remaining space
-    result.add(Spacer());
+    result.add(const Spacer());
 
     return result;
   }

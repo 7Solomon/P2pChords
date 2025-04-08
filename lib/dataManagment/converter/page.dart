@@ -5,7 +5,14 @@ import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:flutter/material.dart';
 
 class ConverterPage extends StatefulWidget {
-  const ConverterPage({super.key});
+  final String? initialText;
+  final String? initialTitle;
+
+  const ConverterPage({
+    super.key,
+    this.initialText,
+    this.initialTitle,
+  });
 
   @override
   State<ConverterPage> createState() => _ConverterPageState();
@@ -17,6 +24,17 @@ class _ConverterPageState extends State<ConverterPage> {
   String? _selectedTitle;
 
   Song? _savedSong;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialText != null) {
+      _controller.text = widget.initialText!;
+    }
+    if (widget.initialTitle != null) {
+      _selectedTitle = widget.initialTitle;
+    }
+  }
 
   void _generate() {
     // Function to handle the button press
@@ -30,6 +48,8 @@ class _ConverterPageState extends State<ConverterPage> {
     }
     Song generatedSong =
         converter.convertTextToSong(inputText, _selectedKey!, _selectedTitle!);
+    
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Song generiert!')),
     );

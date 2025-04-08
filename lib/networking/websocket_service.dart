@@ -77,6 +77,10 @@ class WebSocketService extends CustomeService {
 
   @override
   Future<bool> connectToServer(String serverId) async {
+    if (serverId == await getServerAddress()) {
+      _notify('Cannot connect to self');
+      return false;
+    }
     // Parse address into IP and port
     try {
       final parts = serverId.split(':');
@@ -241,7 +245,7 @@ class WebSocketService extends CustomeService {
     //  }
 //
     //  return completer.future;
-    return []; // Placeholder for actual discovery logic
+    return [];
   }
 
   // WebSocket-specific methods with similar patterns to NearbyService
@@ -365,8 +369,19 @@ class WebSocketService extends CustomeService {
         orElse: () => throw Exception('Client not found'),
       );
 
+      final disconnectMessage = {
+        'type': 'disconnect',
+        'content': {
+          'name': userNickName,
+          'id': clientId,
+        },
+      };
+
+      client.send(jsonEncode(disconnectMessage));
+
       _clients.remove(client);
       connectedDeviceIds.remove(clientId);
+
       _notify('Client ${client.name} disconnected');
       return true;
     } catch (e) {

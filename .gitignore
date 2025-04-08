@@ -41,3 +41,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+/lib/dataManagment/half_legal_stuff/
+/lib/dataManagment/local_manager/config_system.dart
+
