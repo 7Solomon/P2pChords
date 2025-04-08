@@ -57,6 +57,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
         Provider.of<SheetUiProvider>(context, listen: false);
     sheetUiProvider.setUiVariables(_uiVariables);
     _hasUnsavedChanges = false;
+    sheetUiProvider.saveToPrefs();
     _showSnackbar('Einstellungen gespeichert');
   }
 

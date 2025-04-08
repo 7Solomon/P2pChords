@@ -11,15 +11,46 @@ import 'package:P2pChords/styling/Themes.dart';
 class AppUiProvider extends ChangeNotifier {
   ThemeData _currentTheme = AppTheme.trueTheme;
 
+  AppUiProvider() {
+    _loadFromPrefs();
+  }
+
   void setTheme(ThemeData theme) {
     _currentTheme = theme;
+    _saveToPrefs();
     notifyListeners();
   }
 
   ThemeData? get currentTheme => _currentTheme;
+
+  Future<void> _saveToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Save theme as a string identifier
+    String themeName = _currentTheme == AppTheme.trueTheme
+        ? 'true'
+        : 'dark'; //  Muss überarbeitet werden is quatschig
+    await prefs.setString('AppTheme', themeName);
+  }
+
+  // Load theme preference
+  Future<void> _loadFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String themeName = prefs.getString('AppTheme') ?? 'true';
+      _currentTheme =
+          themeName == 'true' ? AppTheme.trueTheme : AppTheme.darkTheme;
+      notifyListeners();
+    } catch (e) {
+      _currentTheme = AppTheme.trueTheme;
+    }
+  }
 }
 
 class SheetUiProvider extends ChangeNotifier {
+  SheetUiProvider() {
+    _loadFromPrefs();
+  }
+
   String _currentKey = 'C';
   UiVariables _uiVariables = UiVariables(
     fontSize: 16.0,
@@ -62,6 +93,31 @@ class SheetUiProvider extends ChangeNotifier {
       'currentKey': _currentKey,
       'uiVariables': _uiVariables.toJson(),
     };
+  }
+
+  Future<void> saveToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String jsonData = jsonEncode(toJson());
+      await prefs.setString('sheet_ui_settings', jsonData);
+    } catch (e) {
+      debugPrint('Error saving SheetUiProvider state: $e');
+    }
+  }
+
+  // Load from SharedPreferences
+  Future<void> _loadFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonData = prefs.getString('sheet_ui_settings');
+
+      if (jsonData != null) {
+        final Map<String, dynamic> data = jsonDecode(jsonData);
+        fromJson(data);
+      }
+    } catch (e) {
+      debugPrint('Error loading SheetUiProvider state: $e');
+    }
   }
 }
 

@@ -23,8 +23,6 @@ class _ConverterPageState extends State<ConverterPage> {
   String? _selectedKey;
   String? _selectedTitle;
 
-  Song? _savedSong;
-
   @override
   void initState() {
     super.initState();
@@ -48,14 +46,23 @@ class _ConverterPageState extends State<ConverterPage> {
     }
     Song generatedSong =
         converter.convertTextToSong(inputText, _selectedKey!, _selectedTitle!);
-    
-    
+
+    showSaveDialog(
+      context: context,
+      onSave: (String groupName) {
+        if (groupName.isNotEmpty) {
+          MultiJsonStorage.saveJson(generatedSong, group: groupName);
+        } else {
+          MultiJsonStorage.saveJson(generatedSong);
+        }
+        Navigator.pop(context);
+      },
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Song generiert!')),
     );
-    setState(() {
-      _savedSong = generatedSong;
-    });
+    setState(() {});
   }
 
   void showSaveDialog({
@@ -147,29 +154,6 @@ class _ConverterPageState extends State<ConverterPage> {
                   style: uiComponents.buttonStyle,
                   child: const Text('Generate'),
                 ),
-                const SizedBox(width: 8),
-                _savedSong != null
-                    ? ElevatedButton(
-                        onPressed: () {
-                          showSaveDialog(
-                            context: context,
-                            onSave: (String groupName) {
-                              if (_savedSong != null) {
-                                if (groupName.isNotEmpty) {
-                                  MultiJsonStorage.saveJson(_savedSong!,
-                                      group: groupName);
-                                } else {
-                                  MultiJsonStorage.saveJson(_savedSong!);
-                                }
-                                Navigator.pop(context);
-                              }
-                            },
-                          );
-                        },
-                        style: uiComponents.buttonStyle,
-                        child: const Text('Save'),
-                      )
-                    : const SizedBox.shrink()
               ],
             ),
           ],

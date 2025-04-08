@@ -50,13 +50,21 @@ class SongConverter {
     // Split the text into lines and process each line
     final lines = text.split('\n');
 
+    // Regular expression for common section names in all caps followed by optional number
+    final unbracketedSectionRegex = RegExp(
+      r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
+      caseSensitive: false,
+    );
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
 
-      // Check if this is a section header (e.g., [Verse 1])
-      final sectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
+      // Check if this is a bracketed section header (e.g., [Verse 1])
+      final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
+      // Check if this is an unbracketed section header (e.g., VERSE 1)
+      final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(line);
 
-      if (sectionMatch != null) {
+      if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
         // If we were already processing a section, save it
         if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
           sections.add(
@@ -68,7 +76,16 @@ class SongConverter {
           currentSectionLines = [];
         }
 
-        currentSectionTitle = sectionMatch.group(1);
+        if (bracketedSectionMatch != null) {
+          currentSectionTitle = bracketedSectionMatch.group(1);
+        } else {
+          // For unbracketed matches, format the title nicely
+          final sectionName = unbracketedSectionMatch!.group(1);
+          final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
+          currentSectionTitle = sectionNumber.isEmpty
+              ? sectionName
+              : '$sectionName $sectionNumber';
+        }
       } else if (currentSectionTitle != null && line.isNotEmpty) {
         // Add the line to the current section
         currentSectionLines.add(line);

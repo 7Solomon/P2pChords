@@ -1,7 +1,7 @@
 # P2pChords
 
 ## Übersicht
-P2pChords ist eine Flutter App zur Visualisierung und der synchronisierten Nutzung von Liedtexten und Akkorden in Echtzeit. Die App ermöglicht eine Synchronisation via Peer-to-Peer und einer Websocket verbundng zwischen mehreren Geräten (Client und Server struktur), sodass Teams und Bands dieselben Texte und Akkorde gleichzeitig anzeigen können.
+P2pChords ist eine Flutter App zur Visualisierung und der synchronisierten Nutzung von Liedtexten und Akkorden in Echtzeit. Die App ermöglicht eine Synchronisation via Peer-to-Peer und einer Websocket verbindung zwischen mehreren Geräten (Client und Server struktur), sodass Teams und Bands dieselben Texte und Akkorde gleichzeitig anzeigt bekommen können.
 
 ## Hauptfunktionen
 
