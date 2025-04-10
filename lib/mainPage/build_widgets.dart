@@ -140,6 +140,8 @@ Widget buildMainContent(
             },
           ),
           const SizedBox(height: 20),
+
+          // Local widget for additional features
           buildLocalWidget(context),
 
           const Spacer(),

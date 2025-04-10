@@ -133,7 +133,7 @@ class ConnectionProvider with ChangeNotifier {
     };
 
     _messageHandlerService.onSongDataMessage = (songData) {
-      _dataLoader.saveDataToStorage(songData);
+      _dataLoader.addSongsData(songData);
     };
 
     _messageHandlerService.onDisconnection = (deviceId) {

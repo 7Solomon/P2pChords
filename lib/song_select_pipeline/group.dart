@@ -38,6 +38,11 @@ class Songoverviewpage extends StatelessWidget {
                     .getSongsInGroup(currentData.currentGroup!)[index];
                 final name = song.header.name;
                 final hash = song.hash;
+                if (song.isCorrupted()) {
+                  print('Corrupted song: $name');
+                  MultiJsonStorage.removeJson(song.hash);
+                  return Container();
+                }
                 return CListTile(
                   title: name,
                   context: context,

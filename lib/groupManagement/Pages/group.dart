@@ -67,7 +67,7 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                 }
 
                 // Check if groups or songs are null
-                if (dataProvider.groups == null || dataProvider.songs == null) {
+                if (dataProvider.groups.isEmpty || dataProvider.songs.isEmpty) {
                   return const Center(child: Text('Keine Daten verfügbar'));
                 }
 

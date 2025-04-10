@@ -229,15 +229,17 @@ class Song {
     };
   }
 
-  // Helper methods
   int get sectionCount => sections.length;
 
-  /// Get a specific section by index, safely returns null if out of bounds
   SongSection? getSection(int index) {
     if (index >= 0 && index < sections.length) {
       return sections[index];
     }
     return null;
+  }
+
+  isCorrupted() {
+    return hash.isEmpty || header.name.isEmpty || sections.isEmpty;
   }
 }
 

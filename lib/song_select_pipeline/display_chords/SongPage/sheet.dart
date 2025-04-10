@@ -1,6 +1,7 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/section_view.dart';
+//import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
 import 'package:flutter/material.dart';
 
 class _LineSegment {
@@ -40,11 +41,9 @@ class SongSheetDisplay extends StatefulWidget {
 class _SongSheetDisplayState extends State<SongSheetDisplay> {
   late int _currentSectionIndex;
   late int _currentSongIndex;
-  late List<List<SongSection>> _sections;
-  late List<SongSection> _afterSongSections;
-  late List<SongSection> _currentSongSections;
 
   Song get currentSong => widget.songs[_currentSongIndex];
+  int get currentSectionLength => currentSong.sections.length;
   Song? get songAfter {
     if (_currentSongIndex >= 0 && _currentSongIndex < widget.songs.length - 1) {
       return widget.songs[_currentSongIndex + 1];
@@ -57,7 +56,6 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     super.initState();
     _currentSectionIndex = widget.sectionIndex;
     _currentSongIndex = widget.songIndex;
-    _loadSections();
   }
 
   @override
@@ -75,7 +73,6 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     if (oldWidget.songIndex != widget.songIndex ||
         oldWidget.songs != widget.songs) {
       _currentSongIndex = widget.songIndex;
-      _loadSections();
     }
   }
 
@@ -88,15 +85,14 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     } else if (_currentSongIndex > 0) {
       setState(() {
         _currentSongIndex--;
-        _loadSections();
-        _currentSectionIndex = _sections.length - 1;
+        _currentSectionIndex = currentSectionLength - 1;
         widget.onSongChanged(_currentSongIndex);
       });
     }
   }
 
   void navigateToNextSection() {
-    if (_currentSectionIndex < _sections.length - 1) {
+    if (_currentSectionIndex < currentSectionLength - 1) {
       setState(() {
         _currentSectionIndex++;
         widget.onSectionChanged(_currentSectionIndex);
@@ -104,7 +100,6 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     } else if (_currentSongIndex < widget.songs.length - 1) {
       setState(() {
         _currentSongIndex++;
-        _loadSections();
         _currentSectionIndex = 0;
         widget.onSongChanged(_currentSongIndex);
       });
@@ -120,18 +115,15 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
 
     final screenHeight = MediaQuery.of(context).size.height;
     final tapPositionY = details.globalPosition.dy;
-
+    print("Tap position Y: $tapPositionY");
+    print("Screen height: $screenHeight");
     if (tapPositionY < screenHeight / 2) {
+      print("Navigating to previous section");
       navigateToPreviousSection();
     } else {
+      print("Navigating to next section");
       navigateToNextSection();
     }
-  }
-
-  void _loadSections() {
-    _currentSongSections = currentSong.sections;
-    _afterSongSections = songAfter?.sections ?? [];
-    _sections = [_currentSongSections, _afterSongSections];
   }
 
   @override
@@ -141,59 +133,29 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (details) => handleScreenTap(context, details),
-      behavior: HitTestBehavior.translucent,
-      child: Column(
-        children: [
-          // Song header
-          //_buildSongHeader(),
+    return Column(
+      children: [
+        // Song header
+        //_buildSongHeader(),
 
-          Expanded(
-              child: SectionView(
-            sections: _sections,
-            currentIndex: _currentSectionIndex,
+        //Expanded(
+        //    child: SectionView(
+        //  songs: widget.songs,
+        //  currentIndex: _currentSectionIndex,
+        //  uiVariables: widget.uiVariables,
+        //  buildLineFunction: _buildLine,
+        //)),
+        Expanded(
+          child: SectionView(
+            songs: widget.songs,
+            currentSectionIndex: _currentSectionIndex,
+            currentSongIndex: _currentSongIndex,
             uiVariables: widget.uiVariables,
             buildLineFunction: _buildLine,
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSongHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              currentSong.header.name,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            onTapDown: (context, details) => handleScreenTap(context, details),
           ),
-          Text(
-            'Key: ${widget.currentKey}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
-            ),
-          ),
-          // Page indicator with song number
-          const SizedBox(width: 12),
-          Text(
-            'Section ${_currentSectionIndex + 1}/${_sections.length} • Song ${_currentSongIndex + 1}/${widget.songs.length}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

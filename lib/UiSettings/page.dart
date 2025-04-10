@@ -195,8 +195,11 @@ class _UisettingsPageState extends State<UisettingsPage> {
                     currentSelection.setCurrentSectionIndex(index);
                   },
                   onSongChanged: (index) {
-                    String hash = dataLoader.getHashByIndex(
+                    String? hash = dataLoader.getHashByIndex(
                         currentSelection.currentGroup!, index);
+                    if (hash == null) {
+                      return;
+                    }
                     currentSelection.setCurrentSong(hash);
                   },
                   onUiVariablesChanged: (newUiVariables) {

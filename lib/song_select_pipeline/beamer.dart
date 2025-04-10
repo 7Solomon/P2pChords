@@ -18,6 +18,29 @@ class BeamerPage extends StatelessWidget {
     ));
 
     Widget beamerDisplay(SongSection section) {
+      final currentSelectionProvider =
+          Provider.of<CurrentSelectionProvider>(context);
+      final dataLoaderProvider = Provider.of<DataLoadeProvider>(context);
+
+      // Validate selection when widget builds
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        currentSelectionProvider.validateSelection(context);
+      });
+
+      // Safe check for selection
+      bool selectionIsValid =
+          currentSelectionProvider.currentSongHash != null &&
+              currentSelectionProvider.currentSectionIndex != null &&
+              dataLoaderProvider.songs
+                  .containsKey(currentSelectionProvider.currentSongHash!);
+
+      if (!selectionIsValid) {
+        return const Text(
+          'Warte auf die Auswahl eines Liedes durch den Server',
+          style: TextStyle(color: Colors.white, fontSize: 24),
+        );
+      }
+
       return Column(
           children: section.lines.map((line) {
         return Text(
@@ -39,9 +62,8 @@ class BeamerPage extends StatelessWidget {
       final dataLoaderProvider = context.read<DataLoadeProvider>();
       return currentSelectionProvider.currentSongHash != null &&
           currentSelectionProvider.currentSectionIndex != null &&
-          dataLoaderProvider.songs != null &&
-          dataLoaderProvider.songs!.isNotEmpty &&
-          dataLoaderProvider.songs!
+          dataLoaderProvider.songs.isNotEmpty &&
+          dataLoaderProvider.songs
               .containsKey(currentSelectionProvider.currentSongHash!);
     }
 
@@ -59,7 +81,7 @@ class BeamerPage extends StatelessWidget {
                 children: [
                   selectionIsInitiated()
                       ? beamerDisplay(
-                          dataloader.songs![currentselection.currentSongHash!]!
+                          dataloader.songs[currentselection.currentSongHash!]!
                               .sections[currentselection.currentSectionIndex!],
                         )
                       : const Text(

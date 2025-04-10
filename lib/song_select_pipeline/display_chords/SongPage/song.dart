@@ -5,7 +5,6 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_componen
     as quick_overlay;
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/quick_select_overlay/overlay.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/song_selection.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +37,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
         Provider.of<DataLoadeProvider>(context, listen: false);
 
     final List<String> songHashList =
-        dataLoaderProvider.groups![currentSelectionProvider.currentGroup!];
+        dataLoaderProvider.groups[currentSelectionProvider.currentGroup!]!;
 
     _controller = QSelectOverlay(
       songs: songHashList,
@@ -69,7 +68,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             dataLoader.getSongsInGroup(currentSelection.currentGroup!);
         final int songIndex = dataLoader.getSongIndex(
             currentSelection.currentGroup!, currentSelection.currentSongHash!);
-
+        final Song? currentSong =
+            dataLoader.getSongByHash(currentSelection.currentSongHash!);
         if (songs.isEmpty) {
           return const Scaffold(
             body: Center(
@@ -77,6 +77,25 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             ),
           );
         }
+
+        if (songIndex == -1 || currentSong == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            currentSelection.validateSelection(
+              context,
+              autoSelect: true,
+              removeInvalidSongs: true,
+              showSnackbar: true,
+              navigateBack: false,
+            );
+          });
+
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
         return Scaffold(
           key: _scaffoldKey,
           appBar: AppBar(
@@ -92,7 +111,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             ],
           ),
           endDrawer: SongDrawer(
-            song: dataLoader.getSongByHash(currentSelection.currentSongHash!),
+            song: currentSong,
             currentKey: sheetUiProvider.currentKey,
             onKeyChanged: (newKey) {
               sheetUiProvider.setCurrentKey(newKey);
@@ -118,8 +137,12 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                   }
                 },
                 onSongChanged: (index) {
-                  String hash = dataLoader.getHashByIndex(
+                  String? hash = dataLoader.getHashByIndex(
                       currentSelection.currentGroup!, index);
+                  if (hash == null) {
+                    displaySnack('Song nicht gefunden');
+                    return;
+                  }
                   currentSelection.setCurrentSong(hash);
                   if (connectionProvider.userState == UserState.server) {
                     connectionProvider.dataSyncService

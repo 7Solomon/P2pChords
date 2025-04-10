@@ -56,7 +56,7 @@ class MultiJsonStorage {
     return groupMap;
   }
 
-  static saveJson(Song song, {String group = 'default'}) async {
+  static saveJson(Song song, {String? group}) async {
     final prefs = await SharedPreferences.getInstance();
 
     // Convert the Song to JSON string
@@ -74,7 +74,9 @@ class MultiJsonStorage {
     }
 
     await prefs.setString(savePath, jsonString);
-    await addSongToGroup(group, song.hash);
+    if (group != null) {
+      await addSongToGroup(group, song.hash);
+    }
   }
 
   static addSongToGroup(String group, String hash) async {

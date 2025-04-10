@@ -76,23 +76,22 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
     Map<String, dynamic> jsonData = jsonDecode(_fileContent!);
     Song song = Song.fromMap(jsonData);
 
-    String groupIndex =
-        _groupSelector.text.isEmpty ? 'default' : _groupSelector.text;
-
-    await MultiJsonStorage.saveJson(song, group: groupIndex);
-
+    String groupIndex = _groupSelector.text;
+    if (groupIndex.isEmpty) {
+      await MultiJsonStorage.saveJson(song);
+    } else {
+      await MultiJsonStorage.saveJson(song, group: groupIndex);
+    }
     _showSnackBar('JSON file saved successfully');
-
-    Navigator.of(context).pop();
-
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
     setState(() => _isLoading = false);
   }
 
   @override
   void dispose() {
-    _groupSelector
-        .dispose(); // Dispose of the controller when the widget is disposed
-    //could be Irelevant becaus eit doesnt change sth
+    _groupSelector.dispose();
     super.dispose();
   }
 
