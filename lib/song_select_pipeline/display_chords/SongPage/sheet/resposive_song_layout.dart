@@ -2,9 +2,8 @@ import 'dart:math';
 
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/section_tile.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/utils.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/section_tile.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -64,10 +63,14 @@ class ResponsiveSongLayout extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: MasonryGridView.count(
-            shrinkWrap: true, // Add this
+            //scrollDirection: Axis.horizontal,
+            shrinkWrap: true,
             crossAxisCount: crossAxisCount,
+
+            // Spacing
             mainAxisSpacing: uiVariables.rowSpacing.value,
             crossAxisSpacing: columnSpacing,
+            // main
             physics: const TapFriendlyScrollPhysics(),
             itemCount: sectionsToDisplay.length,
             itemBuilder: (context, index) {
@@ -100,7 +103,7 @@ class ResponsiveSongLayout extends StatelessWidget {
     );
   }
 
-  // Helper method to collect sections to display (no changes needed here)
+  // Helper method to collect sections to display
   List<SectionInfo> _collectSections() {
     // Existing implementation
     final List<SectionInfo> sectionsToDisplay = [];

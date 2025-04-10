@@ -115,7 +115,7 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                               ? songName
                               : 'Unknown SongData Please Fix!',
                           context: context,
-                          subtitle: songHash,
+                          subtitle: songHeader.authors[0],
                         ));
                   }).toList(),
                 );

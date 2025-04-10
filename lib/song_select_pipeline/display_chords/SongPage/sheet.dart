@@ -1,6 +1,7 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/section_view.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/line_builds.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/section_view.dart';
 //import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
 import 'package:flutter/material.dart';
 
@@ -41,6 +42,8 @@ class SongSheetDisplay extends StatefulWidget {
 class _SongSheetDisplayState extends State<SongSheetDisplay> {
   late int _currentSectionIndex;
   late int _currentSongIndex;
+  //
+  late LineBuildFunction _sectionBuilder;
 
   Song get currentSong => widget.songs[_currentSongIndex];
   int get currentSectionLength => currentSong.sections.length;
@@ -56,6 +59,10 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     super.initState();
     _currentSectionIndex = widget.sectionIndex;
     _currentSongIndex = widget.songIndex;
+
+    // Line builder function
+    _sectionBuilder =
+        LineBuildFunction(context, widget.uiVariables, widget.currentKey);
   }
 
   @override
@@ -73,6 +80,13 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     if (oldWidget.songIndex != widget.songIndex ||
         oldWidget.songs != widget.songs) {
       _currentSongIndex = widget.songIndex;
+    }
+
+    // For LineBuilderFunction, check if the current key or uiVariables have changed
+    if (oldWidget.currentKey != widget.currentKey ||
+        oldWidget.uiVariables != widget.uiVariables) {
+      _sectionBuilder =
+          LineBuildFunction(context, widget.uiVariables, widget.currentKey);
     }
   }
 
@@ -115,13 +129,9 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
 
     final screenHeight = MediaQuery.of(context).size.height;
     final tapPositionY = details.globalPosition.dy;
-    print("Tap position Y: $tapPositionY");
-    print("Screen height: $screenHeight");
     if (tapPositionY < screenHeight / 2) {
-      print("Navigating to previous section");
       navigateToPreviousSection();
     } else {
-      print("Navigating to next section");
       navigateToNextSection();
     }
   }
@@ -151,218 +161,11 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
             currentSectionIndex: _currentSectionIndex,
             currentSongIndex: _currentSongIndex,
             uiVariables: widget.uiVariables,
-            buildLineFunction: _buildLine,
+            buildLineFunction: _sectionBuilder.buildLine,
             onTapDown: (context, details) => handleScreenTap(context, details),
           ),
         ),
       ],
     );
-  }
-
-  Widget _buildLine(LyricLine line) {
-    // If no chords, just return the lyrics
-    if (line.chords.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: widget.uiVariables.lineSpacing.value),
-        child: Text(
-          line.lyrics,
-          style: TextStyle(fontSize: widget.uiVariables.fontSize.value),
-        ),
-      );
-    }
-
-    // Process line with chords
-    return Padding(
-      padding: EdgeInsets.only(bottom: widget.uiVariables.lineSpacing.value),
-      child: _buildChordLyricLine(line),
-    );
-  }
-
-  Widget _buildChordLyricLine(LyricLine line) {
-    return LayoutBuilder(builder: (context, constraints) {
-      // Split lyrics into lines based on available width
-      final List<_LineSegment> segments =
-          _splitIntoLines(line, constraints.maxWidth);
-
-      // Build a chord line + lyric line for each segment
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: segments
-            .expand((segment) => [
-                  // Chord line for this segment (with overflow protection)
-                  SizedBox(
-                    width: constraints.maxWidth,
-                    child: ClipRect(
-                      // Add ClipRect to ensure no overflow
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:
-                            _buildChordSegment(segment, constraints.maxWidth),
-                      ),
-                    ),
-                  ),
-                  // Lyric line for this segment
-                  Text(
-                    segment.text,
-                    style:
-                        TextStyle(fontSize: widget.uiVariables.fontSize.value),
-                  ),
-                ])
-            .toList(),
-      );
-    });
-  }
-
-  // Split lyrics into lines that fit within the available width
-  List<_LineSegment> _splitIntoLines(LyricLine line, double maxWidth) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: line.lyrics,
-        style: TextStyle(fontSize: widget.uiVariables.fontSize.value),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: null,
-    );
-
-    textPainter.layout(maxWidth: maxWidth);
-
-    final List<_LineSegment> segments = [];
-    final List<TextBox> boxes = [];
-
-    // Get all line boxes
-    for (int i = 0; i < line.lyrics.length; i++) {
-      final lineBoxes = textPainter.getBoxesForSelection(
-        TextSelection(baseOffset: i, extentOffset: i + 1),
-      );
-
-      if (lineBoxes.isNotEmpty) {
-        boxes.add(lineBoxes.first);
-      }
-    }
-
-    // Find line breaks by detecting y-coordinate changes
-    int lineStart = 0;
-    double currentY = boxes.isNotEmpty ? boxes.first.top : 0;
-
-    for (int i = 1; i < boxes.length; i++) {
-      if (boxes[i].top > currentY + 1) {
-        // New line detected (allowing for small floating point differences)
-        // Create a segment for the current line
-        segments.add(_createSegment(line, lineStart, i));
-
-        lineStart = i;
-        currentY = boxes[i].top;
-      }
-    }
-
-    // Add the final segment
-    if (lineStart < line.lyrics.length) {
-      segments.add(_createSegment(line, lineStart, line.lyrics.length));
-    }
-
-    return segments;
-  }
-
-  // Create a segment with its corresponding chords
-  _LineSegment _createSegment(LyricLine line, int start, int end) {
-    final text = line.lyrics.substring(start, end);
-
-    // Find chords that belong to this segment
-    final chords = line.chords.where((chord) {
-      return chord.position >= start && chord.position < end;
-    }).map((chord) {
-      // Adjust chord position relative to segment start
-      return Chord(value: chord.value, position: chord.position - start);
-    }).toList();
-
-    return _LineSegment(text, chords, start);
-  }
-
-  // Build chord widgets for a given line segment
-  List<Widget> _buildChordSegment(_LineSegment segment, double maxWidth) {
-    // Add maxWidth parameter
-    if (segment.chords.isEmpty) {
-      return [
-        SizedBox(height: widget.uiVariables.fontSize.value - 2)
-      ]; // Empty chord line with some height
-    }
-
-    List<Widget> result = [];
-    int lastPos = 0;
-    double currentWidth = 0.0; // Track used width
-
-    // Sort chords by position
-    final sortedChords = [...segment.chords]
-      ..sort((a, b) => a.position.compareTo(b.position));
-
-    for (var chord in sortedChords) {
-      // Add space before chord
-      if (chord.position > lastPos) {
-        String spaceBefore = segment.text.substring(lastPos, chord.position);
-        double spaceWidth =
-            _getTextWidth(spaceBefore, widget.uiVariables.fontSize.value);
-
-        // Check if adding this space would exceed available width
-        if (currentWidth + spaceWidth > maxWidth - 10) {
-          // Leave 10px safety margin
-          break; // Stop adding more chords if we're about to overflow
-        }
-
-        result.add(SizedBox(width: spaceWidth));
-        currentWidth += spaceWidth;
-      }
-
-      // Calculate chord width
-      double chordWidth = _getTextWidth(
-          _translateChord(chord), widget.uiVariables.fontSize.value - 2);
-
-      // Check if adding this chord would exceed available width
-      if (currentWidth + chordWidth > maxWidth - 10) {
-        // Leave 10px safety margin
-        break; // Stop adding this chord if it would overflow
-      }
-
-      // Add chord text
-      result.add(
-        Text(
-          _translateChord(chord),
-          style: TextStyle(
-            fontSize: widget.uiVariables.fontSize.value - 2,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-      );
-
-      currentWidth += chordWidth;
-      lastPos = chord.position;
-    }
-
-    // Add flexible spacer at the end to fill remaining space
-    result.add(const Spacer());
-
-    return result;
-  }
-
-  // Helper to get text width
-  double _getTextWidth(String text, double fontSize) {
-    final textSpan = TextSpan(
-      text: text,
-      style: TextStyle(fontSize: fontSize),
-    );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    return textPainter.width;
-  }
-
-  // Translate chord if needed
-  String _translateChord(Chord chord) {
-    String chordString =
-        ChordUtils.nashvilleToChord(chord.value, widget.currentKey);
-    return chordString;
   }
 }

@@ -45,6 +45,9 @@ class Songoverviewpage extends StatelessWidget {
                 }
                 return CListTile(
                   title: name,
+                  subtitle: song.header.authors.isNotEmpty
+                      ? song.header.authors[0]
+                      : '',
                   context: context,
                   onTap: () {
                     currentData.setCurrentSong(hash);

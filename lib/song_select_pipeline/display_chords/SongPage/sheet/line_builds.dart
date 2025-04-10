@@ -10,13 +10,13 @@ class LineSegment {
   LineSegment(this.text, this.chords, this.startIndex);
 }
 
-class SectionBuildFunction {
+class LineBuildFunction {
   final BuildContext context;
 
   final UiVariables uiVariables;
   final String currentKey;
 
-  SectionBuildFunction(this.context, this.uiVariables, this.currentKey);
+  LineBuildFunction(this.context, this.uiVariables, this.currentKey);
 
   Widget buildLine(LyricLine line) {
     // If no chords, just return the lyrics

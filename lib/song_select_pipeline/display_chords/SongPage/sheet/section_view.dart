@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/resposive_song_layout.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/section_builds.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/test/utils.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/resposive_song_layout.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/section_builds.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/utils.dart';
 import 'package:flutter/material.dart';
 
 class SectionView extends StatelessWidget {

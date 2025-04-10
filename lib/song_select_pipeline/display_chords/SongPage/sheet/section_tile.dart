@@ -1,6 +1,5 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/helper.dart';
 import 'package:flutter/material.dart';
 
 class SectionTile extends StatelessWidget {
@@ -38,6 +37,7 @@ class SectionTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Show song title ONLY on the first displayed section of each song
+        // TITEL
         if (isFirstSectionOfSong)
           Container(
             padding: const EdgeInsets.only(bottom: 8.0),
@@ -50,6 +50,7 @@ class SectionTile extends StatelessWidget {
               ),
             ),
           ),
+        // SectionIndex
         Container(
           padding: const EdgeInsets.only(bottom: 4.0),
           alignment: Alignment.topRight,
@@ -65,8 +66,21 @@ class SectionTile extends StatelessWidget {
           ),
         ),
         // The actual section content
-        SectionBuilder.buildSection(
-            section, uiVariables.fontSize.value, buildLine),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              section.title.toUpperCase(),
+              style: TextStyle(
+                fontSize: uiVariables.fontSize.value + 2,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...section.lines.map((line) => buildLine(line)),
+            const SizedBox(height: 24),
+          ],
+        ),
       ],
     );
 
