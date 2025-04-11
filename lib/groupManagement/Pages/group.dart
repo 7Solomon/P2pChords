@@ -1,9 +1,12 @@
+import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/groupManagement/Pages/songs.dart';
 import 'package:P2pChords/styling/Tiles.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
 
 class GroupSongsPage extends StatefulWidget {
@@ -39,7 +42,19 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
-            onPressed: () {
+            onPressed: () {},
+          ),
+        ],
+      ),
+      floatingActionButton: CSpeedDial(
+        theme: Theme.of(context),
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.group_add),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'Songs zur Gruppe hinzufügen',
+            onTap: () => (
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -52,8 +67,8 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                     },
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ],
       ),
@@ -115,7 +130,20 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                               ? songName
                               : 'Unknown SongData Please Fix!',
                           context: context,
-                          subtitle: songHeader.authors[0],
+                          subtitle: songHeader.authors.isNotEmpty
+                              ? songHeader.authors[0]
+                              : '',
+                          onLongPress: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SongEditPage(
+                                  song: entry,
+                                  group: widget.group,
+                                ),
+                              ),
+                            );
+                          },
                         ));
                   }).toList(),
                 );

@@ -241,6 +241,14 @@ class Song {
   isCorrupted() {
     return hash.isEmpty || header.name.isEmpty || sections.isEmpty;
   }
+
+  factory Song.empty() {
+    return Song(
+      hash: sha256.convert(utf8.encode('empty')).toString(),
+      header: SongHeader(name: '', key: 'C'),
+      sections: [],
+    );
+  }
 }
 
 class SongData {

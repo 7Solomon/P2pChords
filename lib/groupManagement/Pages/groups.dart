@@ -1,11 +1,13 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/groupManagement/Pages/group.dart';
-import 'package:P2pChords/groupManagement/functions.dart'; // Import your group functions here
+import 'package:P2pChords/groupManagement/functions.dart';
 import 'package:P2pChords/styling/Tiles.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
 
 class ManageGroupPage extends StatefulWidget {
@@ -74,24 +76,39 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gruppen Übersicht'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (String choice) {
-              if (choice == 'Neue Gruppe') {
-                _createNewGroup();
-              } else if (choice == 'Gruppe importieren') {
-                importGroup();
-              }
+      ),
+      floatingActionButton: CSpeedDial(
+        theme: Theme.of(context),
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.group_add),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'Neue Gruppe',
+            onTap: () => _createNewGroup(),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.download),
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            label: 'Gruppe importieren',
+            onTap: () => importGroup(),
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.add),
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            label: 'Song erstellen',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SongEditPage(
+                    song: Song.empty(),
+                  ),
+                ),
+              );
             },
-            itemBuilder: (BuildContext context) {
-              return {'Neue Gruppe', 'Gruppe importieren'}.map((String choice) {
-                return PopupMenuItem<String>(
-                  value: choice,
-                  child: Text(choice),
-                );
-              }).toList();
-            },
-            icon: const Icon(Icons.add),
           ),
         ],
       ),
@@ -101,7 +118,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final groups = dataProvider.groups;
-          if (groups == null || groups.isEmpty) {
+          if (groups.isEmpty) {
             return const Center(child: Text('Keine Gruppen vorhanden'));
           }
           return ListView(

@@ -4,7 +4,7 @@ import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/dataManagment/Pages/saveJsonPage.dart';
+import 'package:P2pChords/dataManagment/Pages/load_json_page.dart';
 import 'package:provider/provider.dart';
 
 //import 'package:P2pChords/customeWidgets/TileWidget.dart';
@@ -96,7 +96,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Suche nach Titel, Künstler oder Tonart...',
+                hintText: 'Suche nach Titel oder Künstler...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -120,13 +120,13 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (dataProvider.songs == null || dataProvider.songs!.isEmpty) {
+                if (dataProvider.songs.isEmpty) {
                   return const Center(child: Text('Keine Lieder Verfügbar'));
                 }
 
                 // Get filtered songs based on search query
-                final filteredSongs = _getFilteredSongs(dataProvider.songs!);
-                final groupSongs = dataProvider.groups?[widget.group] ?? [];
+                final filteredSongs = _getFilteredSongs(dataProvider.songs);
+                final groupSongs = dataProvider.groups[widget.group];
 
                 if (filteredSongs.isEmpty) {
                   return const Center(
@@ -138,7 +138,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                   children: filteredSongs.entries.map((entry) {
                     final key = entry.key;
                     final songData = entry.value;
-                    final isInGroup = groupSongs.contains(key);
+                    final isInGroup = groupSongs!.contains(key);
                     return CDissmissible.deleteAndAction(
                       key: Key(key),
                       deleteConfirmation: () =>

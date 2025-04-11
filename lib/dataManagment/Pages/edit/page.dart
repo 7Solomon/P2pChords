@@ -2,14 +2,21 @@ import 'dart:convert';
 import 'package:P2pChords/dataManagment/Pages/edit/editor_component.dart';
 import 'package:P2pChords/dataManagment/Pages/edit/style.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class SongEditPage extends StatefulWidget {
-  const SongEditPage({super.key, required this.song, required this.saveSong});
+  const SongEditPage({
+    super.key,
+    required this.song,
+    this.group,
+  });
 
   final Song song;
-  final void Function(Song) saveSong;
+  final String? group;
 
   @override
   _SongEditPageState createState() => _SongEditPageState();
@@ -81,7 +88,8 @@ class _SongEditPageState extends State<SongEditPage> {
       sections: _editedSong.sections,
     );
 
-    widget.saveSong(updatedSong);
+    // Save the updated song
+    MultiJsonStorage.saveJson(updatedSong, group: widget.group);
   }
 
   void _addNewSection() {
@@ -192,46 +200,51 @@ class _SongEditPageState extends State<SongEditPage> {
     });
   }
 
+  void _showRawJson() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Raw JSON'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            const JsonEncoder.withIndent('  ').convert(_editedSong.toMap()),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: UIStyle.button,
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Schließen'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Song"),
+        title: const Text("Song Editieren"),
         backgroundColor: UIStyle.primary,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            onPressed: _saveChanges,
-            icon: const Icon(Icons.save),
-            tooltip: 'Save Changes',
-          ),
-          IconButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Raw JSON'),
-                  content: SingleChildScrollView(
-                    child: SelectableText(
-                      const JsonEncoder.withIndent('  ')
-                          .convert(_editedSong.toMap()),
-                    ),
-                  ),
-                  actions: [
-                    ElevatedButton(
-                      style: UIStyle.button,
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            icon: const Icon(Icons.code),
-            tooltip: 'View JSON',
-          ),
-        ],
       ),
+      floatingActionButton: CSpeedDial(theme: Theme.of(context), children: [
+        SpeedDialChild(
+          child: const Icon(Icons.save),
+          backgroundColor: UIStyle.primary,
+          foregroundColor: Colors.white,
+          label: 'Save Changes',
+          onTap: _saveChanges,
+        ),
+        SpeedDialChild(
+          child: const Icon(Icons.code),
+          backgroundColor: UIStyle.primary,
+          foregroundColor: Colors.white,
+          label: 'Show Raw JSON',
+          onTap: _showRawJson,
+        )
+      ]),
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(UIStyle.spacing),

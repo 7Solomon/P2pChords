@@ -69,10 +69,7 @@ class Songoverviewpage extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => SongEditPage(
                           song: song,
-                          saveSong: (Song song) async {
-                            await MultiJsonStorage.saveJson(song,
-                                group: currentData.currentGroup!);
-                          },
+                          group: currentData.currentGroup,
                         ),
                       ),
                     );

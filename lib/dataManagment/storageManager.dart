@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:P2pChords/dataManagment/comparer/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MultiJsonStorage {
@@ -56,8 +57,12 @@ class MultiJsonStorage {
     return groupMap;
   }
 
-  static saveJson(Song song, {String? group}) async {
+  static Future<bool> saveJson(Song song, {String? group}) async {
     final prefs = await SharedPreferences.getInstance();
+
+    if (song.hash == sha256.convert(utf8.encode('empty')).toString()) {
+      return false;
+    }
 
     // Convert the Song to JSON string
     String jsonString = jsonEncode(song.toMap());
@@ -69,7 +74,7 @@ class MultiJsonStorage {
       bool doContinue = await compareSongData(
           jsonString, prefs.getString(savePath), jsonString, song.header.name);
       if (!doContinue) {
-        return;
+        return false;
       }
     }
 
@@ -77,6 +82,7 @@ class MultiJsonStorage {
     if (group != null) {
       await addSongToGroup(group, song.hash);
     }
+    return true;
   }
 
   static addSongToGroup(String group, String hash) async {
