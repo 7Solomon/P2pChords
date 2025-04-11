@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:P2pChords/dataManagment/Pages/edit/editor_component.dart';
 import 'package:P2pChords/dataManagment/Pages/edit/style.dart';
+import 'package:P2pChords/dataManagment/Pages/file_picker.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:provider/provider.dart';
 
 class SongEditPage extends StatefulWidget {
   const SongEditPage({
@@ -243,7 +246,21 @@ class _SongEditPageState extends State<SongEditPage> {
           foregroundColor: Colors.white,
           label: 'Show Raw JSON',
           onTap: _showRawJson,
-        )
+        ),
+        SpeedDialChild(
+          child: const Icon(Icons.file_upload),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          label: 'Load Song File',
+          onTap: () => FilePickerUtil.pickAndEditSongFile(
+            context,
+            groupName: null,
+            onSongAdded: () {
+              Provider.of<DataLoadeProvider>(context, listen: false)
+                  .refreshData();
+            },
+          ),
+        ),
       ]),
       body: SingleChildScrollView(
         child: Padding(

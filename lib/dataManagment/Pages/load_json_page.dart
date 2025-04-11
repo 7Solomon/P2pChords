@@ -1,15 +1,14 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
+import 'package:P2pChords/dataManagment/Pages/file_picker.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-
-import '../storageManager.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:provider/provider.dart';
 
 class JsonFilePickerPage extends StatefulWidget {
-  final VoidCallback onSongAdded;
-  const JsonFilePickerPage({super.key, required this.onSongAdded});
+  const JsonFilePickerPage({super.key});
 
   @override
   _JsonFilePickerPageState createState() => _JsonFilePickerPageState();
@@ -19,54 +18,21 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
   bool _isLoading = false;
   final TextEditingController _groupSelector = TextEditingController();
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
   Future<void> _pickFile() async {
     setState(() => _isLoading = true);
 
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        allowMultiple: false,
-      );
-
-      if (result != null) {
-        File file = File(result.files.single.path!);
-        String content = await file.readAsString();
-
-        // Validate JSON and convert to Song
-        Map<String, dynamic> jsonData = jsonDecode(content);
-        Song loadedSong = Song.fromMap(jsonData);
-
-        // Navigate to the edit page with the loaded song
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SongEditPage(
-                song: loadedSong,
-                group:
-                    _groupSelector.text.isNotEmpty ? _groupSelector.text : null,
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      _showSnackBar('Error loading file: ${e.toString()}');
-    } finally {
-      setState(() => _isLoading = false);
+    await FilePickerUtil.pickAndEditSongFile(
+      context,
+      groupName: _groupSelector.text.isNotEmpty ? _groupSelector.text : null,
+    );
+    if (mounted) {
+      Provider.of<DataLoadeProvider>(context, listen: false).refreshData();
     }
+    setState(() => _isLoading = false);
   }
 
   @override
   void dispose() {
-    _groupSelector.dispose();
     super.dispose();
   }
 
@@ -76,19 +42,30 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
       appBar: AppBar(
         title: const Text('Song laden'),
       ),
+      floatingActionButton: CSpeedDial(
+        theme: Theme.of(context),
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.group_add),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'Einen neuen Song Erstellen',
+            onTap: () => (Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SongEditPage(
+                  song: Song.empty(),
+                ),
+              ),
+            )),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _groupSelector,
-              decoration: const InputDecoration(
-                labelText: 'Gruppe für diesen Song',
-                hintText: 'In welche Gruppe soll der Song gespeichert werden?',
-                border: OutlineInputBorder(),
-              ),
-            ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _isLoading ? null : _pickFile,

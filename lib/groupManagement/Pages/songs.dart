@@ -208,10 +208,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => JsonFilePickerPage(onSongAdded: () {
-                      Provider.of<DataLoadeProvider>(context, listen: false)
-                          .refreshData();
-                    }),
+                    builder: (context) => const JsonFilePickerPage(),
                   ),
                 );
               },
