@@ -333,15 +333,16 @@ class _SongEditPageState extends State<SongEditPage> {
                     SizedBox(height: UIStyle.spacing),
 
                     // Authors Section
-                    Text('Authors', style: UIStyle.subheading),
-                    SizedBox(height: UIStyle.smallSpacing),
+                    const Text('Authoren', style: UIStyle.subheading),
+                    const SizedBox(height: UIStyle.smallSpacing),
 
                     ..._authorControllers.asMap().entries.map((entry) {
                       final index = entry.key;
                       final controller = entry.value;
 
                       return Padding(
-                        padding: EdgeInsets.only(bottom: UIStyle.smallSpacing),
+                        padding:
+                            const EdgeInsets.only(bottom: UIStyle.smallSpacing),
                         child: Row(
                           children: [
                             Expanded(
@@ -365,7 +366,7 @@ class _SongEditPageState extends State<SongEditPage> {
                     ElevatedButton.icon(
                       onPressed: _addAuthor,
                       icon: const Icon(Icons.add),
-                      label: const Text('Add Author'),
+                      label: const Text('Author Hinzufügen'),
                       style: UIStyle.secondaryButton,
                     ),
                   ],
@@ -378,16 +379,20 @@ class _SongEditPageState extends State<SongEditPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Song Sections', style: UIStyle.heading),
+                  const Expanded(
+                    child: Text('Sections',
+                        style: UIStyle.heading,
+                        overflow: TextOverflow.ellipsis),
+                  ),
                   ElevatedButton.icon(
                     onPressed: _addNewSection,
                     icon: const Icon(Icons.add),
-                    label: const Text('Add Section'),
+                    label: const Text('Hinzufügen'),
                     style: UIStyle.button,
                   ),
                 ],
               ),
-              SizedBox(height: UIStyle.spacing),
+              const SizedBox(height: UIStyle.spacing),
 
               // Song Sections
               ..._editedSong.sections.asMap().entries.map((sectionEntry) {
@@ -413,7 +418,13 @@ class _SongEditPageState extends State<SongEditPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(section.title, style: UIStyle.subheading),
+                            Expanded(
+                              child: Text(
+                                section.title,
+                                style: UIStyle.subheading,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                             Row(
                               children: [
                                 IconButton(

@@ -39,12 +39,6 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.group),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () {},
-          ),
-        ],
       ),
       floatingActionButton: CSpeedDial(
         theme: Theme.of(context),

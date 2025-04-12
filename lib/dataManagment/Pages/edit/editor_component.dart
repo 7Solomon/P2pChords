@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:P2pChords/dataManagment/Pages/edit/style.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
@@ -8,11 +10,11 @@ class ChordEditorComponent extends StatefulWidget {
   final Function(LyricLine) onLineChanged;
 
   const ChordEditorComponent({
-    Key? key,
+    super.key,
     required this.line,
     required this.songKey,
     required this.onLineChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ChordEditorComponent> createState() => _ChordEditorComponentState();
@@ -115,7 +117,7 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
               const SizedBox(height: 16),
               Text(
                 'Preview: ${ChordUtils.nashvilleToChord(controller.text, widget.songKey)}',
-                style: TextStyle(
+                style: const TextStyle(
                   color: UIStyle.primary,
                   fontWeight: FontWeight.bold,
                 ),
@@ -180,125 +182,144 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Chords line (visual representation)
-              Container(
-                height: 32,
-                margin: const EdgeInsets.only(bottom: 4),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Positions for placing new chords (transparent overlay)
-                    GestureDetector(
-                      onTapUp: (details) {
-                        // Calculate position in text where user tapped
-                        final RenderBox box =
-                            context.findRenderObject() as RenderBox;
-                        final position = _getPositionFromX(
-                          details.localPosition.dx,
-                          widget.line.lyrics,
-                        );
-                        _addChordAtPosition(position);
-                      },
-                      child: Container(
-                        width: double.infinity,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  // Make sure width is sufficient for text content
+                  width: max(
+                    _getTextWidth(widget.line.lyrics, _fontSize) +
+                        60, // Extra padding
+                    MediaQuery.of(context).size.width - (UIStyle.spacing * 4),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Chords line - keep your existing Stack implementation
+                      Container(
                         height: 32,
-                        color: Colors.transparent,
-                      ),
-                    ),
-
-                    // Existing chords
-                    ...widget.line.chords.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final chord = entry.value;
-                      final chordText = ChordUtils.nashvilleToChord(
-                          chord.value, widget.songKey);
-
-                      // Position chord at its location
-                      final xPosition =
-                          _getXFromPosition(chord.position, widget.line.lyrics);
-
-                      return Positioned(
-                        left: xPosition,
-                        child: GestureDetector(
-                          onTap: () => _editChord(index),
-                          onPanStart: (_) {
-                            setState(() {
-                              _isDraggingChord = true;
-                              _selectedChordIndex = index;
-                            });
-                          },
-                          onPanUpdate: (details) {
-                            if (_isDraggingChord &&
-                                _selectedChordIndex == index) {
-                              final RenderBox box =
-                                  context.findRenderObject() as RenderBox;
-                              final position = _getPositionFromX(
-                                details.localPosition.dx,
-                                widget.line.lyrics,
-                              );
-                              _updateChordPosition(index, position);
-                            }
-                          },
-                          onPanEnd: (_) {
-                            setState(() {
-                              _isDraggingChord = false;
-                              _selectedChordIndex = null;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 2, horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: _selectedChordIndex == index
-                                  ? UIStyle.primary
-                                  : UIStyle.primary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
+                        margin: const EdgeInsets.only(bottom: 4),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            // Positions for placing new chords (transparent overlay)
+                            GestureDetector(
+                              onTapUp: (details) {
+                                // Calculate position in text where user tapped
+                                final RenderBox box =
+                                    context.findRenderObject() as RenderBox;
+                                final position = _getPositionFromX(
+                                  details.localPosition.dx,
+                                  widget.line.lyrics,
+                                );
+                                _addChordAtPosition(position);
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                height: 32,
+                                color: Colors.transparent,
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  chordText,
-                                  style: TextStyle(
-                                    fontSize: _fontSize - 2,
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedChordIndex == index
-                                        ? Colors.white
-                                        : UIStyle.primary,
+
+                            // Existing chords
+                            ...widget.line.chords.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final chord = entry.value;
+                              final chordText = ChordUtils.nashvilleToChord(
+                                  chord.value, widget.songKey);
+
+                              // Position chord at its location
+                              final xPosition = _getXFromPosition(
+                                  chord.position, widget.line.lyrics);
+
+                              return Positioned(
+                                left: xPosition,
+                                child: GestureDetector(
+                                  onTap: () => _editChord(index),
+                                  onPanStart: (_) {
+                                    setState(() {
+                                      _isDraggingChord = true;
+                                      _selectedChordIndex = index;
+                                    });
+                                  },
+                                  onPanUpdate: (details) {
+                                    if (_isDraggingChord &&
+                                        _selectedChordIndex == index) {
+                                      final RenderBox box = context
+                                          .findRenderObject() as RenderBox;
+                                      final position = _getPositionFromX(
+                                        details.localPosition.dx,
+                                        widget.line.lyrics,
+                                      );
+                                      _updateChordPosition(index, position);
+                                    }
+                                  },
+                                  onPanEnd: (_) {
+                                    setState(() {
+                                      _isDraggingChord = false;
+                                      _selectedChordIndex = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 2, horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      color: _selectedChordIndex == index
+                                          ? UIStyle.primary
+                                          : UIStyle.primary.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          chordText,
+                                          style: TextStyle(
+                                            fontSize: _fontSize - 2,
+                                            fontWeight: FontWeight.bold,
+                                            color: _selectedChordIndex == index
+                                                ? Colors.white
+                                                : UIStyle.primary,
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => _deleteChord(index),
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 16,
+                                            color: _selectedChordIndex == index
+                                                ? Colors.white
+                                                : UIStyle.primary,
+                                          ),
+                                        )
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                GestureDetector(
-                                  onTap: () => _deleteChord(index),
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 16,
-                                    color: _selectedChordIndex == index
-                                        ? Colors.white
-                                        : UIStyle.primary,
-                                  ),
-                                )
-                              ],
-                            ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+
+                      // Lyrics with measurement marks to align with chords
+                      TextField(
+                        controller: _lyricsController,
+                        onChanged: _updateLyrics,
+                        style: TextStyle(fontSize: _fontSize),
+                        scrollPhysics:
+                            NeverScrollableScrollPhysics(), // Important for parent scroll
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          hintText: 'Enter lyrics here',
+                          hintStyle: TextStyle(
+                            fontSize: _fontSize,
+                            color: UIStyle.textLight.withOpacity(0.5),
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-
-              // Lyrics with measurement marks to align with chords
-              TextField(
-                controller: _lyricsController,
-                onChanged: _updateLyrics,
-                style: TextStyle(fontSize: _fontSize),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  hintText: 'Enter lyrics here',
-                  hintStyle: TextStyle(
-                    fontSize: _fontSize,
-                    color: UIStyle.textLight.withOpacity(0.5),
+                      ),
+                    ],
                   ),
                 ),
               ),

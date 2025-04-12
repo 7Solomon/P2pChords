@@ -13,22 +13,3 @@ class TapFriendlyScrollPhysics extends ClampingScrollPhysics {
   double get dragStartDistanceMotionThreshold =>
       100.0; // Higher threshold for drag vs. tap
 }
-
-// Simplified section info class to reduce redundancy
-class SectionInfo {
-  final Song song;
-  final SongSection section;
-  final int songIndex;
-  final int sectionIndex;
-  final bool isFirstSectionOfSong;
-  final bool isLastSectionOfSong;
-
-  SectionInfo({
-    required this.song,
-    required this.section,
-    required this.songIndex,
-    required this.sectionIndex,
-    required this.isFirstSectionOfSong,
-    required this.isLastSectionOfSong,
-  });
-}
