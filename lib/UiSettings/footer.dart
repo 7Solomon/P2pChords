@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/UiSettings/ui_styles.dart';
@@ -9,12 +11,12 @@ class SongControlsFooter extends StatefulWidget {
   final VoidCallback onCloseTap;
 
   const SongControlsFooter({
-    Key? key,
+    super.key,
     required this.showControlsNotifier,
     required this.uiVariables,
     required this.onUiVariablesChanged,
     required this.onCloseTap,
-  }) : super(key: key);
+  });
 
   @override
   State<SongControlsFooter> createState() => _SongControlsFooterState();
@@ -123,6 +125,97 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
   }
 
   Widget _buildTabContent() {
+    // Define control configurations
+    final controlConfigs = [
+      // Text Tab Controls
+      {
+        'tab': 0,
+        'label': 'Schriftgröße',
+        'property': 'fontSize',
+        'step': 1.0,
+        'type': 'double',
+      },
+
+      // Spacing Tab Controls
+      {
+        'tab': 1,
+        'label': 'Linien Abstand',
+        'property': 'lineSpacing',
+        'step': 1.0,
+        'type': 'double',
+      },
+      {
+        'tab': 1,
+        'label': 'Abstand zwischen Zeilen',
+        'property': 'rowSpacing',
+        'step': 1.0,
+        'type': 'double',
+      },
+      {
+        'tab': 1,
+        'label': 'Abstand zwischen Spalten',
+        'property': 'columnSpacing',
+        'step': 1.0,
+        'type': 'double',
+      },
+
+      // Layout Tab Controls
+      {
+        'tab': 2,
+        'label': 'Anzahl Sections',
+        'property': 'sectionCount',
+        'step': 1.0,
+        'formatDecimals': 0,
+        'type': 'int',
+      },
+      {
+        'tab': 2,
+        'label': 'Breite der Spalten',
+        'property': 'columnWidth',
+        'step': 10.0,
+        'formatDecimals': 0,
+        'type': 'double',
+      },
+    ];
+
+    // Create tab contents based on configurations
+    List<Widget> buildTabContent(int tabIndex) {
+      return controlConfigs
+          .where((config) => config['tab'] == tabIndex)
+          .map((config) {
+        final property = config['property'] as String;
+        final step = config['step'] as double;
+        final decimals = config['formatDecimals'] as int? ?? 1;
+        final type = config['type'] as String;
+
+        // Get the corresponding variable from uiVariables
+        final variable = widget.uiVariables.getProperty(property);
+
+        return ControlsRow(
+          label: config['label'] as String,
+          value: variable.value.toStringAsFixed(decimals),
+          minValue: variable.min.toStringAsFixed(decimals),
+          maxValue: variable.max.toStringAsFixed(decimals),
+          onDecrease: () {
+            if (type == 'int') {
+              variable.value = (variable.value - step).toInt();
+            } else {
+              variable.value -= step;
+            }
+            widget.onUiVariablesChanged(widget.uiVariables);
+          },
+          onIncrease: () {
+            if (type == 'int') {
+              variable.value = (variable.value + step).toInt();
+            } else {
+              variable.value += step;
+            }
+            widget.onUiVariablesChanged(widget.uiVariables);
+          },
+        );
+      }).toList();
+    }
+
     return DefaultTabController(
       length: 3,
       child: Column(
@@ -199,120 +292,17 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
                 // Text Tab
                 ListView(
                   padding: EdgeInsets.zero,
-                  children: [
-                    ControlsRow(
-                      label: 'Schriftgröße',
-                      value:
-                          widget.uiVariables.fontSize.value.toStringAsFixed(1),
-                      minValue:
-                          widget.uiVariables.fontSize.min.toStringAsFixed(1),
-                      maxValue:
-                          widget.uiVariables.fontSize.max.toStringAsFixed(1),
-                      onDecrease: () {
-                        widget.uiVariables.fontSize.value -= 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                      onIncrease: () {
-                        widget.uiVariables.fontSize.value += 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                    ),
-                  ],
+                  children: buildTabContent(0),
                 ),
                 // Spacing Tab
                 ListView(
                   padding: EdgeInsets.zero,
-                  children: [
-                    ControlsRow(
-                      label: 'Linien Abstand',
-                      value: widget.uiVariables.lineSpacing.value
-                          .toStringAsFixed(1),
-                      minValue:
-                          widget.uiVariables.lineSpacing.min.toStringAsFixed(1),
-                      maxValue:
-                          widget.uiVariables.lineSpacing.max.toStringAsFixed(1),
-                      onDecrease: () {
-                        widget.uiVariables.lineSpacing.value -= 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                        ;
-                      },
-                      onIncrease: () {
-                        widget.uiVariables.lineSpacing.value += 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                    ),
-                    ControlsRow(
-                      label: 'Abstand zwischen Zeilen',
-                      value: widget.uiVariables.rowSpacing.value
-                          .toStringAsFixed(1),
-                      minValue:
-                          widget.uiVariables.rowSpacing.min.toStringAsFixed(1),
-                      maxValue:
-                          widget.uiVariables.rowSpacing.max.toStringAsFixed(1),
-                      onDecrease: () {
-                        widget.uiVariables.rowSpacing.value -= 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                      onIncrease: () {
-                        widget.uiVariables.rowSpacing.value += 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                    ),
-                    ControlsRow(
-                      label: 'Abstand zwischen Spalten',
-                      value: widget.uiVariables.columnSpacing.value
-                          .toStringAsFixed(1),
-                      minValue: widget.uiVariables.columnSpacing.min
-                          .toStringAsFixed(1),
-                      maxValue: widget.uiVariables.columnSpacing.max
-                          .toStringAsFixed(1),
-                      onDecrease: () {
-                        widget.uiVariables.columnSpacing.value -= 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                      onIncrease: () {
-                        widget.uiVariables.columnSpacing.value += 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                    ),
-                  ],
+                  children: buildTabContent(1),
                 ),
                 // Layout Tab
                 ListView(
                   padding: EdgeInsets.zero,
-                  children: [
-                    ControlsRow(
-                      label: 'Anzahl Sections',
-                      value: widget.uiVariables.sectionCount.value.toString(),
-                      minValue: widget.uiVariables.sectionCount.min.toString(),
-                      maxValue: widget.uiVariables.sectionCount.max.toString(),
-                      onDecrease: () {
-                        widget.uiVariables.sectionCount.value -= 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                      onIncrease: () {
-                        widget.uiVariables.sectionCount.value += 1;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                    ),
-                    ControlsRow(
-                      label: 'Breite der Spalten',
-                      value: widget.uiVariables.columnWidth.value
-                          .toStringAsFixed(0),
-                      minValue:
-                          widget.uiVariables.columnWidth.min.toStringAsFixed(0),
-                      maxValue:
-                          widget.uiVariables.columnWidth.max.toStringAsFixed(0),
-                      onDecrease: () {
-                        widget.uiVariables.columnWidth.value -= 10;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                      onIncrease: () {
-                        widget.uiVariables.columnWidth.value += 10;
-                        widget.onUiVariablesChanged(widget.uiVariables);
-                      },
-                    ),
-                  ],
+                  children: buildTabContent(2),
                 ),
               ],
             ),

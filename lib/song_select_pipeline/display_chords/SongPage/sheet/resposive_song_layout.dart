@@ -2,10 +2,10 @@ import 'dart:math';
 
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/grid_builder.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/section_tile.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class ResponsiveSongLayout extends StatelessWidget {
   final List<Song> songs;
@@ -27,17 +27,6 @@ class ResponsiveSongLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate how many columns we can fit based on available width
-        final availableWidth = constraints.maxWidth - 32; // Account for padding
-        final columnWidth = uiVariables.columnWidth.value;
-        final columnSpacing = uiVariables.columnSpacing.value;
-
-        // Calculate max columns that fit
-        final crossAxisCount = max(
-            1,
-            ((availableWidth + columnSpacing) / (columnWidth + columnSpacing))
-                .floor());
-
         // Create a key for the current section for scrolling
         final currentSectionKey = GlobalKey();
 
@@ -61,98 +50,130 @@ class ResponsiveSongLayout extends StatelessWidget {
         });
 
         return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: MasonryGridView.count(
-            //scrollDirection: Axis.horizontal,
-            shrinkWrap: true,
-            crossAxisCount: crossAxisCount,
-
-            // Spacing
-            mainAxisSpacing: uiVariables.rowSpacing.value,
-            crossAxisSpacing: columnSpacing,
-            // main
-            physics: const TapFriendlyScrollPhysics(),
-            itemCount: sectionsToDisplay.length,
-            itemBuilder: (context, index) {
-              if (index >= sectionsToDisplay.length) {
-                return const SizedBox.shrink(); // Safety check
-              }
-
-              final SectionInfo sectionData = sectionsToDisplay[index];
-              final bool isCurrentSection =
-                  sectionData.songIndex == currentSongIndex &&
-                      sectionData.sectionIndex == currentSectionIndex;
-
-              return SectionTile(
-                key: isCurrentSection ? currentSectionKey : null,
-                song: sectionData.song,
-                section: sectionData.section,
-                songIndex: sectionData.songIndex,
-                sectionIndex: sectionData.sectionIndex,
-                isCurrentSection: isCurrentSection,
-                isCurrentSong: sectionData.songIndex == currentSongIndex,
-                isFirstSectionOfSong: sectionData.isFirstSectionOfSong,
-                isLastSectionOfSong: sectionData.isLastSectionOfSong,
-                uiVariables: uiVariables,
-                buildLine: buildLine,
-              );
-            },
-          ),
-        );
+            padding: const EdgeInsets.all(16.0),
+            child: CGridViewBuild(
+              currentSectionIndex: currentSectionIndex,
+              currentSongIndex: currentSongIndex,
+              uiVariables: uiVariables,
+              sectionsToDisplay: sectionsToDisplay,
+              buildLine: buildLine,
+            ));
       },
     );
   }
 
-  // Helper method to collect sections to display
-  List<SectionInfo> _collectSections() {
-    // Existing implementation
-    final List<SectionInfo> sectionsToDisplay = [];
-    final maxSections = uiVariables.sectionCount.value;
-    int totalSectionCount = 0;
-    int songIdx = currentSongIndex;
-    int? prevSongIndex;
+  List<SectionTile> _collectSections() {
+    final List<SectionTile> sectionTiles = [];
+    final int maxSections = uiVariables.sectionCount.value;
 
-    // Collect all sections we want to display
-    while (songIdx < songs.length && totalSectionCount < maxSections) {
-      if (songIdx < 0 || songIdx >= songs.length) break; // Safety check
-
-      var song = songs[songIdx];
-      bool isCurrentSong = songIdx == currentSongIndex;
-      bool isNewSong = prevSongIndex != songIdx;
-      prevSongIndex = songIdx;
-
-      if (song.sections.isEmpty) {
-        songIdx++;
-        continue;
-      }
-
-      int startSectionIdx = (isCurrentSong) ? currentSectionIndex : 0;
-      if (startSectionIdx < 0) startSectionIdx = 0; // Safety check
-      if (startSectionIdx >= song.sections.length)
-        startSectionIdx = 0; // Safety check
-
-      for (int secIdx = startSectionIdx;
-          secIdx < song.sections.length && totalSectionCount < maxSections;
-          secIdx++) {
-        var section = song.sections[secIdx];
-        bool isFirstSectionOfSong = secIdx == startSectionIdx;
-        bool isLastSectionOfSong = secIdx == song.sections.length - 1;
-
-        sectionsToDisplay.add(SectionInfo(
-          song: song,
-          section: section,
-          songIndex: songIdx,
-          sectionIndex: secIdx,
-          isFirstSectionOfSong: isFirstSectionOfSong,
-          isLastSectionOfSong: isLastSectionOfSong,
-        ));
-
-        totalSectionCount++;
-      }
-
-      songIdx++;
+    // Safety checks
+    if (songs.isEmpty ||
+        currentSongIndex < 0 ||
+        currentSongIndex >= songs.length) {
+      return sectionTiles;
     }
 
-    return sectionsToDisplay;
+    Song currentSong = songs[currentSongIndex];
+    if (currentSectionIndex < 0 ||
+        currentSectionIndex >= currentSong.sections.length) {
+      return sectionTiles;
+    }
+
+    // Determine the position of current section in the visible window
+    int currentPosition = 0; // Default: current section at top
+
+    // Calculate sections before current that should be visible
+    int totalSectionsBefore = 0;
+    for (int s = 0; s < currentSongIndex; s++) {
+      totalSectionsBefore += songs[s].sections.length;
+    }
+    totalSectionsBefore += currentSectionIndex;
+
+    // Calculate total sections in all songs
+    int totalSections = 0;
+    for (int s = 0; s < songs.length; s++) {
+      totalSections += songs[s].sections.length;
+    }
+
+    // Calculate sections after current
+    int totalSectionsAfter = totalSections - totalSectionsBefore - 1;
+
+    // Adjust position based on navigation context
+    if (totalSectionsBefore < maxSections - 1) {
+      // Near the beginning - keep current at beginning
+      currentPosition = totalSectionsBefore;
+    } else if (totalSectionsAfter < maxSections - 1) {
+      // Near the end - position current section to show all remaining
+      currentPosition = maxSections - totalSectionsAfter - 1;
+    } else {
+      // Middle region - ensure we can always see the current section
+      currentPosition = min(1, maxSections - 1);
+      (1, maxSections - 1);
+    }
+
+    // Collect sections based on the position
+    int songIdx = currentSongIndex;
+    int sectionIdx = currentSectionIndex;
+
+    // Navigate backward to find start position
+    for (int i = 0; i < currentPosition; i++) {
+      sectionIdx--;
+      if (sectionIdx < 0) {
+        songIdx--;
+        if (songIdx < 0) break;
+        if (songs[songIdx].sections.isEmpty) {
+          i--; // Don't count empty songs
+          continue;
+        }
+        sectionIdx = songs[songIdx].sections.length - 1;
+      }
+    }
+
+    // Now collect maxSections sections starting from this position
+    for (int count = 0; count < maxSections; count++) {
+      if (songIdx < 0 || songIdx >= songs.length) break;
+
+      if (sectionIdx >= songs[songIdx].sections.length) {
+        songIdx++;
+        if (songIdx >= songs.length) break;
+        sectionIdx = 0;
+        if (songs[songIdx].sections.isEmpty) {
+          count--; // Don't count empty songs
+          continue;
+        }
+      }
+
+      if (sectionIdx < 0) {
+        songIdx--;
+        if (songIdx < 0) break;
+        if (songs[songIdx].sections.isEmpty) {
+          count--; // Don't count empty songs
+          continue;
+        }
+        sectionIdx = songs[songIdx].sections.length - 1;
+      }
+
+      bool isCurrentSection =
+          (songIdx == currentSongIndex && sectionIdx == currentSectionIndex);
+      sectionTiles.add(
+        SectionTile(
+          song: songs[songIdx],
+          section: songs[songIdx].sections[sectionIdx],
+          songIndex: songIdx,
+          sectionIndex: sectionIdx,
+          isFirstSectionOfSong: sectionIdx == 0,
+          isLastSectionOfSong: sectionIdx == songs[songIdx].sections.length - 1,
+          isCurrentSection: isCurrentSection,
+          isCurrentSong: songIdx == currentSongIndex,
+          uiVariables: uiVariables,
+          buildLine: buildLine,
+        ),
+      );
+
+      // Move to next section
+      sectionIdx++;
+    }
+
+    return sectionTiles;
   }
 }

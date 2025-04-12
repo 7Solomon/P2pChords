@@ -6,6 +6,7 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:crypto/crypto.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
@@ -67,7 +68,9 @@ class _SongEditPageState extends State<SongEditPage> {
     super.dispose();
   }
 
-  void _saveChanges() {
+  void _saveChanges() async {
+    String hash = _editedSong.hash;
+
     // Update the header data
     final updatedHeader = SongHeader(
       name: _nameController.text,
@@ -83,16 +86,31 @@ class _SongEditPageState extends State<SongEditPage> {
           .where((text) => text.isNotEmpty)
           .toList(),
     );
+    if (hash == sha256.convert(utf8.encode('empty')).toString()) {
+      hash = sha256
+          .convert(utf8.encode(_editedSong.toMap().toString()))
+          .toString();
+    }
 
     // Create updated song with the current sections and new header
     final updatedSong = Song(
-      hash: _editedSong.hash,
+      hash: hash,
       header: updatedHeader,
       sections: _editedSong.sections,
     );
 
     // Save the updated song
-    MultiJsonStorage.saveJson(updatedSong, group: widget.group);
+    final result =
+        await MultiJsonStorage.saveJson(updatedSong, group: widget.group);
+    if (result) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gespeichert!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fehler beim Speichern!')),
+      );
+    }
   }
 
   void _addNewSection() {

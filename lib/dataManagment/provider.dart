@@ -53,11 +53,7 @@ class SheetUiProvider extends ChangeNotifier {
   }
 
   String _currentKey = 'C';
-  UiVariables _uiVariables = UiVariables(
-    fontSize: 16.0,
-    lineSpacing: 0.0,
-    sectionCount: 1,
-  );
+  UiVariables _uiVariables = UiVariables();
 
   void setFontSize(double size) {
     _uiVariables.fontSize.value = size;
@@ -154,6 +150,8 @@ class CurrentSelectionProvider extends ChangeNotifier {
     bool navigateBack = false,
   }) async {
     final dataLoader = Provider.of<DataLoadeProvider>(context, listen: false);
+    final currentSelection =
+        Provider.of<CurrentSelectionProvider>(context, listen: false);
     bool changed = false;
     String? hashToRemove;
 
@@ -176,11 +174,13 @@ class CurrentSelectionProvider extends ChangeNotifier {
     // Auto-select if requested
     if (changed && autoSelect) {
       if (dataLoader.groups.isNotEmpty) {
-        String firstGroup = dataLoader.groups.keys.first;
-        _currentGroup = firstGroup;
+        //String firstGroup = dataLoader.groups.keys.first;
+        //_currentGroup = firstGroup;
 
-        if (dataLoader.groups[firstGroup]?.isNotEmpty ?? false) {
-          String? firstSongHash = dataLoader.getHashByIndex(firstGroup, 0);
+        if (dataLoader.groups[currentSelection.currentGroup]?.isNotEmpty ??
+            false) {
+          String? firstSongHash =
+              dataLoader.getHashByIndex(currentSelection.currentGroup!, 0);
           if (firstSongHash != null) {
             _currentSongHash = firstSongHash;
             _currentSectionIndex = 0;

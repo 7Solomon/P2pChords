@@ -1,5 +1,7 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/line_builds.dart';
+import 'package:P2pChords/utils/measure_size.dart';
 import 'package:flutter/material.dart';
 
 class SectionTile extends StatelessWidget {
@@ -133,18 +135,7 @@ class SectionTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-          // Direction indicator for next section
-          //if (hasNextSection && !isLastSectionOfSong)
-          //  Align(
-          //    alignment: Alignment.bottomRight,
-          //    child: Icon(
-          //      Icons.arrow_downward,
-          //      size: 14,
-          //      color: isCurrentSong
-          //          ? Colors.blue.withOpacity(0.3)
-          //          : Colors.grey.withOpacity(0.2),
-          //    ),
-          //  ),
+
           sectionContent,
         ],
       ),

@@ -45,14 +45,27 @@ class SectionView extends StatelessWidget {
 
     // Wrap in scrollable container with tap detection
     Widget scrollableContent = GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTapDown:
-          onTapDown != null ? (details) => onTapDown!(context, details) : null,
-      child: SingleChildScrollView(
-        physics: const TapFriendlyScrollPhysics(),
-        child: content,
-      ),
-    );
+        behavior: HitTestBehavior.translucent,
+        onTapDown: onTapDown != null
+            ? (details) => onTapDown!(context, details)
+            : null,
+        child: LayoutBuilder(builder: (context, constraints) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: constraints.maxHeight,
+              maxWidth: constraints.maxWidth,
+            ),
+            child: SingleChildScrollView(
+              physics: const TapFriendlyScrollPhysics(),
+              child: content,
+            ),
+          );
+        })
+        //child: SingleChildScrollView(
+        //  physics: const TapFriendlyScrollPhysics(),
+        //  child: content,
+        //),
+        );
 
     // Apply animation if needed
     if (!animate || previousIndex == null) {
