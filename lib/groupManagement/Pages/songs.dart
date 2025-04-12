@@ -1,10 +1,13 @@
+import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/converter/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/dataManagment/Pages/load_json_page.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
 
 //import 'package:P2pChords/customeWidgets/TileWidget.dart';
@@ -35,10 +38,6 @@ class _AllSongsPageState extends State<AllSongsPage> {
         _searchQuery = _searchController.text.toLowerCase();
       });
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
   }
 
   Map<String, Song> _getFilteredSongs(Map<String, Song> allSongs) {
@@ -62,12 +61,6 @@ class _AllSongsPageState extends State<AllSongsPage> {
     }));
   }
 
-  void _loadData() {
-    if (_dataProvider.songs == null || _dataProvider.groups == null) {
-      _dataProvider.refreshData();
-    }
-  }
-
   Future<void> _addSongToGroup(String key) async {
     Song? song = await MultiJsonStorage.loadJson(key);
     if (song != null) {
@@ -87,6 +80,41 @@ class _AllSongsPageState extends State<AllSongsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alle Lieder'),
+      ),
+      floatingActionButton: CSpeedDial(
+        theme: Theme.of(context),
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.add),
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            label: 'Song Erstellen',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SongEditPage(
+                    song: Song.empty(),
+                  ),
+                ),
+              );
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.download),
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            label: 'Song Importieren',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JsonFilePickerPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -183,52 +211,6 @@ class _AllSongsPageState extends State<AllSongsPage> {
           )
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showOptionsMenu();
-        },
-        tooltip: 'Optionen',
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  void _showOptionsMenu() {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.file_upload),
-              title: const Text('Lied aus Datei importieren'),
-              onTap: () {
-                Navigator.pop(context); // Close the bottom sheet
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const JsonFilePickerPage(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.create),
-              title: const Text('Neues Lied erstellen'),
-              onTap: () {
-                Navigator.pop(context); // Close the bottom sheet
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ConverterPage(),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }

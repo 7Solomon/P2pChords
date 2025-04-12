@@ -195,7 +195,7 @@ class _SongEditPageState extends State<SongEditPage> {
           ),
           ElevatedButton(
             style: UIStyle.button.copyWith(
-                backgroundColor: MaterialStateProperty.all(UIStyle.error)),
+                backgroundColor: WidgetStateProperty.all(UIStyle.error)),
             onPressed: () {
               setState(() {
                 _editedSong.sections.removeAt(sectionIndex);
@@ -282,7 +282,7 @@ class _SongEditPageState extends State<SongEditPage> {
       ]),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(UIStyle.spacing),
+          padding: const EdgeInsets.all(UIStyle.spacing),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -293,15 +293,15 @@ class _SongEditPageState extends State<SongEditPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Song Details', style: UIStyle.heading),
-                    SizedBox(height: UIStyle.spacing),
+                    const Text('Song Details', style: UIStyle.heading),
+                    const SizedBox(height: UIStyle.spacing),
 
                     // Song Name
                     TextField(
                       controller: _nameController,
                       decoration: UIStyle.inputDecoration('Song Name'),
                     ),
-                    SizedBox(height: UIStyle.spacing),
+                    const SizedBox(height: UIStyle.spacing),
 
                     // Row for Key, BPM, Time Signature
                     Row(
@@ -312,7 +312,7 @@ class _SongEditPageState extends State<SongEditPage> {
                             decoration: UIStyle.inputDecoration('Key'),
                           ),
                         ),
-                        SizedBox(width: UIStyle.spacing),
+                        const SizedBox(width: UIStyle.spacing),
                         Expanded(
                           child: TextField(
                             controller: _bpmController,
@@ -320,7 +320,7 @@ class _SongEditPageState extends State<SongEditPage> {
                             keyboardType: TextInputType.number,
                           ),
                         ),
-                        SizedBox(width: UIStyle.spacing),
+                        const SizedBox(width: UIStyle.spacing),
                         Expanded(
                           child: TextField(
                             controller: _timeSignatureController,
@@ -330,7 +330,7 @@ class _SongEditPageState extends State<SongEditPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: UIStyle.spacing),
+                    const SizedBox(height: UIStyle.spacing),
 
                     // Authors Section
                     const Text('Authoren', style: UIStyle.subheading),
@@ -362,7 +362,7 @@ class _SongEditPageState extends State<SongEditPage> {
                       );
                     }),
 
-                    SizedBox(height: UIStyle.smallSpacing),
+                    const SizedBox(height: UIStyle.smallSpacing),
                     ElevatedButton.icon(
                       onPressed: _addAuthor,
                       icon: const Icon(Icons.add),
@@ -373,7 +373,7 @@ class _SongEditPageState extends State<SongEditPage> {
                 ),
               ),
 
-              SizedBox(height: UIStyle.largeSpacing),
+              const SizedBox(height: UIStyle.largeSpacing),
 
               // Sections Heading with Add Button
               Row(
@@ -400,7 +400,7 @@ class _SongEditPageState extends State<SongEditPage> {
                 final section = sectionEntry.value;
 
                 return Container(
-                  margin: EdgeInsets.only(bottom: UIStyle.spacing),
+                  margin: const EdgeInsets.only(bottom: UIStyle.spacing),
                   decoration: UIStyle.cardDecoration,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,8 +455,10 @@ class _SongEditPageState extends State<SongEditPage> {
                             final line = lineEntry.value;
 
                             return Container(
-                              margin: EdgeInsets.only(bottom: UIStyle.spacing),
-                              padding: EdgeInsets.all(UIStyle.smallSpacing),
+                              margin: const EdgeInsets.only(
+                                  bottom: UIStyle.spacing),
+                              padding:
+                                  const EdgeInsets.all(UIStyle.smallSpacing),
                               decoration: BoxDecoration(
                                 border: Border.all(color: UIStyle.divider),
                                 borderRadius: BorderRadius.circular(8),
@@ -507,16 +509,18 @@ class _SongEditPageState extends State<SongEditPage> {
               }),
 
               // Save Button at bottom
-              SizedBox(height: UIStyle.spacing),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _saveChanges,
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save Changes'),
-                  style: UIStyle.button,
+              const SizedBox(height: UIStyle.spacing),
+              Align(
+                alignment: Alignment.center,
+                child: SizedBox(
+                  child: ElevatedButton.icon(
+                    onPressed: _saveChanges,
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save Changes'),
+                    style: UIStyle.secondaryButton,
+                  ),
                 ),
-              ),
+              )
             ],
           ),
         ),
