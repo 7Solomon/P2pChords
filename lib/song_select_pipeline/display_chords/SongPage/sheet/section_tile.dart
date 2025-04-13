@@ -13,7 +13,7 @@ class SectionTile extends StatelessWidget {
   final bool isFirstSectionOfSong;
   final bool isLastSectionOfSong;
   final UiVariables uiVariables;
-  final Widget Function(LyricLine) buildLine;
+  final Widget Function(LineData) buildLine;
 
   const SectionTile({
     super.key,

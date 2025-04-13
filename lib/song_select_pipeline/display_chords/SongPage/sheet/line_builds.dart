@@ -18,13 +18,26 @@ class LineBuildFunction {
 
   LineBuildFunction(this.context, this.uiVariables, this.currentKey);
 
-  Widget buildLine(LyricLine line) {
+  Widget buildLine(LineData line) {
     // If no chords, just return the lyrics
     if (line.chords.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(bottom: uiVariables.lineSpacing.value),
         child: Text(
           line.lyrics,
+          style: TextStyle(fontSize: uiVariables.fontSize.value),
+        ),
+      );
+    }
+
+    if (line.lyrics.isEmpty) {
+      final chordLine = line.chords
+          .map((chord) => [chord.value + ' ' * chord.position])
+          .join();
+      return Padding(
+        padding: EdgeInsets.only(bottom: uiVariables.lineSpacing.value),
+        child: Text(
+          chordLine,
           style: TextStyle(fontSize: uiVariables.fontSize.value),
         ),
       );
@@ -37,7 +50,7 @@ class LineBuildFunction {
     );
   }
 
-  Widget buildChordLyricLine(LyricLine line) {
+  Widget buildChordLyricLine(LineData line) {
     return LayoutBuilder(builder: (context, constraints) {
       // Split lyrics into lines based on available width
       final List<LineSegment> segments =
@@ -73,7 +86,7 @@ class LineBuildFunction {
   }
 
 // Split lyrics into lines that fit within the available width
-  List<LineSegment> splitIntoLines(LyricLine line, double maxWidth) {
+  List<LineSegment> splitIntoLines(LineData line, double maxWidth) {
     final textPainter = TextPainter(
       text: TextSpan(
         text: line.lyrics,
@@ -123,7 +136,7 @@ class LineBuildFunction {
   }
 
 // Create a segment with its corresponding chords
-  LineSegment createSegment(LyricLine line, int start, int end) {
+  LineSegment createSegment(LineData line, int start, int end) {
     final text = line.lyrics.substring(start, end);
 
     // Find chords that belong to this segment

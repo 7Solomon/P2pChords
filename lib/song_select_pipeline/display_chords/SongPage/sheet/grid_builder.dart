@@ -15,7 +15,7 @@ class CGridViewBuild extends StatelessWidget {
   final int currentSectionIndex;
   final int currentSongIndex;
 
-  final Widget Function(LyricLine) buildLine;
+  final Widget Function(LineData) buildLine;
 
   const CGridViewBuild({
     super.key,

@@ -13,7 +13,7 @@ class SectionView extends StatelessWidget {
   final int currentSectionIndex;
   final int currentSongIndex;
   final UiVariables uiVariables;
-  final Widget Function(LyricLine) buildLineFunction;
+  final Widget Function(LineData) buildLineFunction;
   final bool animate;
   final int? previousIndex;
   final Function(BuildContext, TapDownDetails)? onTapDown;

@@ -1,5 +1,4 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
-import 'package:P2pChords/dataManagment/converter/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';

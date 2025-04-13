@@ -12,7 +12,7 @@ class ResponsiveSongLayout extends StatelessWidget {
   final int currentSectionIndex;
   final int currentSongIndex;
   final UiVariables uiVariables;
-  final Widget Function(LyricLine) buildLine;
+  final Widget Function(LineData) buildLine;
 
   const ResponsiveSongLayout({
     super.key,

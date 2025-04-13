@@ -56,6 +56,15 @@ class ChordUtils {
   static String chordToNashville(String chord, String key) {
     _checkInitialized();
 
+    if (chord == "N.C." || key.isEmpty) {
+      return chord; // Return as-is for "No Chord" or if no key provided
+    }
+
+    // Validation for songKey
+    if (!RegExp(r'^[A-G][#b]?$').hasMatch(key)) {
+      throw FormatException('Invalid key format: $key');
+    }
+
     // Extract root note and modifiers
     final rootNote = chord.replaceAll(RegExp(r'[^A-Ga-g#b]'), '');
     final modifiers = chord.substring(rootNote.length);
@@ -72,7 +81,7 @@ class ChordUtils {
     }
 
     if (nashvilleNumber == null) {
-      return chord; // Return original if not found
+      throw FormatException("Invalid Chord: $chord");
     }
 
     // Convert chord "m" to Nashville "-" for minor chords
@@ -106,25 +115,29 @@ class Chord {
       value: entry.value.toString(),
     );
   }
+  Chord copyWith({int? position, String? value}) {
+    return Chord(
+        position: position ?? this.position, value: value ?? this.value);
+  }
 
   Map<String, String> toMap() => {position.toString(): value};
 }
 
 /// Represents a line in a song with lyrics and associated chords
-class LyricLine {
+class LineData {
   final String lyrics;
   final List<Chord> chords;
 
-  LyricLine({required this.lyrics, required this.chords});
+  LineData({required this.lyrics, required this.chords});
 
-  factory LyricLine.fromMap(Map<String, dynamic> map) {
+  factory LineData.fromMap(Map<String, dynamic> map) {
     final lyrics = map['lyrics'] ?? '';
     final chordMap = map['chords'] as Map<String, dynamic>? ?? {};
 
     final chords =
         chordMap.entries.map((entry) => Chord.fromMap(entry)).toList();
 
-    return LyricLine(lyrics: lyrics, chords: chords);
+    return LineData(lyrics: lyrics, chords: chords);
   }
 
   Map<String, dynamic> toMap() => {
@@ -137,14 +150,14 @@ class LyricLine {
 /// Represents a section in a song (verse, chorus, etc.)
 class SongSection {
   final String title; // e.g., "Verse 1", "Chorus"
-  final List<LyricLine> lines;
+  final List<LineData> lines;
 
   SongSection({required this.title, required this.lines});
 
   factory SongSection.fromMap(MapEntry<String, dynamic> entry) {
     final title = entry.key;
     final lines = (entry.value as List)
-        .map((lineMap) => LyricLine.fromMap(lineMap as Map<String, dynamic>))
+        .map((lineMap) => LineData.fromMap(lineMap as Map<String, dynamic>))
         .toList();
 
     return SongSection(title: title, lines: lines);

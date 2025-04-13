@@ -2,6 +2,45 @@ import 'dart:convert';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:crypto/crypto.dart';
 
+// Class to represent the preliminary parsing state
+class PreliminarySongData {
+  final String originalText;
+  final List<PreliminarySection> sections;
+  final String title;
+  final List<String> authors;
+  final String key;
+
+  PreliminarySongData({
+    required this.originalText,
+    required this.sections,
+    required this.title,
+    this.authors = const [],
+    this.key = '',
+  });
+}
+
+// Class to represent a section before final processing
+class PreliminarySection {
+  String title;
+  List<PreliminaryLine> lines;
+
+  PreliminarySection({
+    required this.title,
+    required this.lines,
+  });
+}
+
+// Class to represent a line before final processing
+class PreliminaryLine {
+  String text;
+  bool isChordLine;
+
+  PreliminaryLine({
+    required this.text,
+    required this.isChordLine,
+  });
+}
+
 class SongConverter {
   // Singeltone
   static final SongConverter _instance = SongConverter._internal();
@@ -38,6 +77,136 @@ class SongConverter {
       hash: hash,
       header: header,
       sections: sections,
+    );
+  }
+
+  /// Interactive version that returns preliminary data for review
+  PreliminarySongData convertTextToSongInteractive(String text, String title,
+      {List<String> authors = const []}) {
+    // Set VARS
+    this.title = title;
+
+    // Do a preliminary parse to get sections
+    final preliminarySections = parseTextForReview(text);
+
+    return PreliminarySongData(
+      originalText: text,
+      sections: preliminarySections,
+      title: title,
+      authors: authors,
+    );
+  }
+
+  /// Parses text into preliminary sections for interactive review
+  List<PreliminarySection> parseTextForReview(String text) {
+    final List<PreliminarySection> sections = [];
+    String? currentSectionTitle;
+    List<PreliminaryLine> currentSectionLines = [];
+
+    // Split the text into lines and process each line
+    final lines = text.split('\n');
+
+    // Regular expression for common section names in all caps followed by optional number
+    final unbracketedSectionRegex = RegExp(
+      r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
+      caseSensitive: false,
+    );
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+
+      // Check if this is a bracketed section header (e.g., [Verse 1])
+      final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
+      // Check if this is an unbracketed section header (e.g., VERSE 1)
+      final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(line);
+
+      if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
+        // If we were already processing a section, save it
+        if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
+          sections.add(
+            PreliminarySection(
+              title: currentSectionTitle,
+              lines: currentSectionLines,
+            ),
+          );
+          currentSectionLines = [];
+        }
+
+        if (bracketedSectionMatch != null) {
+          currentSectionTitle = bracketedSectionMatch.group(1);
+        } else {
+          // For unbracketed matches, format the title nicely
+          final sectionName = unbracketedSectionMatch!.group(1);
+          final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
+          currentSectionTitle = sectionNumber.isEmpty
+              ? sectionName
+              : '$sectionName $sectionNumber';
+        }
+      } else if (line.isNotEmpty) {
+        // If no section title yet, create a default section
+        currentSectionTitle ??= "Untitled Section";
+
+        // Add the line to the current section with a preliminary chord detection
+        currentSectionLines.add(
+          PreliminaryLine(
+            text: line,
+            isChordLine: isChordLine(line),
+          ),
+        );
+      }
+    }
+
+    // Add the last section
+    if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
+      sections.add(
+        PreliminarySection(
+          title: currentSectionTitle,
+          lines: currentSectionLines,
+        ),
+      );
+    }
+
+    return sections;
+  }
+
+  /// Creates a final Song object from the corrected preliminary data
+  Song finalizeSong(PreliminarySongData preliminaryData, String key) {
+    // Process the preliminary sections into final song sections
+    List<SongSection> finalSections = [];
+
+    for (var prelimSection in preliminaryData.sections) {
+      List<String> sectionLines = [];
+
+      // Convert preliminary lines back to raw lines keeping the chord/lyric structure
+      for (var line in prelimSection.lines) {
+        sectionLines.add(line.text);
+      }
+
+      // Process these lines into LineData objects with chords
+      finalSections.add(
+        SongSection(
+          title: prelimSection.title,
+          lines: processLyricLines(sectionLines),
+        ),
+      );
+    }
+
+    // Create a hash for the song
+    final hash =
+        sha256.convert(utf8.encode(preliminaryData.originalText)).toString();
+
+    // Create song header
+    final header = SongHeader(
+      name: preliminaryData.title,
+      key: key,
+      authors: preliminaryData.authors,
+    );
+
+    // Create the song object
+    return Song(
+      hash: hash,
+      header: header,
+      sections: finalSections,
     );
   }
 
@@ -105,9 +274,9 @@ class SongConverter {
     return sections;
   }
 
-  /// Processes lines in a section to create LyricLine objects with chords
-  List<LyricLine> processLyricLines(List<String> lines) {
-    List<LyricLine> lyricLines = [];
+  /// Processes lines in a section to createLineDataobjects with chords
+  List<LineData> processLyricLines(List<String> lines) {
+    List<LineData> lyricLines = [];
 
     // Process pairs of lines (chord line followed by lyric line)
     for (int i = 0; i < lines.length; i++) {
@@ -125,9 +294,9 @@ class SongConverter {
         // Extract chords with their positions
         final chords = extractChords(chordLine, lyricLine);
 
-        // Create LyricLine object
+        // CreateLineDataobject
         lyricLines.add(
-          LyricLine(
+          LineData(
             lyrics: lyricLine,
             chords: chords,
           ),
@@ -138,8 +307,48 @@ class SongConverter {
       } else {
         // This is just a lyric line without chords
         lyricLines.add(
-          LyricLine(
+          LineData(
             lyrics: lines[i],
+            chords: [],
+          ),
+        );
+      }
+    }
+
+    return lyricLines;
+  }
+
+  /// Takes the lines after they've been organized as chord/lyric pairs
+  /// and processes them into LineData objects
+  List<LineData> processReviewedLines(List<PreliminaryLine> lines) {
+    List<LineData> lyricLines = [];
+
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].isChordLine &&
+          i + 1 < lines.length &&
+          !lines[i + 1].isChordLine) {
+        // This is a chord line followed by a lyric line
+        final chordLine = lines[i].text;
+        final lyricLine = lines[i + 1].text;
+
+        // Extract chords with their positions
+        final chords = extractChords(chordLine, lyricLine);
+
+        // Create LineData object
+        lyricLines.add(
+          LineData(
+            lyrics: lyricLine,
+            chords: chords,
+          ),
+        );
+
+        // Skip the lyric line as we've processed it
+        i++;
+      } else if (!lines[i].isChordLine) {
+        // This is just a lyric line without chords
+        lyricLines.add(
+          LineData(
+            lyrics: lines[i].text,
             chords: [],
           ),
         );
@@ -177,71 +386,26 @@ class SongConverter {
       final chordText = match.group(0)!;
       //final chordvalue =
       int chordPosition = match.start;
-      String nashvilleValue = ChordUtils.chordToNashville(chordText, key);
-      //int lyricPosition =
-      //    findChordPositionInLyrics(chordPosition, lyricLine, chordLine);
-      //
+      String nashvilleValue;
+      try {
+        // Convert chord to Nashville notation
+        nashvilleValue = ChordUtils.chordToNashville(chordText, key);
+      } catch (e) {
+        // Handle invalid chord conversion
+        print('Invalid chord: $chordText, error: $e, Maybe log diffrent');
+        nashvilleValue = chordText; // Fallback to original chord text
+        continue;
+      }
+
       // Add chord
       chords.add(Chord(
         position: chordPosition,
-        value: chordText,
+        value: nashvilleValue,
       ));
     }
 
     return chords;
   }
-
-  /// Find the correct position for a chord in the lyrics
-//int findChordPositionInLyrics(
-//    int chordPosition, String lyricLine, String chordLine) {
-//  // If the chord is at the beginning of the chord line, place it at the beginning of lyrics
-//  if (chordPosition == 0 ||
-//      chordLine.substring(0, chordPosition).trim().isEmpty) {
-//    return 0;
-//  }
-//
-//  // Count visible characters (not spaces) in chord line before the chord
-//  int visibleCharsBefore =
-//      chordLine.substring(0, chordPosition).replaceAll(' ', '').length;
-//
-//  // Find position in lyrics that most closely matches
-//  int lyricPos = 0;
-//  int charCount = 0;
-//
-//  // Try to align with visible characters in lyrics
-//  for (int i = 0; i < lyricLine.length; i++) {
-//    if (lyricLine[i] != ' ') {
-//      charCount++;
-//    }
-//    if (charCount >= visibleCharsBefore) {
-//      lyricPos = i;
-//      break;
-//    }
-//  }
-//
-//  return lyricPos;
-//}
-
-  /// Convert standard text format to the JSON structure similar to test.json
-//Map<String, dynamic> convertTextToJsonFormat(String text,
-//    {String title = 'Untitled') {
-//  final song = convertTextToSong(text, title: title, key: key);
-//
-//  // Convert to map structure
-//  final Map<String, dynamic> result = {
-//    'header': song.header.toMap(),
-//    'data': {}
-//  };
-//
-//  // Process each section
-//  for (var section in song.sections) {
-//    final sectionKey = normalizeSectionKey(section.title);
-//    result['data'][sectionKey] =
-//        section.lines.map((line) => line.toMap()).toList();
-//  }
-//
-//  return result;
-//}
 
   /// Normalize section title to a key format (e.g. "Verse 1" to "verse1")
   String normalizeSectionKey(String title) {

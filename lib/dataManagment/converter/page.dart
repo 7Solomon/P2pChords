@@ -1,444 +1,353 @@
-import 'package:P2pChords/dataManagment/converter/functions.dart';
-import 'package:P2pChords/dataManagment/converter/components.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
+import 'package:P2pChords/dataManagment/converter/key_validator.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:flutter/material.dart';
+import 'package:P2pChords/dataManagment/converter/functions.dart';
+import 'package:P2pChords/dataManagment/data_class.dart';
 
-class ConversionReviewPage extends StatefulWidget {
-  final String title;
-  final String artist;
-  final String originalText;
+class InteractiveConverterPage extends StatefulWidget {
+  final String rawText;
+  final String initialTitle;
+  final List<String> initialAuthors;
 
-  const ConversionReviewPage({
-    Key? key,
-    required this.title,
-    required this.artist,
-    required this.originalText,
-  }) : super(key: key);
+  const InteractiveConverterPage({
+    super.key,
+    required this.rawText,
+    required this.initialTitle,
+    this.initialAuthors = const [],
+  });
 
   @override
-  State<ConversionReviewPage> createState() => _ConversionReviewPageState();
+  _InteractiveConverterPageState createState() =>
+      _InteractiveConverterPageState();
 }
 
-class _ConversionReviewPageState extends State<ConversionReviewPage> {
-  Song? _convertedSong;
-  String _key = 'C'; // Default key
-  bool _isConverting = false;
-  String _error = '';
-
-  // Map to track chord-lyric line associations
-  Map<String, int?> _chordToLyricLineMap = {};
-
-  final List<String> _keyOptions = [
-    'C',
-    'C#',
-    'D',
-    'D#',
-    'E',
-    'F',
-    'F#',
-    'G',
-    'G#',
-    'A',
-    'A#',
-    'B',
-    'Cm',
-    'C#m',
-    'Dm',
-    'D#m',
-    'Em',
-    'Fm',
-    'F#m',
-    'Gm',
-    'G#m',
-    'Am',
-    'A#m',
-    'Bm'
-  ];
+class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
+  late PreliminarySongData preliminaryData;
+  late TextEditingController titleController;
+  late TextEditingController keyController;
+  late List<TextEditingController> authorControllers;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Perform initial conversion
-    _convertSong();
+    titleController = TextEditingController(text: widget.initialTitle);
+    keyController = TextEditingController(text: '');
+
+    // Initialize the preliminary data
+    preliminaryData = converter.convertTextToSongInteractive(
+      widget.rawText,
+      widget.initialTitle,
+      authors: widget.initialAuthors,
+    );
+
+    // Initialize author controllers
+    authorControllers = preliminaryData.authors
+        .map((author) => TextEditingController(text: author))
+        .toList();
+
+    if (authorControllers.isEmpty) {
+      authorControllers.add(TextEditingController());
+    }
+
+    isLoading = false;
   }
 
-  void _convertSong() {
+  // Add this method to handle key changes
+  void _onKeyChanged(String newKey) {
+    // No need to setState here as the UI will update through the controller
+    converter.key = newKey;
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    keyController.dispose();
+    for (var controller in authorControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addNewSection() {
     setState(() {
-      _isConverting = true;
-      _error = '';
-    });
-
-    try {
-      final convertedSong = converter.convertTextToSong(
-        widget.originalText,
-        _key,
-        widget.title,
-        authors: [widget.artist],
+      preliminaryData.sections.add(
+        PreliminarySection(
+          title: "New Section",
+          lines: [],
+        ),
       );
-
-      setState(() {
-        _convertedSong = convertedSong;
-        _isConverting = false;
-        _initializeAssociations();
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Conversion error: ${e.toString()}';
-        _isConverting = false;
-      });
-    }
+    });
   }
 
-  // Initialize chord-lyric line associations based on the converter's output
-  void _initializeAssociations() {
-    if (_convertedSong == null) return;
+  void _addLineToSection(int sectionIndex) {
+    setState(() {
+      // Add a chord line followed by a lyric line for better usability
+      preliminaryData.sections[sectionIndex].lines.add(
+        PreliminaryLine(
+          text: "",
+          isChordLine: true,
+        ),
+      );
+      preliminaryData.sections[sectionIndex].lines.add(
+        PreliminaryLine(
+          text: "",
+          isChordLine: false,
+        ),
+      );
+    });
+  }
 
-    _chordToLyricLineMap = {};
+  void _toggleLineType(int sectionIndex, int lineIndex) {
+    setState(() {
+      preliminaryData.sections[sectionIndex].lines[lineIndex].isChordLine =
+          !preliminaryData.sections[sectionIndex].lines[lineIndex].isChordLine;
+    });
+  }
 
-    for (int sectionIndex = 0;
-        sectionIndex < _convertedSong!.sections.length;
-        sectionIndex++) {
-      final section = _convertedSong!.sections[sectionIndex];
+  void _removeSection(int index) {
+    setState(() {
+      preliminaryData.sections.removeAt(index);
+    });
+  }
 
-      for (int lineIndex = 0; lineIndex < section.lines.length; lineIndex++) {
-        final line = section.lines[lineIndex];
+  void _removeLine(int sectionIndex, int lineIndex) {
+    setState(() {
+      preliminaryData.sections[sectionIndex].lines.removeAt(lineIndex);
+    });
+  }
 
-        // If this is a chord line, try to find an association
-        if (line.chords.isNotEmpty) {
-          // In the current logic, chord lines are often followed by lyric lines
-          // So we'll associate with the next line if it exists and is a lyric line
-          if (lineIndex + 1 < section.lines.length &&
-              section.lines[lineIndex + 1].chords.isEmpty) {
-            _chordToLyricLineMap['$sectionIndex:$lineIndex'] = lineIndex + 1;
-          }
-        }
-      }
-    }
+  void _updateLineText(int sectionIndex, int lineIndex, String newText) {
+    setState(() {
+      preliminaryData.sections[sectionIndex].lines[lineIndex].text = newText;
+    });
   }
 
   void _updateSectionTitle(int sectionIndex, String newTitle) {
-    if (_convertedSong == null) return;
-
     setState(() {
-      final updatedSections = List<SongSection>.from(_convertedSong!.sections);
-      updatedSections[sectionIndex] = SongSection(
-        title: newTitle,
-        lines: _convertedSong!.sections[sectionIndex].lines,
-      );
-
-      _convertedSong = Song(
-        hash: _convertedSong!.hash,
-        header: _convertedSong!.header,
-        sections: updatedSections,
-      );
+      preliminaryData.sections[sectionIndex].title = newTitle;
     });
   }
 
-  void _updateLyricLine(int sectionIndex, int lineIndex, String newLyrics) {
-    if (_convertedSong == null) return;
-
-    setState(() {
-      final section = _convertedSong!.sections[sectionIndex];
-      final updatedLines = List<LyricLine>.from(section.lines);
-
-      updatedLines[lineIndex] = LyricLine(
-        lyrics: newLyrics,
-        chords: section.lines[lineIndex].chords,
-      );
-
-      final updatedSections = List<SongSection>.from(_convertedSong!.sections);
-      updatedSections[sectionIndex] = SongSection(
-        title: section.title,
-        lines: updatedLines,
-      );
-
-      _convertedSong = Song(
-        hash: _convertedSong!.hash,
-        header: _convertedSong!.header,
-        sections: updatedSections,
-      );
-    });
-  }
-
-  void _updateChord(
-      int sectionIndex, int lineIndex, int chordIndex, String newValue) {
-    if (_convertedSong == null) return;
-
-    setState(() {
-      final section = _convertedSong!.sections[sectionIndex];
-      final line = section.lines[lineIndex];
-
-      final updatedChords = List<Chord>.from(line.chords);
-      updatedChords[chordIndex] = Chord(
-        position: line.chords[chordIndex].position,
-        value: newValue,
-      );
-
-      final updatedLines = List<LyricLine>.from(section.lines);
-      updatedLines[lineIndex] = LyricLine(
-        lyrics: line.lyrics,
-        chords: updatedChords,
-      );
-
-      final updatedSections = List<SongSection>.from(_convertedSong!.sections);
-      updatedSections[sectionIndex] = SongSection(
-        title: section.title,
-        lines: updatedLines,
-      );
-
-      _convertedSong = Song(
-        hash: _convertedSong!.hash,
-        header: _convertedSong!.header,
-        sections: updatedSections,
-      );
-    });
-  }
-
-  // Change line type between chord and lyric
-  void _updateLineType(int sectionIndex, int lineIndex, LineType newType) {
-    if (_convertedSong == null) return;
-
-    setState(() {
-      final section = _convertedSong!.sections[sectionIndex];
-      final line = section.lines[lineIndex];
-
-      // Convert to new line type
-      LyricLine updatedLine;
-
-      if (newType == LineType.chord && line.chords.isEmpty) {
-        // Convert lyric line to chord line
-        // Create chord from text
-        updatedLine = LyricLine(
-          lyrics: line.lyrics,
-          chords: [Chord(position: 0, value: line.lyrics)], // Simple example
-        );
-      } else if (newType == LineType.lyric && line.chords.isNotEmpty) {
-        // Convert chord line to lyric line
-        updatedLine = LyricLine(
-          lyrics: line.lyrics.isEmpty
-              ? line.chords.map((c) => c.value).join(' ')
-              : line.lyrics,
-          chords: [],
-        );
-      } else {
-        // No change needed
-        return;
-      }
-
-      // Update the song
-      final updatedLines = List<LyricLine>.from(section.lines);
-      updatedLines[lineIndex] = updatedLine;
-
-      final updatedSections = List<SongSection>.from(_convertedSong!.sections);
-      updatedSections[sectionIndex] = SongSection(
-        title: section.title,
-        lines: updatedLines,
-      );
-
-      _convertedSong = Song(
-        hash: _convertedSong!.hash,
-        header: _convertedSong!.header,
-        sections: updatedSections,
-      );
-
-      // Update associations
-      if (newType == LineType.lyric) {
-        // If changed to lyric, remove any associations to this line
-        _chordToLyricLineMap.removeWhere((key, value) =>
-            value == lineIndex && key.startsWith('$sectionIndex:'));
-      }
-    });
-  }
-
-  // Update association between chord line and lyric line
-  void _updateChordLineAssociation(
-      int sectionIndex, int chordLineIndex, int? lyricLineIndex) {
-    setState(() {
-      _chordToLyricLineMap['$sectionIndex:$chordLineIndex'] = lyricLineIndex;
-    });
-  }
-
-  void _saveSong() {
-    // Process the song with associations before saving
-    if (_convertedSong != null) {
-      _processAssociationsForSave();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Song would be saved with updated associations')),
-      );
-      Navigator.pop(context);
+  void _moveLine(int sectionIndex, int lineIndex) {
+    // Move line at lineIndex and lineIndex+1 down one spot
+    if (lineIndex < preliminaryData.sections[sectionIndex].lines.length - 1) {
+      setState(() {
+        final line =
+            preliminaryData.sections[sectionIndex].lines.removeAt(lineIndex);
+        preliminaryData.sections[sectionIndex].lines
+            .insert(lineIndex + 1, line);
+      });
     }
   }
 
-  // Process the associations to create the final song structure
-  void _processAssociationsForSave() {
-    if (_convertedSong == null) return;
-
-    // This is a placeholder for the actual implementation
-    print('Associations for saving:');
-    _chordToLyricLineMap.forEach((key, value) {
-      print('Chord line $key is associated with lyric line $value');
+  void _addAuthorField() {
+    setState(() {
+      authorControllers.add(TextEditingController());
     });
-    print('NOT IMPLEMENTED: Saving the song with associations...');
+  }
+
+  void _removeAuthorField(int index) {
+    setState(() {
+      authorControllers.removeAt(index);
+    });
+  }
+
+  Song _finalizeSong() {
+    // Update the song data from controllers
+    final authors = authorControllers
+        .map((controller) => controller.text)
+        .where((text) => text.isNotEmpty)
+        .toList();
+
+    final keyValue = keyController.text.trim();
+
+    preliminaryData = PreliminarySongData(
+      originalText: preliminaryData.originalText,
+      sections: preliminaryData.sections,
+      title: titleController.text,
+      authors: authors,
+      key: keyValue,
+    );
+
+    // The key is stored in converter and in preliminaryData
+    return converter.finalizeSong(preliminaryData, keyValue);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Loading...')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conversion Review'),
+        title: const Text('Edit Song Conversion'),
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
-            onPressed: _convertedSong != null ? _saveSong : null,
-            tooltip: 'Save song',
+            onPressed: () async {
+              final song = _finalizeSong();
+              bool result = await MultiJsonStorage.saveJson(song);
+              if (result) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text('Erfolgreich gespeichert: ${song.header.name}')),
+                );
+              } else {
+                // Handle error
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Fehler beim Speichern!')),
+                );
+              }
+            },
+            tooltip: 'Song speichern',
           ),
         ],
       ),
-      body: _isConverting
-          ? const Center(child: CircularProgressIndicator())
-          : _error.isNotEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _convertSong,
-                          child: const Text('Try Again'),
-                        ),
-                      ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Song metadata fields
+            Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Song Information',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Song Title',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-                )
-              : _buildReviewContent(),
-    );
-  }
 
-  Widget _buildReviewContent() {
-    if (_convertedSong == null) {
-      return const Center(child: Text('No conversion data available'));
-    }
+                    const SizedBox(height: 12),
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Song: ${_convertedSong!.header.name}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Text('Key: '),
-              DropdownButton<String>(
-                value: _key,
-                items: _keyOptions.map((String key) {
-                  return DropdownMenuItem<String>(
-                    value: key,
-                    child: Text(key),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _key = newValue;
-                    });
-                    _convertSong();
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
+                    KeyInputPreview(
+                      keyController: keyController,
+                      songData: preliminaryData,
+                      onKeyChanged: _onKeyChanged,
+                    ),
 
-        // Tab view for Original and Converted views
-        Expanded(
-          child: DefaultTabController(
-            length: 2,
-            child: Column(
-              children: [
-                const TabBar(
-                  tabs: [
-                    Tab(text: 'Original Text'),
-                    Tab(text: 'Converted Result'),
-                  ],
-                  labelColor: Colors.blue,
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // Original text tab
-                      SingleChildScrollView(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: SelectableText(
-                            widget.originalText,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 14,
+                    const SizedBox(height: 16),
+
+                    // Authors section
+                    const Text('Authors',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+
+                    for (int i = 0; i < authorControllers.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: authorControllers[i],
+                                decoration: InputDecoration(
+                                  labelText: 'Author ${i + 1}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
                             ),
-                          ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: authorControllers.length > 1
+                                  ? () => _removeAuthorField(i)
+                                  : null,
+                            ),
+                          ],
                         ),
                       ),
 
-                      // Converted result tab
-                      _buildConvertedView(),
-                    ],
-                  ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Author'),
+                      onPressed: _addAuthorField,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildConvertedView() {
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        for (int sectionIndex = 0;
-            sectionIndex < _convertedSong!.sections.length;
-            sectionIndex++)
-          SectionCard(
-            section: _convertedSong!.sections[sectionIndex],
-            sectionIndex: sectionIndex,
-            onSectionTitleChanged: _updateSectionTitle,
-            onLineTypeChanged: _updateLineType,
-            onChordLineAssociationChanged: _updateChordLineAssociation,
-            onLyricsChanged: _updateLyricLine,
-            onChordChanged: _updateChord,
-          ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _saveSong,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-          ),
-          child: const Text('Save Song'),
+            // Original text preview (collapsible)
+            Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 16),
+              child: ExpansionTile(
+                title: const Text('Original Text'),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(4.0),
+                    ),
+                    child: Text(
+                      preliminaryData.originalText,
+                      style: const TextStyle(fontFamily: 'monospace'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Text('Song Sections',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            ),
+
+            // List of sections using the custom widget
+            for (int sectionIndex = 0;
+                sectionIndex < preliminaryData.sections.length;
+                sectionIndex++)
+              SectionCard(
+                section: preliminaryData.sections[sectionIndex],
+                sectionIndex: sectionIndex,
+                onUpdateSectionTitle: _updateSectionTitle,
+                onRemoveSection: _removeSection,
+                onUpdateLineText: _updateLineText,
+                onToggleLineType: _toggleLineType,
+                onRemoveLine: _removeLine,
+                onAddLine: _addLineToSection,
+                onMoveLine: _moveLine,
+              ),
+
+            // Add new section button
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Add New Section'),
+                onPressed: _addNewSection,
+                style: ElevatedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 
 class ChordEditorComponent extends StatefulWidget {
-  final LyricLine line;
+  final LineData line;
   final String songKey;
-  final Function(LyricLine) onLineChanged;
+  final Function(LineData) onLineChanged;
 
   const ChordEditorComponent({
     super.key,
@@ -52,7 +52,7 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
     updatedChords.add(Chord(position: position, value: "1"));
     updatedChords.sort((a, b) => a.position.compareTo(b.position));
 
-    final updatedLine = LyricLine(
+    final updatedLine = LineData(
       lyrics: widget.line.lyrics,
       chords: updatedChords,
     );
@@ -71,7 +71,7 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
     updatedChords[chordIndex] =
         Chord(position: newPosition, value: chord.value);
 
-    final updatedLine = LyricLine(
+    final updatedLine = LineData(
       lyrics: widget.line.lyrics,
       chords: updatedChords,
     );
@@ -89,7 +89,7 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
       }
     }
 
-    final updatedLine = LyricLine(
+    final updatedLine = LineData(
       lyrics: newLyrics,
       chords: updatedChords,
     );
@@ -137,7 +137,7 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
                 updatedChords[index] =
                     Chord(position: chord.position, value: controller.text);
 
-                final updatedLine = LyricLine(
+                final updatedLine = LineData(
                   lyrics: widget.line.lyrics,
                   chords: updatedChords,
                 );
@@ -156,7 +156,7 @@ class _ChordEditorComponentState extends State<ChordEditorComponent> {
   void _deleteChord(int index) {
     final updatedChords = List<Chord>.from(widget.line.chords)..removeAt(index);
 
-    final updatedLine = LyricLine(
+    final updatedLine = LineData(
       lyrics: widget.line.lyrics,
       chords: updatedChords,
     );

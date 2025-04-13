@@ -139,7 +139,7 @@ class _SongEditPageState extends State<SongEditPage> {
                   setState(() {
                     final newSection = SongSection(
                       title: titleController.text,
-                      lines: [LyricLine(lyrics: '', chords: [])],
+                      lines: [LineData(lyrics: '', chords: [])],
                     );
                     _editedSong.sections.add(newSection);
                   });
@@ -157,12 +157,12 @@ class _SongEditPageState extends State<SongEditPage> {
   void _addNewLine(int sectionIndex) {
     setState(() {
       _editedSong.sections[sectionIndex].lines.add(
-        LyricLine(lyrics: '', chords: []),
+        LineData(lyrics: '', chords: []),
       );
     });
   }
 
-  void _updateLine(int sectionIndex, int lineIndex, LyricLine updatedLine) {
+  void _updateLine(int sectionIndex, int lineIndex, LineData updatedLine) {
     setState(() {
       _editedSong.sections[sectionIndex].lines[lineIndex] = updatedLine;
     });
@@ -174,7 +174,7 @@ class _SongEditPageState extends State<SongEditPage> {
       // If this was the last line, add an empty one
       if (_editedSong.sections[sectionIndex].lines.isEmpty) {
         _editedSong.sections[sectionIndex].lines.add(
-          LyricLine(lyrics: '', chords: []),
+          LineData(lyrics: '', chords: []),
         );
       }
     });

@@ -723,7 +723,7 @@ class _SongComparisonDialogState extends State<SongComparisonDialog>
   }
 
   // Check if two lines are equal
-  bool _areLinesEqual(LyricLine line1, LyricLine line2) {
+  bool _areLinesEqual(LineData line1, LineData line2) {
     if (line1.lyrics != line2.lyrics) return false;
     if (line1.chords.length != line2.chords.length) return false;
 
