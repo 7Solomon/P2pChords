@@ -12,7 +12,7 @@ class SectionView extends StatelessWidget {
 
   final int currentSectionIndex;
   final int currentSongIndex;
-  final UiVariables uiVariables;
+  //final UiVariables uiVariables;
   final Widget Function(LineData) buildLineFunction;
   final bool animate;
   final int? previousIndex;
@@ -23,7 +23,7 @@ class SectionView extends StatelessWidget {
     required this.songs,
     required this.currentSectionIndex,
     required this.currentSongIndex,
-    required this.uiVariables,
+    //required this.uiVariables,
     required this.buildLineFunction,
     this.animate = true,
     this.previousIndex,
@@ -39,7 +39,6 @@ class SectionView extends StatelessWidget {
       songs: songs,
       currentSectionIndex: currentSectionIndex,
       currentSongIndex: currentSongIndex,
-      uiVariables: uiVariables,
       buildLine: buildLineFunction,
     );
 

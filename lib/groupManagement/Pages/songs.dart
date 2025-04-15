@@ -1,4 +1,5 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
+import 'package:P2pChords/dataManagment/data_base/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
@@ -109,6 +110,20 @@ class _AllSongsPageState extends State<AllSongsPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const JsonFilePickerPage(),
+                ),
+              );
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.download),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'Songs aus einem Server importieren',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ServerImportPage(),
                 ),
               );
             },

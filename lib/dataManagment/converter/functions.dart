@@ -34,28 +34,35 @@ class PreliminarySection {
 class PreliminaryLine {
   String text;
   bool isChordLine;
+  bool wasSplit;
 
   PreliminaryLine({
     required this.text,
     required this.isChordLine,
+    this.wasSplit = false,
   });
 }
 
 class SongConverter {
   // Singeltone
-  static final SongConverter _instance = SongConverter._internal();
-  factory SongConverter() => _instance;
-  SongConverter._internal();
 
-  late String key;
-  late String title;
+  SongConverter();
+
+  String key = "";
+  String title = "";
+
+  // getter
+
+  SongConverter createSongConverter() {
+    return SongConverter();
+  }
 
   /// Converts plain text with chords and lyrics to a Song object
-  Song convertTextToSong(String text, String key, String title,
+  Song convertTextToSong(String text, String setKey, String setTitle,
       {List<String> authors = const []}) {
     // Set VARS
-    this.key = key;
-    this.title = title;
+    key = setKey;
+    title = setTitle;
 
     // Parse the text into sections
     final sections = parseSections(text);
@@ -84,7 +91,7 @@ class SongConverter {
   PreliminarySongData convertTextToSongInteractive(String text, String title,
       {List<String> authors = const []}) {
     // Set VARS
-    this.title = title;
+    title = title;
 
     // Do a preliminary parse to get sections
     final preliminarySections = parseTextForReview(text);
@@ -459,5 +466,3 @@ class SongConverter {
     );
   }
 }
-
-final converter = SongConverter();

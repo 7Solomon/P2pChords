@@ -292,4 +292,8 @@ class SongData {
         'songs': Map.fromEntries(
             songs.entries.map((e) => MapEntry(e.key, e.value.toMap()))),
       };
+
+  factory SongData.getEmptySongData() {
+    return SongData(groups: {}, songs: {});
+  }
 }

@@ -2,15 +2,16 @@ import 'dart:math';
 
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/line_builds.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/section_tile.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:provider/provider.dart';
 
 class CGridViewBuild extends StatelessWidget {
   final List<SectionTile> sectionsToDisplay;
-  final UiVariables uiVariables;
 
   final int currentSectionIndex;
   final int currentSongIndex;
@@ -21,13 +22,14 @@ class CGridViewBuild extends StatelessWidget {
     super.key,
     required this.currentSectionIndex,
     required this.currentSongIndex,
-    required this.uiVariables,
     required this.sectionsToDisplay,
     required this.buildLine,
   });
 
   @override
   Widget build(BuildContext context) {
+    final uiVariables = Provider.of<SheetUiProvider>(context).uiVariables;
+
     // Calculate optimal layout values
     final double columnWidth = max(250.0, uiVariables.columnWidth.value);
     final double columnSpacing = uiVariables.columnSpacing.value;

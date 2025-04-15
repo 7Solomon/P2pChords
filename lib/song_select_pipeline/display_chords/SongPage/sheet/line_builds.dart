@@ -1,6 +1,8 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class LineSegment {
   final String text;
@@ -13,10 +15,13 @@ class LineSegment {
 class LineBuildFunction {
   final BuildContext context;
 
-  final UiVariables uiVariables;
+  //final UiVariables uiVariables;
   final String currentKey;
 
-  LineBuildFunction(this.context, this.uiVariables, this.currentKey);
+  LineBuildFunction(this.context, this.currentKey);
+
+  UiVariables get uiVariables =>
+      Provider.of<SheetUiProvider>(context).uiVariables;
 
   Widget buildLine(LineData line) {
     // If no chords, just return the lyrics

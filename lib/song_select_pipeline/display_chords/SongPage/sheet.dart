@@ -18,7 +18,7 @@ class SongSheetDisplay extends StatefulWidget {
   final int songIndex;
   final int sectionIndex;
   final String currentKey;
-  final UiVariables uiVariables;
+  //final UiVariables uiVariables;
   final Function(int) onSectionChanged;
   final Function(int) onSongChanged;
   final Function(BuildContext, TapDownDetails)? onTapDown;
@@ -29,7 +29,7 @@ class SongSheetDisplay extends StatefulWidget {
     required this.songIndex,
     required this.sectionIndex,
     required this.currentKey,
-    required this.uiVariables,
+    //required this.uiVariables,
     required this.onSectionChanged,
     required this.onSongChanged,
     this.onTapDown,
@@ -61,8 +61,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     _currentSongIndex = widget.songIndex;
 
     // Line builder function
-    _sectionBuilder =
-        LineBuildFunction(context, widget.uiVariables, widget.currentKey);
+    _sectionBuilder = LineBuildFunction(context, widget.currentKey);
   }
 
   @override
@@ -82,11 +81,9 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
       _currentSongIndex = widget.songIndex;
     }
 
-    // For LineBuilderFunction, check if the current key or uiVariables have changed
-    if (oldWidget.currentKey != widget.currentKey ||
-        oldWidget.uiVariables != widget.uiVariables) {
-      _sectionBuilder =
-          LineBuildFunction(context, widget.uiVariables, widget.currentKey);
+    // For LineBuilderFunction, check if the current key or uiVariables have changed, changed to just key
+    if (oldWidget.currentKey != widget.currentKey) {
+      _sectionBuilder = LineBuildFunction(context, widget.currentKey);
     }
   }
 
@@ -99,7 +96,10 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     } else if (_currentSongIndex > 0) {
       setState(() {
         _currentSongIndex--;
-        _currentSectionIndex = currentSectionLength - 1;
+        // Fix where empty sections were a problem
+        _currentSectionIndex = widget.songs[_currentSongIndex].sections.isEmpty
+            ? 0
+            : widget.songs[_currentSongIndex].sections.length - 1;
         widget.onSongChanged(_currentSongIndex);
       });
     }
@@ -145,22 +145,11 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Song header
-        //_buildSongHeader(),
-
-        //Expanded(
-        //    child: SectionView(
-        //  songs: widget.songs,
-        //  currentIndex: _currentSectionIndex,
-        //  uiVariables: widget.uiVariables,
-        //  buildLineFunction: _buildLine,
-        //)),
         Expanded(
           child: SectionView(
             songs: widget.songs,
             currentSectionIndex: _currentSectionIndex,
             currentSongIndex: _currentSongIndex,
-            uiVariables: widget.uiVariables,
             buildLineFunction: _sectionBuilder.buildLine,
             onTapDown: (context, details) => handleScreenTap(context, details),
           ),

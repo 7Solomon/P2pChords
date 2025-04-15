@@ -32,7 +32,7 @@ Future<void> importGroup() async {
   }
 }
 
-Future<void> exportGroupsData(SongData songsData) async {
+Future<bool> exportGroupsData(SongData songsData) async {
   // In exportGroupsData function
   String groups = songsData.groups.keys.join('-');
   String groupHash =
@@ -49,11 +49,30 @@ Future<void> exportGroupsData(SongData songsData) async {
     File file = File(filePath);
     await file.writeAsString(jsonString);
 
-    print('File saved to: $filePath');
-    print('HERE ADD SNACKBAR');
+    return true;
   } catch (e) {
-    print('Error saving file: $e');
-    print('HERE ADD SNACKBAR');
+    return false;
+  }
+}
+
+Future<bool> exportSong(Song song) async {
+  // In exportGroupsData function
+  String songHash = song.hash;
+  try {
+    Directory? downloadsDirectory = await getDownloadsDirectory();
+    String filePath =
+        '${downloadsDirectory!.path}/${songHash}_p2pController.json';
+
+    // Convert the Map to a JSON string
+    String jsonString = jsonEncode(song.toMap());
+
+    // Write the JSON string to the file
+    File file = File(filePath);
+    await file.writeAsString(jsonString);
+
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 

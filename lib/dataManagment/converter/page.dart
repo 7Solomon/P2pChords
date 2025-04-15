@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
 import 'package:P2pChords/dataManagment/converter/key_validator.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
@@ -26,6 +28,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
   late PreliminarySongData preliminaryData;
   late TextEditingController titleController;
   late TextEditingController keyController;
+  late SongConverter converter;
   late List<TextEditingController> authorControllers;
   bool isLoading = true;
 
@@ -34,6 +37,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     super.initState();
     titleController = TextEditingController(text: widget.initialTitle);
     keyController = TextEditingController(text: '');
+    converter = SongConverter();
 
     // Initialize the preliminary data
     preliminaryData = converter.convertTextToSongInteractive(
@@ -56,8 +60,21 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
 
   // Add this method to handle key changes
   void _onKeyChanged(String newKey) {
-    // No need to setState here as the UI will update through the controller
     converter.key = newKey;
+  }
+
+  void _splitChordLyricPair(int sectionIndex, int chordLineIndex) {
+    setState(() {
+      final section = preliminaryData.sections[sectionIndex];
+
+      // The chord line should already be marked as a chord line, but let's ensure it
+      section.lines[chordLineIndex].isChordLine = true;
+      section.lines[chordLineIndex].wasSplit = true; // Set the flag
+
+      // The lyric line should already be marked as not a chord line, but let's ensure it
+      section.lines[chordLineIndex + 1].isChordLine = false;
+      section.lines[chordLineIndex + 1].wasSplit = true; // Set the flag
+    });
   }
 
   @override
@@ -199,6 +216,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
                       content:
                           Text('Erfolgreich gespeichert: ${song.header.name}')),
                 );
+                Navigator.of(context).pop();
               } else {
                 // Handle error
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -330,6 +348,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
                 onRemoveLine: _removeLine,
                 onAddLine: _addLineToSection,
                 onMoveLine: _moveLine,
+                onSplitChordLyricPair: _splitChordLyricPair,
               ),
 
             // Add new section button

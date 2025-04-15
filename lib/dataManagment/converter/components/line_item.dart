@@ -33,6 +33,7 @@ class LineItem extends StatefulWidget {
 class _LineItemState extends State<LineItem> {
   late TextEditingController _textController;
 
+  //bool _showRawChordText = false; // FOR implemettaion of just chord line
   @override
   void initState() {
     super.initState();
@@ -129,6 +130,7 @@ class _LineItemState extends State<LineItem> {
                   text: widget.line.text,
                   onTextChanged: _updateLineText,
                   accentColor: accentColor,
+                  showTextField: !isChordLine,
                 )
               : TextField(
                   controller: _textController,

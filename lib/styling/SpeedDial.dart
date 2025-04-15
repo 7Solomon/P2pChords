@@ -17,3 +17,260 @@ class CSpeedDial extends SpeedDial {
           foregroundColor: foregroundColor ?? Colors.white,
         );
 }
+
+class SpeedDialCategory {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<SpeedDialChild> children;
+
+  SpeedDialCategory({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.children,
+  });
+}
+
+class HierarchicalSpeedDial extends StatefulWidget {
+  final List<SpeedDialCategory> categories;
+  final ThemeData theme;
+  final AnimatedIconData animatedIcon;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final double elevation;
+
+  const HierarchicalSpeedDial({
+    Key? key,
+    required this.categories,
+    required this.theme,
+    this.animatedIcon = AnimatedIcons.menu_close,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.elevation = 8.0,
+  }) : super(key: key);
+
+  @override
+  State<HierarchicalSpeedDial> createState() => _HierarchicalSpeedDialState();
+}
+
+class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
+    with SingleTickerProviderStateMixin {
+  bool _isOpen = false;
+  SpeedDialCategory? _activeCategory;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    //print(
+    //    "Build called: isOpen=$_isOpen, activeCategory=${_activeCategory?.title}");
+
+    return SizedBox(
+      // Give the Stack an explicit size constraint
+      width: 200,
+      height: 350,
+      child: Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.bottomRight,
+        clipBehavior: Clip.none,
+        children: [
+          // Category Buttons
+          if (_isOpen && _activeCategory == null)
+            for (int i = 0; i < widget.categories.length; i++)
+              _buildCategoryButton(widget.categories[i], i),
+
+          // Child Buttons for Active Category
+          if (_isOpen && _activeCategory != null) ...[
+            // Back button
+            _buildBackButton(),
+
+            // Category children
+            for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
+              _buildChildButton(_activeCategory!.children[i], i),
+          ],
+
+          // Main Dial Button (should be last to appear on top)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: FloatingActionButton(
+              backgroundColor:
+                  widget.backgroundColor ?? widget.theme.primaryColor,
+              foregroundColor: widget.foregroundColor ?? Colors.white,
+              elevation: widget.elevation,
+              onPressed: () {
+                print("Main button pressed");
+                _toggleMainDial();
+              },
+              child: AnimatedIcon(
+                icon: widget.animatedIcon,
+                progress: _animation,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleMainDial() {
+    print("Toggling dial: current state=$_isOpen");
+    setState(() {
+      _isOpen = !_isOpen;
+      _activeCategory = null;
+      if (_isOpen) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+    print("After toggle: new state=$_isOpen");
+  }
+
+  void _openCategory(SpeedDialCategory category) {
+    setState(() {
+      _activeCategory = category;
+    });
+  }
+
+  void _closeCategory() {
+    setState(() {
+      _activeCategory = null;
+    });
+  }
+
+  // Helper methods to build individual buttons
+  Widget _buildCategoryButton(SpeedDialCategory category, int index) {
+    final position = (index + 1) * 65.0;
+
+    return Positioned(
+      right: 0,
+      bottom: position,
+      child: Row(
+        children: [
+          // Label
+          Material(
+            elevation: 2,
+            color: category.color.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Text(
+                category.title,
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Button
+          FloatingActionButton.small(
+            heroTag: 'category_${category.title}',
+            backgroundColor: category.color,
+            foregroundColor: Colors.white,
+            child: Icon(category.icon),
+            onPressed: () => _openCategory(category),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return Positioned(
+      right: 0,
+      bottom: 65.0,
+      child: Row(
+        children: [
+          // Label
+          Material(
+            elevation: 2,
+            color: Colors.grey.shade700,
+            borderRadius: BorderRadius.circular(6),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Text(
+                'Zurück',
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Button
+          FloatingActionButton.small(
+            heroTag: 'back_button',
+            backgroundColor: Colors.grey.shade700,
+            child: const Icon(Icons.arrow_back),
+            onPressed: _closeCategory,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChildButton(SpeedDialChild child, int index) {
+    final position = (index + 2) * 65.0; // +2 to account for back button
+
+    return Positioned(
+      right: 0,
+      bottom: position,
+      child: Row(
+        children: [
+          if (child.label != null)
+            Material(
+              elevation: 2,
+              color: _activeCategory!.color.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Text(
+                  child.label!,
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          const SizedBox(width: 10),
+          FloatingActionButton.small(
+            heroTag: 'child_${_activeCategory!.title}_$index',
+            backgroundColor: child.backgroundColor ?? _activeCategory!.color,
+            foregroundColor: child.foregroundColor ?? Colors.white,
+            child: child.child,
+            onPressed: () {
+              // Close the dial first
+              setState(() {
+                _isOpen = false;
+                _activeCategory = null;
+                _animationController.reverse();
+              });
+              // Then execute the child's onTap function
+              child.onTap?.call();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}

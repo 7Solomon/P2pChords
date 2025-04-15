@@ -1,4 +1,6 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
+import 'package:P2pChords/dataManagment/Pages/load_json_page.dart';
+import 'package:P2pChords/dataManagment/data_base/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
@@ -77,38 +79,80 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
       appBar: AppBar(
         title: const Text('Gruppen Übersicht'),
       ),
-      floatingActionButton: CSpeedDial(
+      floatingActionButton: HierarchicalSpeedDial(
         theme: Theme.of(context),
-        children: [
-          SpeedDialChild(
-            child: const Icon(Icons.group_add),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            label: 'Neue Gruppe',
-            onTap: () => _createNewGroup(),
+        categories: [
+          SpeedDialCategory(
+            title: 'Gruppen',
+            icon: Icons.add_circle,
+            color: Colors.blue,
+            children: [
+              SpeedDialChild(
+                child: const Icon(Icons.group_add),
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                label: 'Neue Gruppe',
+                onTap: () => _createNewGroup(),
+              ),
+              SpeedDialChild(
+                child: const Icon(Icons.download),
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                label: 'Gruppe importieren',
+                onTap: () => importGroup(),
+              ),
+            ],
           ),
-          SpeedDialChild(
-            child: const Icon(Icons.download),
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            label: 'Gruppe importieren',
-            onTap: () => importGroup(),
-          ),
-          SpeedDialChild(
-            child: const Icon(Icons.add),
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            label: 'Song erstellen',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SongEditPage(
-                    song: Song.empty(),
-                  ),
-                ),
-              );
-            },
+          SpeedDialCategory(
+            title: 'Songs',
+            icon: Icons.add_circle,
+            color: Colors.orange,
+            children: [
+              SpeedDialChild(
+                child: const Icon(Icons.add),
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                label: 'Song erstellen',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SongEditPage(
+                        song: Song.empty(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              SpeedDialChild(
+                child: const Icon(Icons.download),
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                label: 'Song Importieren',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const JsonFilePickerPage(),
+                    ),
+                  );
+                },
+              ),
+              SpeedDialChild(
+                child: const Icon(Icons.download),
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                label: 'Songs aus einem Server importieren',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ServerImportPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),

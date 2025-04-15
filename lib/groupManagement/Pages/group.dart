@@ -1,6 +1,7 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/groupManagement/functions.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
@@ -117,6 +118,14 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                           return true;
                         },
                         confirmActionDismiss: () {
+                          exportSong(entry).then((value) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Song exportiert!'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          });
                           return Future.value(false);
                         },
                         child: CListTile(

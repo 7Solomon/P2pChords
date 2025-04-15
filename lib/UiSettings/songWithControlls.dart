@@ -55,7 +55,6 @@ class _SongSheetWithControlsState extends State<SongSheetWithControls> {
           songIndex: widget.songIndex,
           sectionIndex: widget.sectionIndex,
           currentKey: widget.currentKey,
-          uiVariables: widget.uiVariables,
           onSectionChanged: widget.onSectionChanged,
           onSongChanged: widget.onSongChanged,
         ),

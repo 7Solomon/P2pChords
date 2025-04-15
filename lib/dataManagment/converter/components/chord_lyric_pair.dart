@@ -16,6 +16,7 @@ class ChordLyricPair extends StatefulWidget {
   final Function(int, int, String) onUpdateLineText;
   final Function(int, int) onRemoveLine;
   final Function(int, int) onMoveLine;
+  final Function(int, int) onSplitPair; // Add this new callback
 
   const ChordLyricPair({
     super.key,
@@ -27,6 +28,7 @@ class ChordLyricPair extends StatefulWidget {
     required this.onUpdateLineText,
     required this.onRemoveLine,
     required this.onMoveLine,
+    required this.onSplitPair, // Add this parameter
   });
 
   @override
@@ -85,18 +87,29 @@ class _ChordLyricPairState extends State<ChordLyricPair> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Label
-          const Row(
+          // Label row with split button
+          Row(
             children: [
-              Icon(Icons.music_note, size: 16),
-              SizedBox(width: 4),
-              Text(
+              const Icon(Icons.music_note, size: 16),
+              const SizedBox(width: 4),
+              const Text(
                 'Chord/Lyric Pair',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
+              ),
+              const Spacer(),
+
+              // Add split button
+              IconButton(
+                icon: const Icon(Icons.call_split, size: 16),
+                tooltip: 'Split into separate lines',
+                onPressed: () {
+                  widget.onSplitPair(
+                      widget.sectionIndex, widget.chordLineIndex);
+                },
               ),
             ],
           ),

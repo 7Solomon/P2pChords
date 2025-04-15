@@ -128,7 +128,6 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                 songIndex: songIndex,
                 sectionIndex: currentSelection.currentSectionIndex!,
                 currentKey: sheetUiProvider.currentKey,
-                uiVariables: sheetUiProvider.uiVariables,
                 onSectionChanged: (index) {
                   currentSelection.setCurrentSectionIndex(index);
                   if (connectionProvider.userState == UserState.server) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ class ChordEditor extends StatefulWidget {
 
 class _ChordEditorState extends State<ChordEditor> {
   late TextEditingController _textController;
+  final SongConverter converter = SongConverter();
   List<Chord> _chords = [];
   bool _isDraggingChord = false;
   int? _selectedChordIndex;
@@ -37,6 +39,7 @@ class _ChordEditorState extends State<ChordEditor> {
   void initState() {
     super.initState();
     _textController = TextEditingController(text: widget.text);
+
     _songKey = converter.key;
     _parseChords();
   }

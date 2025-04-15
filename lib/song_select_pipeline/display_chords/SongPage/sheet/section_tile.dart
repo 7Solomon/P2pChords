@@ -1,7 +1,9 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/line_builds.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SectionTile extends StatelessWidget {
   final Song song;
@@ -12,7 +14,7 @@ class SectionTile extends StatelessWidget {
   final bool isCurrentSong;
   final bool isFirstSectionOfSong;
   final bool isLastSectionOfSong;
-  final UiVariables uiVariables;
+  //final UiVariables uiVariables;
   final Widget Function(LineData) buildLine;
 
   const SectionTile({
@@ -25,12 +27,14 @@ class SectionTile extends StatelessWidget {
     required this.isCurrentSong,
     required this.isFirstSectionOfSong,
     required this.isLastSectionOfSong,
-    required this.uiVariables,
+    //required this.uiVariables,
     required this.buildLine,
   });
 
   @override
   Widget build(BuildContext context) {
+    final uiVariables = Provider.of<SheetUiProvider>(context).uiVariables;
+
     bool hasNextSection = !isLastSectionOfSong;
 
     // Build section content with conditional title
