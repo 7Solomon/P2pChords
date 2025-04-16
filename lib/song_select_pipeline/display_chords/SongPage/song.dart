@@ -80,13 +80,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
         if (songIndex == -1 || currentSong == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            currentSelection.validateSelection(
-              context,
-              autoSelect: true,
-              removeInvalidSongs: true,
-              showSnackbar: true,
-              navigateBack: false,
-            );
+            displaySnack('Song Index ist -1 oder currentSong is null');
           });
 
           return const Scaffold(

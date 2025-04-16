@@ -23,9 +23,9 @@ class BeamerPage extends StatelessWidget {
       final dataLoaderProvider = Provider.of<DataLoadeProvider>(context);
 
       // Validate selection when widget builds
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        currentSelectionProvider.validateSelection(context);
-      });
+      //WidgetsBinding.instance.addPostFrameCallback((_) {
+      //  currentSelectionProvider.validateSelection(context);
+      //});
 
       // Safe check for selection
       bool selectionIsValid =

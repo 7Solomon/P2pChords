@@ -240,14 +240,15 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
           if (child.label != null)
             Material(
               elevation: 2,
-              color: _activeCategory!.color.withOpacity(0.8),
+              color: (child.backgroundColor ?? _activeCategory!.color)
+                  .withOpacity(0.8),
               borderRadius: BorderRadius.circular(6),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: Text(
                   child.label!,
-                  style: TextStyle(
+                  style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),

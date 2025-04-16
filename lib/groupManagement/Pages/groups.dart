@@ -110,7 +110,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
             children: [
               SpeedDialChild(
                 child: const Icon(Icons.add),
-                backgroundColor: Colors.orange,
+                backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
                 label: 'Song erstellen',
                 onTap: () {

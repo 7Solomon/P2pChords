@@ -19,7 +19,7 @@ class _ServerImportPageState extends State<ServerImportPage> {
   List<Song>? _importedSongs;
 
   // Keys for shared preferences
-  static const String _serverUrlKey = 'custom_server_url';
+  static const String _serverUrlKey = 'saved_song_server_url';
 
   @override
   void initState() {

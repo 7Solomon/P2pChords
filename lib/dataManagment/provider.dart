@@ -141,74 +141,76 @@ class CurrentSelectionProvider extends ChangeNotifier {
     _currentSectionIndex = index;
     notifyListeners();
   }
-
-  Future<bool> validateSelection(
-    BuildContext context, {
-    bool autoSelect = true,
-    bool removeInvalidSongs = false,
-    bool showSnackbar = false,
-    bool navigateBack = false,
-  }) async {
-    final dataLoader = Provider.of<DataLoadeProvider>(context, listen: false);
-    final currentSelection =
-        Provider.of<CurrentSelectionProvider>(context, listen: false);
-    bool changed = false;
-    String? hashToRemove;
-
-    // Validate song selection
-    if (_currentSongHash != null &&
-        !dataLoader.songs.containsKey(_currentSongHash)) {
-      hashToRemove = _currentSongHash;
-      _currentSongHash = null;
-      _currentSectionIndex = null;
-      changed = true;
-    }
-
-    // Validate group selection
-    if (_currentGroup != null &&
-        !dataLoader.groups.containsKey(_currentGroup)) {
-      _currentGroup = null;
-      changed = true;
-    }
-
-    // Auto-select if requested
-    if (changed && autoSelect) {
-      if (dataLoader.groups.isNotEmpty) {
-        //String firstGroup = dataLoader.groups.keys.first;
-        //_currentGroup = firstGroup;
-
-        if (dataLoader.groups[currentSelection.currentGroup]?.isNotEmpty ??
-            false) {
-          String? firstSongHash =
-              dataLoader.getHashByIndex(currentSelection.currentGroup!, 0);
-          if (firstSongHash != null) {
-            _currentSongHash = firstSongHash;
-            _currentSectionIndex = 0;
-          }
-        }
-      }
-    }
-
-    // Remove invalid song if requested
-    if (removeInvalidSongs && hashToRemove != null) {
-      await dataLoader.removeSong(hashToRemove);
-      if (showSnackbar) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Ungültiges Lied gefunden und entfernt!!')));
-      }
-    }
-
-    // Navigate back if requested
-    if (navigateBack && changed) {
-      Navigator.of(context).pop();
-    }
-
-    if (changed) {
-      notifyListeners();
-    }
-
-    return changed;
-  }
+  //////
+  // QUATSCHIG!!!
+  /////
+  //Future<bool> validateSelection(
+  //  BuildContext context, {
+  //  bool autoSelect = true,
+  //  bool removeInvalidSongs = false,
+  //  bool showSnackbar = false,
+  //  bool navigateBack = false,
+  //}) async {
+  //  final dataLoader = Provider.of<DataLoadeProvider>(context, listen: false);
+  //  final currentSelection =
+  //      Provider.of<CurrentSelectionProvider>(context, listen: false);
+  //  bool changed = false;
+  //  String? hashToRemove;
+//
+  //  // Validate song selection
+  //  if (_currentSongHash != null &&
+  //      !dataLoader.songs.containsKey(_currentSongHash)) {
+  //    hashToRemove = _currentSongHash;
+  //    _currentSongHash = null;
+  //    _currentSectionIndex = null;
+  //    changed = true;
+  //  }
+//
+  //  // Validate group selection
+  //  if (_currentGroup != null &&
+  //      !dataLoader.groups.containsKey(_currentGroup)) {
+  //    _currentGroup = null;
+  //    changed = true;
+  //  }
+//
+  //  // Auto-select if requested
+  //  if (changed && autoSelect) {
+  //    if (dataLoader.groups.isNotEmpty) {
+  //      //String firstGroup = dataLoader.groups.keys.first;
+  //      //_currentGroup = firstGroup;
+//
+  //      if (dataLoader.groups[currentSelection.currentGroup]?.isNotEmpty ??
+  //          false) {
+  //        String? firstSongHash =
+  //            dataLoader.getHashByIndex(currentSelection.currentGroup!, 0);
+  //        if (firstSongHash != null) {
+  //          _currentSongHash = firstSongHash;
+  //          _currentSectionIndex = 0;
+  //        }
+  //      }
+  //    }
+  //  }
+//
+  //  // Remove invalid song if requested
+  //  if (removeInvalidSongs && hashToRemove != null) {
+  //    await dataLoader.removeSong(hashToRemove);
+  //    if (showSnackbar) {
+  //      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+  //          content: Text('Ungültiges Lied gefunden und entfernt!!')));
+  //    }
+  //  }
+//
+  //  // Navigate back if requested
+  //  if (navigateBack && changed) {
+  //    Navigator.of(context).pop();
+  //  }
+//
+  //  if (changed) {
+  //    notifyListeners();
+  //  }
+//
+  //  return changed;
+  //}
 
   fromJson(Map<String, dynamic> json) {
     _currentSongHash = json['currentSongHash'];
