@@ -5,6 +5,7 @@ import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/mainPage/page.dart';
 import 'package:P2pChords/navigator.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'state.dart';
@@ -37,13 +38,18 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SheetUiProvider()),
         ChangeNotifierProvider(create: (_) => AppUiProvider()),
       ],
-      child: const MyApp(),
+      child: MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  MyApp({super.key}) {
+    SnackService().init(_scaffoldMessengerKey);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +58,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'P2P Chords',
           theme: appUiProvider.currentTheme,
+          scaffoldMessengerKey: _scaffoldMessengerKey,
           home: const MainPage(),
           navigatorKey: NavigationService.navigatorKey,
         );

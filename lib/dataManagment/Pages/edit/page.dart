@@ -6,6 +6,7 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:crypto/crypto.dart';
 
 import 'package:flutter/material.dart';
@@ -103,13 +104,9 @@ class _SongEditPageState extends State<SongEditPage> {
     final result =
         await MultiJsonStorage.saveJson(updatedSong, group: widget.group);
     if (result) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gespeichert!')),
-      );
+      SnackService().showSuccess('Gespeichert');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fehler beim Speichern!')),
-      );
+      SnackService().showError('Fehler beim Speichern!');
     }
   }
 

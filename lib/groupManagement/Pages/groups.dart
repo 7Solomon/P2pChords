@@ -4,6 +4,7 @@ import 'package:P2pChords/dataManagment/data_base/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/groupManagement/Pages/group.dart';
@@ -56,15 +57,10 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                   Provider.of<DataLoadeProvider>(context, listen: false)
                       .addGroup(newGroup);
 
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Gruppe "$newGroup" erstellt'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    Navigator.of(context).pop();
-                  }
+                  SnackService().showSuccess(
+                    'Gruppe "$newGroup" erstellt',
+                  );
+                  Navigator.of(context).pop();
                 }
               },
             ),

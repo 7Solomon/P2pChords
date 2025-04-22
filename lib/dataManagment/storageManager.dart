@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:P2pChords/dataManagment/comparer/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -34,19 +35,20 @@ class MultiJsonStorage {
         }
       } catch (e) {
         // Any error means we need recovery
-        debugPrint('Error checking group map: $e');
+        SnackService().showError('Error checking group map: $e');
         _recoveryModeRequired = true;
       }
 
       // If recovery is needed, clear everything
       if (_recoveryModeRequired) {
-        debugPrint('Recovery mode activated - clearing all preferences');
+        SnackService()
+            .showError('Recovery mode activated - clearing all preferences');
         await _emergencyClearAllPreferences();
       }
 
       _initialized = true;
     } catch (e) {
-      debugPrint('Critical error during initialization: $e');
+      SnackService().showError('Critical error during initialization: $e');
       // Try one last emergency clear
       await _emergencyResetSharedPrefs();
       _initialized = true;
@@ -60,9 +62,9 @@ class MultiJsonStorage {
       await prefs.clear();
       // Re-initialize with an empty JSON object for group map
       await prefs.setString('$_keyPrefix:group_map', '{}');
-      debugPrint('Emergency clear completed');
+      SnackService().showError('Emergency clear completed');
     } catch (e) {
-      debugPrint('Error during emergency clear: $e');
+      SnackService().showError('Error during emergency clear: $e');
       // Last resort - try to use a brand new SharedPreferences instance
       await _emergencyResetSharedPrefs();
     }
@@ -76,9 +78,9 @@ class MultiJsonStorage {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
       await prefs.setString('$_keyPrefix:group_map', '{}');
-      debugPrint('SharedPreferences recreated');
+      SnackService().showError('SharedPreferences recreated');
     } catch (e) {
-      debugPrint('Failed to recreate SharedPreferences: $e');
+      SnackService().showError('Failed to recreate SharedPreferences: $e');
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
 import 'package:P2pChords/dataManagment/converter/key_validator.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
@@ -213,17 +214,16 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
               final song = _finalizeSong();
               bool result = await dataLoadeProvider.addSong(song);
               if (result) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text('Erfolgreich gespeichert: ${song.header.name}')),
-                );
+                //ScaffoldMessenger.of(context).showSnackBar(
+                //  SnackBar(
+                //      content:
+                //          Text('')),
+                //);
+                SnackService().showSuccess(
+                    'Erfolgreich gespeichert: ${song.header.name}');
                 Navigator.of(context).pop();
               } else {
-                // Handle error
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fehler beim Speichern!')),
-                );
+                SnackService().showError('Fehler beim Speichern!');
               }
             },
             tooltip: 'Song speichern',

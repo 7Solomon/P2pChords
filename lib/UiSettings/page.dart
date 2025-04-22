@@ -1,10 +1,12 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/UiSettings/songWithControlls.dart';
+import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,12 +26,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
   bool _initialized = false;
 
   void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    SnackService().showInfo(message);
   }
 
   Future<bool?> _showSaveDialog() {

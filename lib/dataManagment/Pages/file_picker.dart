@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -40,11 +41,7 @@ class FilePickerUtil {
         }
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading file: ${e.toString()}')),
-        );
-      }
+      SnackService().showError('Fehler beim Laden der Datei: ${e.toString()}');
     }
   }
 }

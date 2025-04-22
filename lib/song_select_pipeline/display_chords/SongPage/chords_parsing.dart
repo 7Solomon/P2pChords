@@ -1,14 +1,20 @@
+import 'package:P2pChords/utils/notification_service.dart';
+
 Map<String, String> parseChords(
   dynamic chordsData,
   Map<String, Map<String, String>> nashvilleToChordMapping,
   String currentKey,
-  Function displaySnack,
 ) {
   Map<String, String> parsedChords = {};
 
   if (chordsData is Map<String, dynamic>) {
     if (!nashvilleToChordMapping.containsKey(currentKey)) {
-      displaySnack('Unknown key: $currentKey');
+      SnackService().show(
+        'Unbekannte Tonart: $currentKey',
+        type: SnackType.error,
+        duration: const Duration(seconds: 5),
+      );
+
       return parsedChords;
     }
 
@@ -28,7 +34,7 @@ Map<String, String> parseChords(
             String bassPart = parts[1]; // e.g., "7"
 
             // Resolve the base and bass part of slash chord
-            baseChord = resolveComplexChord(basePart, keyMapping, displaySnack);
+            baseChord = resolveComplexChord(basePart, keyMapping);
             String? bassChordResolved = keyMapping[bassPart];
 
             if (baseChord != null && bassChordResolved != null) {
@@ -41,7 +47,7 @@ Map<String, String> parseChords(
           }
         } else {
           // Handle regular or complex chords (e.g., "5sus", "-6", "-3")
-          baseChord = resolveComplexChord(chord, keyMapping, displaySnack);
+          baseChord = resolveComplexChord(chord, keyMapping);
         }
 
         if (baseChord != null) {
@@ -64,7 +70,6 @@ Map<String, String> parseChords(
 String? resolveComplexChord(
   String chord,
   Map<String, String> keyMapping,
-  Function displaySnack,
 ) {
   String baseChord = chord;
   String? baseChordResolved;
@@ -115,8 +120,11 @@ String? resolveComplexChord(
   }
 
   if (baseChordResolved == null) {
-    print('Unknown Nashville number: $chord');
-    //displaySnack('Unknown Nashville number: $chord');
+    SnackService().show(
+      'Unbekannte Nashville Nummer: $chord',
+      type: SnackType.error,
+      duration: const Duration(seconds: 5),
+    );
   }
 
   return baseChordResolved;

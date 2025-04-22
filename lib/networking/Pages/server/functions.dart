@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 
 Widget listViewClientList(connectedDeviceIds) {
   return ListView.builder(
@@ -125,13 +126,7 @@ Widget serverIpDisplay(String? ipAddress, BuildContext context) {
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: ipAddress))
                             .then((_) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('IP address kopiert!'),
-                              behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          SnackService().showSuccess('IP Adresse kopiert!');
                         });
                       },
                       icon: const Icon(Icons.copy),

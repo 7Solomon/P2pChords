@@ -1,4 +1,5 @@
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -62,15 +63,7 @@ Widget qrScannerButton({
           }
         } else {
           // Show permission denied message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Kamera-Berechtigung wird benötigt'),
-              action: SnackBarAction(
-                label: 'Einstellungen',
-                onPressed: () => openAppSettings(),
-              ),
-            ),
-          );
+          SnackService().showWarning('Kamera-Berechtigung wird benötigt');
         }
       },
       child: Padding(

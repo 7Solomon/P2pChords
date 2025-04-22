@@ -6,6 +6,7 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_componen
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,12 +20,6 @@ class ChordSheetPage extends StatefulWidget {
 class _ChordSheetPageState extends State<ChordSheetPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late QSelectOverlay _controller;
-
-  void displaySnack(String str) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(str)));
-    });
-  }
 
   @override
   void initState() {
@@ -80,10 +75,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
         if (songIndex == -1 || currentSong == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            print(currentSong);
-            print(dataLoader.songs.keys
-                .contains(currentSelection.currentSongHash!));
-            displaySnack('Song Index ist -1 oder currentSong is null');
+            SnackService()
+                .showError('Song Index ist -1 oder currentSong is null');
           });
 
           return const Scaffold(
@@ -133,28 +126,14 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                   }
                 },
                 onSongChanged: (index) {
-                  print('Changing to song index: $index');
                   String? hash = dataLoader.getHashByIndex(
                       currentSelection.currentGroup!, index);
-                  print('got hash: $hash');
+
                   if (hash == null) {
-                    displaySnack('Song nicht gefunden');
+                    SnackService().showError('Song nicht gefunden');
                     return;
                   }
                   currentSelection.setCurrentSong(hash);
-                  print(
-                      'Songs contain Hash: ${dataLoader.songs.keys.contains(hash)}');
-                  print('*');
-                  print(
-                      "Group songs: ${dataLoader.groups[currentSelection.currentGroup!]}");
-                  print("Available songs: ${dataLoader.songs.keys.toList()}");
-                  final groupSongs =
-                      dataLoader.groups[currentSelection.currentGroup!]!;
-                  for (int i = 0; i < groupSongs.length; i++) {
-                    final hash = groupSongs[i];
-                    final exists = dataLoader.songs.containsKey(hash);
-                    print("Song $i: $hash - exists in DB: $exists");
-                  }
 
                   if (connectionProvider.userState == UserState.server) {
                     connectionProvider.dataSyncService

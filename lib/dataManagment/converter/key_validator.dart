@@ -1,5 +1,6 @@
 // Add this after your existing widgets
 
+import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';

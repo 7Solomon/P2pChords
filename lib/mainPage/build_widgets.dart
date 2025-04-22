@@ -7,6 +7,7 @@ import 'package:P2pChords/song_select_pipeline/beamer.dart';
 import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
@@ -212,13 +213,8 @@ void _handleClientSongAction(
       MaterialPageRoute(builder: (context) => ChordSheetPage()),
     );
   } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('You are not connected to a server yet'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: EdgeInsets.all(12),
-      ),
+    SnackService().showInfo(
+      'Du bist noch nicht mit einem Server verbunden',
     );
   }
 }

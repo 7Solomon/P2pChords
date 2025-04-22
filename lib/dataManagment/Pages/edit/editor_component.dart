@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:P2pChords/dataManagment/Pages/edit/style.dart';
+import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 

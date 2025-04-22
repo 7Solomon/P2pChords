@@ -2,6 +2,7 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -94,15 +95,13 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                                   .dataSyncService
                                   .sendSongDataToAllClients(songData);
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: success
-                                      ? const Text(
-                                          'Daten erfolgreich an alle Clients gesendet')
-                                      : const Text(
-                                          'Fehler beim Senden der Daten'),
-                                ),
-                              );
+                              if (success) {
+                                SnackService().showSuccess(
+                                    'Daten erfolgreich an alle Clients gesendet');
+                              } else {
+                                SnackService()
+                                    .showError('Fehler beim Senden der Daten');
+                              }
                             }
                           }
 
@@ -116,12 +115,8 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                             );
                           }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Du kannst keine Gruppen auswählen, wenn du ein Client bist'),
-                            ),
-                          );
+                          SnackService().showWarning(
+                              'Du kannst keine Gruppen auswählen, wenn du ein Client bist');
                         }
                       },
                     );

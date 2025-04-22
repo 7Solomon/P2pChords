@@ -7,6 +7,7 @@ import 'package:P2pChords/state.dart';
 import 'package:P2pChords/device.dart';
 import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/networking/Pages/components.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 
 class ClientPage extends StatefulWidget {
   const ClientPage({Key? key}) : super(key: key);
@@ -74,17 +75,7 @@ class _ClientPageState extends State<ClientPage>
 
   /// Show a snackbar message
   void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        margin: const EdgeInsets.all(12),
-      ),
-    );
+    SnackService().showInfo(message);
   }
 
   /// Start searching for available servers

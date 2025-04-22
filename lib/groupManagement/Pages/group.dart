@@ -3,6 +3,7 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/groupManagement/functions.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/groupManagement/Pages/songs.dart';
@@ -29,10 +30,10 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
   }
 
   Future<void> _removeSongFromGroup(String jsonHash) async {
-    print(_dataProvider.groups[widget.group]!.length);
+    //print(_dataProvider.groups[widget.group]!.length);
     bool res = await _dataProvider.removeSongFromGroup(widget.group, jsonHash);
-    print(res);
-    print(_dataProvider.groups[widget.group]!.length);
+    //print(res);
+    //print(_dataProvider.groups[widget.group]!.length);
   }
 
   @override
@@ -98,27 +99,13 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                         deleteConfirmation: () =>
                             CDissmissible.showDeleteConfirmationDialog(context),
                         confirmDeleteDismiss: () async {
-                          if (widget.group == 'default') {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Lieder können nicht aus der Standardgruppe gelöscht werden.'),
-                                backgroundColor: Colors.red,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                            return false;
-                          }
                           await _removeSongFromGroup(songHash);
                           return true;
                         },
                         confirmActionDismiss: () {
                           exportSong(entry).then((value) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Song exportiert!'),
-                                duration: Duration(seconds: 2),
-                              ),
+                            SnackService().showInfo(
+                              'Song exportiert!',
                             );
                           });
                           return Future.value(false);

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:P2pChords/networking/Pages/server/functions.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/state.dart';
@@ -72,16 +73,7 @@ class _ServerPageState extends State<ServerPage>
   /// Show a snackbar message
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        margin: const EdgeInsets.all(12),
-      ),
-    );
+    SnackService().showInfo(message);
   }
 
   /// Start the server based on selected connection mode

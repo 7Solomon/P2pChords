@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:crypto/crypto.dart';
 
@@ -399,7 +400,7 @@ class SongConverter {
         nashvilleValue = ChordUtils.chordToNashville(chordText, key);
       } catch (e) {
         // Handle invalid chord conversion
-        print('Invalid chord: $chordText, error: $e, Maybe log diffrent');
+        //print('Invalid chord: $chordText, error: $e');
         nashvilleValue = chordText; // Fallback to original chord text
         continue;
       }
