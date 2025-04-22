@@ -46,12 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
-
-	
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Need BLE permission for nearby connections</string>
+	<string>This app uses Bluetooth to connect with nearby devices</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Need BLE permission for nearby connections</string>
+	<string>This app uses Bluetooth to connect with nearby devices</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Need location permission for nearby connections</string>
 	<key>NSLocationAlwaysUsageDescription</key>
@@ -60,6 +58,15 @@
 	<string>Need location permission for nearby connections</string>
 
 	<key>NSCameraUsageDescription</key>
-<string>This app needs camera access to scan QR codes</string>
+	<string>This app needs camera access to scan QR codes</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires microphone access for audio features</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app uses local network to discover nearby devices</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
