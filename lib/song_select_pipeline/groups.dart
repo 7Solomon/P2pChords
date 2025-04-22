@@ -1,5 +1,6 @@
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -59,12 +60,12 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alle Gruppen'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _dataProvider.refreshData,
-          ),
-        ],
+        //actions: [
+        //  IconButton(
+        //    icon: const Icon(Icons.refresh),
+        //    onPressed: _dataProvider.refreshData,
+        //  ),
+        //],
       ),
       body: _dataProvider.isLoading
           ? const Center(child: CircularProgressIndicator())

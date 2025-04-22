@@ -116,6 +116,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
         _currentSongIndex++;
         _currentSectionIndex = 0;
         widget.onSongChanged(_currentSongIndex);
+        widget.onSectionChanged(_currentSectionIndex);
       });
     }
   }

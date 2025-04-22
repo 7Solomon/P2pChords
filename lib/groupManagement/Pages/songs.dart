@@ -1,7 +1,7 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/data_base/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';
@@ -14,10 +14,8 @@ import 'package:provider/provider.dart';
 
 class AllSongsPage extends StatefulWidget {
   final String group;
-  final VoidCallback onSongAdded;
 
-  const AllSongsPage(
-      {super.key, required this.group, required this.onSongAdded});
+  const AllSongsPage({super.key, required this.group});
 
   @override
   _AllSongsPageState createState() => _AllSongsPageState();
@@ -62,16 +60,12 @@ class _AllSongsPageState extends State<AllSongsPage> {
   }
 
   Future<void> _addSongToGroup(String key) async {
+    //print('Adding song: $key, to group: ${widget.group}');
     Song? song = await MultiJsonStorage.loadJson(key);
-    if (song != null) {
-      await MultiJsonStorage.saveJson(
-        song,
-        group: widget.group,
-      );
+    //print(song);
 
-      // Muss vielleich noch anders gelöst werden
-      _dataProvider.refreshData();
-      widget.onSongAdded();
+    if (song != null) {
+      _dataProvider.addSong(song, groupName: widget.group);
     }
   }
 
@@ -186,9 +180,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                       deleteConfirmation: () =>
                           CDissmissible.showDeleteConfirmationDialog(context),
                       confirmDeleteDismiss: () async {
-                        await MultiJsonStorage.removeJson(key);
-                        dataProvider.refreshData();
-                        return Future.value(true);
+                        return dataProvider.removeSong(key);
                       },
                       confirmActionDismiss: () async {
                         await _addSongToGroup(key);

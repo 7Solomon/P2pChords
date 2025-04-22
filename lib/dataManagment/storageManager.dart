@@ -3,27 +3,98 @@ import 'package:P2pChords/dataManagment/comparer/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 
 class MultiJsonStorage {
   static const String _keyPrefix = 'data';
+  static bool _initialized = false;
+  static bool _recoveryModeRequired = false;
 
-  // For debug
-  static Future<void> printAllWithPrefix() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys =
-        prefs.getKeys(); // Retrieve all keys stored in SharedPreferences
+  // Initialize SharedPreferences safely before app starts
+  static Future<void> initialize() async {
+    if (_initialized) return;
 
-    // Iterate through all keys and check if they start with the given prefix
-    for (String key in keys) {
-      String? value = prefs.getString(key);
-      print('Key: $key, Value: $value');
+    try {
+      // Try to access SharedPreferences at the most basic level
+      final prefs = await SharedPreferences.getInstance();
+
+      try {
+        // Try to read the group map
+        final groupMapString = prefs.getString('$_keyPrefix:group_map');
+
+        // If we get here without error and groupMapString is valid JSON or null, we're ok
+        if (groupMapString == null || isValidJson(groupMapString)) {
+          // Initialize an empty map if needed
+          if (groupMapString == null) {
+            await prefs.setString('$_keyPrefix:group_map', '{}');
+          }
+        } else {
+          // Invalid JSON, need to reset
+          _recoveryModeRequired = true;
+        }
+      } catch (e) {
+        // Any error means we need recovery
+        debugPrint('Error checking group map: $e');
+        _recoveryModeRequired = true;
+      }
+
+      // If recovery is needed, clear everything
+      if (_recoveryModeRequired) {
+        debugPrint('Recovery mode activated - clearing all preferences');
+        await _emergencyClearAllPreferences();
+      }
+
+      _initialized = true;
+    } catch (e) {
+      debugPrint('Critical error during initialization: $e');
+      // Try one last emergency clear
+      await _emergencyResetSharedPrefs();
+      _initialized = true;
     }
   }
 
-  //static resetGroupMap() async {
-  //  final prefs = await SharedPreferences.getInstance();
-  //  await prefs.remove('$_keyPrefix:group_map');
-  //}
+  // Special method to completely clear SharedPreferences using a separate instance
+  static Future<void> _emergencyClearAllPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      // Re-initialize with an empty JSON object for group map
+      await prefs.setString('$_keyPrefix:group_map', '{}');
+      debugPrint('Emergency clear completed');
+    } catch (e) {
+      debugPrint('Error during emergency clear: $e');
+      // Last resort - try to use a brand new SharedPreferences instance
+      await _emergencyResetSharedPrefs();
+    }
+  }
+
+  // Most extreme method - tries to recreate SharedPreferences from scratch
+  static Future<void> _emergencyResetSharedPrefs() async {
+    try {
+      // Force a new instance
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      await prefs.setString('$_keyPrefix:group_map', '{}');
+      debugPrint('SharedPreferences recreated');
+    } catch (e) {
+      debugPrint('Failed to recreate SharedPreferences: $e');
+    }
+  }
+
+  // Helper to check if a string is valid JSON
+  static bool isValidJson(String? jsonString) {
+    if (jsonString == null || jsonString.isEmpty) {
+      return false;
+    }
+
+    try {
+      jsonDecode(jsonString);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   static Future<bool> compareSongData(prefs, string1, string2, songName) async {
     if (string2 != string1) {
@@ -41,20 +112,45 @@ class MultiJsonStorage {
 
   static Future<Map<String, List<String>>> getGroupMap(
       SharedPreferences prefs) async {
-    final groupMapString = prefs.getString('$_keyPrefix:group_map');
+    try {
+      // Always check if initialized
+      if (!_initialized) await initialize();
 
-    if (groupMapString == null) {
+      String? groupMapString;
+      try {
+        groupMapString = prefs.getString('$_keyPrefix:group_map');
+      } catch (e) {
+        debugPrint('Error reading group map: $e');
+        // Reset group map
+        await prefs.setString('$_keyPrefix:group_map', '{}');
+        groupMapString = '{}';
+      }
+
+      if (groupMapString == null || groupMapString.isEmpty) {
+        await prefs.setString('$_keyPrefix:group_map', '{}');
+        return <String, List<String>>{};
+      }
+
+      try {
+        Map<String, dynamic> decodedMap = jsonDecode(groupMapString);
+        Map<String, List<String>> groupMap = {};
+
+        decodedMap.forEach((key, value) {
+          if (value is List) {
+            groupMap[key] =
+                List<String>.from(value.map((item) => item.toString()));
+          }
+        });
+        return groupMap;
+      } catch (e) {
+        debugPrint('Invalid JSON in group map: $e');
+        await prefs.setString('$_keyPrefix:group_map', '{}');
+        return <String, List<String>>{};
+      }
+    } catch (e) {
+      debugPrint('Error in getGroupMap: $e');
       return <String, List<String>>{};
     }
-    Map<String, dynamic> decodedMap = jsonDecode(groupMapString);
-    Map<String, List<String>> groupMap = {};
-
-    decodedMap.forEach((key, value) {
-      if (value is List) {
-        groupMap[key] = List<String>.from(value.map((item) => item.toString()));
-      }
-    });
-    return groupMap;
   }
 
   static Future<bool> saveJson(Song song, {String? group}) async {
@@ -126,14 +222,40 @@ class MultiJsonStorage {
   }
 
   static Future<Song?> loadJson(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    String? jsonString = prefs.getString('$_keyPrefix:songs:$key');
+    try {
+      // Always check if initialized
+      if (!_initialized) await initialize();
 
-    if (jsonString != null) {
-      Map<String, dynamic> songData = jsonDecode(jsonString);
-      return Song.fromMap(songData);
+      final prefs = await SharedPreferences.getInstance();
+      String? jsonString;
+
+      try {
+        jsonString = prefs.getString('$_keyPrefix:songs:$key');
+      } catch (e) {
+        debugPrint('Error reading song data: $e');
+        return null;
+      }
+
+      if (jsonString == null || jsonString.isEmpty) {
+        return null;
+      }
+
+      try {
+        Map<String, dynamic> songData = jsonDecode(jsonString);
+        return Song.fromMap(songData);
+      } catch (e) {
+        debugPrint('Error parsing song data for key $key: $e');
+        try {
+          await prefs.remove('$_keyPrefix:songs:$key');
+        } catch (e2) {
+          debugPrint('Error removing corrupted song: $e2');
+        }
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error loading song: $e');
+      return null;
     }
-    return null;
   }
 
   static Future<void> removeJson(String key) async {
@@ -189,35 +311,67 @@ class MultiJsonStorage {
     prefs.setString('$_keyPrefix:group_map', jsonEncode(groupMap));
   }
 
-  static Future<List<String>> getAllSongHashs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final allKeys = prefs.getKeys();
-    final songKeys =
-        allKeys.where((key) => key.startsWith('$_keyPrefix:songs:'));
+  static Future<List<String>> getAllSongHashs(SharedPreferences prefs) async {
+    try {
+      Set<String> allKeys;
 
-    // Load each Hash and add to the list
-    List<String> allHashes = [];
-    for (String key in songKeys) {
-      String hash = key.substring('$_keyPrefix:songs:'.length);
-      allHashes.add(hash);
+      try {
+        allKeys = prefs.getKeys();
+      } catch (e) {
+        debugPrint('Error getting keys: $e');
+        return [];
+      }
+
+      final Iterable<String> songKeys =
+          allKeys.where((String key) => key.startsWith('$_keyPrefix:songs:'));
+
+      // Load each Hash and add to the list
+      List<String> allHashes = [];
+      for (String key in songKeys) {
+        String hash = key.substring('$_keyPrefix:songs:'.length);
+        allHashes.add(hash);
+      }
+      return allHashes;
+    } catch (e) {
+      debugPrint('Error getting all song hashes: $e');
+      return [];
     }
-    return allHashes;
   }
 
   static Future<SongData> getSavedSongsData() async {
-    final prefs = await SharedPreferences.getInstance();
+    // Make sure we've initialized properly first
+    try {
+      await initialize();
 
-    // Retrieve the data
-    Map<String, List<String>> groupMap = await getGroupMap(prefs);
-    List<String> allHashes = await getAllSongHashs();
+      final prefs = await SharedPreferences.getInstance();
 
-    Map<String, Song> songMap = {};
-    for (String hash in allHashes) {
-      Song? song = await loadJson(hash);
-      if (song != null) {
-        songMap[hash] = song;
+      Map<String, List<String>> groupMap = {};
+      Map<String, Song> songMap = {};
+
+      try {
+        // Get group map
+        groupMap = await getGroupMap(prefs);
+
+        // Get all song hashes
+        List<String> allHashes = await getAllSongHashs(prefs);
+
+        // Load all songs
+        for (String hash in allHashes) {
+          Song? song = await loadJson(hash);
+          if (song != null) {
+            songMap[hash] = song;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error building SongData: $e');
       }
+
+      return SongData.fromDataProvider(groupMap, songMap);
+    } catch (e) {
+      debugPrint('Error in getSavedSongsData: $e');
+
+      // Return empty data in case of any error
+      return SongData.fromDataProvider({}, {});
     }
-    return SongData.fromDataProvider(groupMap, songMap);
   }
 }

@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
 import 'package:P2pChords/dataManagment/converter/key_validator.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:provider/provider.dart';
 
 class InteractiveConverterPage extends StatefulWidget {
   final String rawText;
@@ -200,7 +202,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
+    final dataLoadeProvider = Provider.of<DataLoadeProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Song Conversion'),
@@ -209,7 +211,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
             icon: const Icon(Icons.save),
             onPressed: () async {
               final song = _finalizeSong();
-              bool result = await MultiJsonStorage.saveJson(song);
+              bool result = await dataLoadeProvider.addSong(song);
               if (result) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

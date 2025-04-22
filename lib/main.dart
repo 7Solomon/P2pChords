@@ -1,12 +1,26 @@
-import 'package:P2pChords/styling/Themes.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/app_ui_provider.dart';
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/mainPage/page.dart';
 import 'package:P2pChords/navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'state.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Completely clear and reset SharedPreferences in case of corruption
+  try {
+    debugPrint('Initializing SharedPreferences...');
+    await MultiJsonStorage.initialize();
+  } catch (e) {
+    debugPrint('Critical error during initialization: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [

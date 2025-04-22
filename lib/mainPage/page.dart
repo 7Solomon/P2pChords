@@ -1,5 +1,6 @@
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/mainPage/build_widgets.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';

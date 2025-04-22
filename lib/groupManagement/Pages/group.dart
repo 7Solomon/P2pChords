@@ -1,6 +1,6 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/groupManagement/functions.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
@@ -29,10 +29,10 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
   }
 
   Future<void> _removeSongFromGroup(String jsonHash) async {
-    await MultiJsonStorage.removeJsonFromGroup(widget.group, jsonHash);
-    setState(() {
-      _dataProvider.refreshData();
-    }); // Refresh the UI after deletion
+    print(_dataProvider.groups[widget.group]!.length);
+    bool res = await _dataProvider.removeSongFromGroup(widget.group, jsonHash);
+    print(res);
+    print(_dataProvider.groups[widget.group]!.length);
   }
 
   @override
@@ -55,11 +55,6 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
                 MaterialPageRoute(
                   builder: (context) => AllSongsPage(
                     group: widget.group,
-                    onSongAdded: () {
-                      setState(() {
-                        _dataProvider.refreshData();
-                      });
-                    },
                   ),
                 ),
               ),
@@ -159,13 +154,8 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
               child: const Text('Lösche Gruppe'),
               onPressed: () {
                 Navigator.of(context).pop();
-                // Call the method to delete the group
-                MultiJsonStorage.removeGroup(widget.group).then((_) {
-                  if (mounted) {
-                    Navigator.of(context).pop(); // Close the screen
-                    _dataProvider.refreshData();
-                  }
-                });
+                _dataProvider.removeGroup(widget.group);
+                Navigator.of(context).pop(); // Close the screen
               },
             ),
           ),

@@ -10,7 +10,6 @@ class FilePickerUtil {
   static Future<void> pickAndEditSongFile(
     BuildContext context, {
     String? groupName,
-    VoidCallback? onSongAdded,
   }) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -37,12 +36,7 @@ class FilePickerUtil {
                 group: groupName,
               ),
             ),
-          ).then((_) {
-            // Call the callback after returning from edit page
-            if (onSongAdded != null) {
-              onSongAdded();
-            }
-          });
+          ).then((_) {});
         }
       }
     } catch (e) {

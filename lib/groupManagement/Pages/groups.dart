@@ -2,7 +2,7 @@ import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/Pages/load_json_page.dart';
 import 'package:P2pChords/dataManagment/data_base/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
@@ -24,7 +24,8 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DataLoadeProvider>(context, listen: false).refreshData();
+      // hoffe me mal das brauchen wir nicht mehr
+      //Provider.of<DataLoadeProvider>(context, listen: false).refreshData();
     });
   }
 
@@ -51,10 +52,10 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
               onPressed: () async {
                 String newGroup = controller.text.trim();
                 if (newGroup.isNotEmpty) {
-                  await MultiJsonStorage.saveNewGroup(newGroup);
-                  final dataProvider =
-                      Provider.of<DataLoadeProvider>(context, listen: false);
-                  await dataProvider.refreshData();
+                  //await MultiJsonStorage.saveNewGroup(newGroup);
+                  Provider.of<DataLoadeProvider>(context, listen: false)
+                      .addGroup(newGroup);
+
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -178,8 +179,7 @@ class _ManageGroupPageState extends State<ManageGroupPage> {
                   await exportGroupsData(songsdata);
                 },
                 confirmDeleteDismiss: () async {
-                  await MultiJsonStorage.removeGroup(group);
-                  dataProvider.refreshData();
+                  await dataProvider.removeGroup(group);
                   setState(() {});
                 },
                 child: CListTile(

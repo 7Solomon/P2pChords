@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/chords_parsing.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 
@@ -33,23 +34,76 @@ class ChordUtils {
   static String nashvilleToChord(String nashvilleNumber, String key) {
     _checkInitialized();
 
-    // Extract base number and modifiers
-    final baseNumber = nashvilleNumber.replaceAll(RegExp(r'[^\d]'), '');
-    final modifiers = nashvilleNumber.replaceAll(RegExp(r'\d'), '');
-
-    // Get the root note from mappings
-    final rootNote = _nashvilleMappings![key]?[baseNumber];
-    if (rootNote == null) {
-      return nashvilleNumber; // Return original if not found
+    if (nashvilleNumber == "N.C." || key.isEmpty) {
+      return nashvilleNumber; // Return as-is for "No Chord" or if no key provided
     }
 
-    // Convert Nashville "-" to chord "m" for minor chords
-    String finalModifiers = modifiers;
-    if (modifiers.contains('-')) {
-      finalModifiers = modifiers.replaceAll('-', 'm');
+    // Handle slash chords in Nashville notation (e.g. "4/1")
+    if (nashvilleNumber.contains('/')) {
+      List<String> parts = nashvilleNumber.split('/');
+      if (parts.length == 2) {
+        String baseNashville = parts[0].trim();
+        String bassNashville = parts[1].trim();
+
+        // Convert each part separately
+        String baseChord = nashvilleToChord(baseNashville, key);
+
+        // For the bass part, we need to find the note corresponding to the number
+        String bassNote = "";
+        if (RegExp(r'^\d+$').hasMatch(bassNashville)) {
+          // If it's just a number, convert it to the root note
+          bassNote = _nashvilleMappings![key]![bassNashville] ?? bassNashville;
+        } else {
+          // If it has modifiers, convert the whole thing
+          bassNote = nashvilleToChord(bassNashville, key);
+        }
+
+        return "$baseChord/$bassNote";
+      }
     }
 
-    return rootNote + finalModifiers;
+    // Extract number and modifiers
+    final nashvilleRegex = RegExp(r'^(\d+)(.*)$');
+    final match = nashvilleRegex.firstMatch(nashvilleNumber);
+
+    if (match == null) {
+      // If not matching our expected format, use the existing robust parsing
+      return _fallbackNashvilleToChord(nashvilleNumber, key);
+    }
+
+    final number = match.group(1)!;
+    String modifiers = match.group(2) ?? '';
+
+    // Get the corresponding note from mappings
+    final note = _nashvilleMappings![key]![number];
+    if (note == null) {
+      return _fallbackNashvilleToChord(nashvilleNumber, key);
+    }
+
+    // Handle the dash notation for minor chords
+    if (modifiers.startsWith('-')) {
+      modifiers = 'm' + modifiers.substring(1);
+    }
+
+    return note + modifiers;
+  }
+
+  // Use the original method as fallback for complex cases
+  static String _fallbackNashvilleToChord(String nashvilleNumber, String key) {
+    // Create a temporary mapping with just this one chord
+    Map<String, String> tempResult = {};
+    Map<String, dynamic> tempChords = {"0": nashvilleNumber};
+
+    // Use the existing robust parsing function
+    tempResult = parseChords(
+      tempChords,
+      {key: _nashvilleMappings![key]!},
+      key,
+      (msg) => print("ChordUtils: $msg"), // Simple logging function
+    );
+
+    // Return the parsed result or original if parsing failed
+    return tempResult.isNotEmpty ? tempResult["0"]! : nashvilleNumber;
   }
 
   /// Convert a standard chord to Nashville notation in the specified key
@@ -63,6 +117,36 @@ class ChordUtils {
     // Validation for songKey
     if (!RegExp(r'^[A-G][#b]?$').hasMatch(key)) {
       throw FormatException('Invalid key format: $key');
+    }
+
+    // Handle slash chords (e.g., "C/G")
+    if (chord.contains('/')) {
+      List<String> parts = chord.split('/');
+      if (parts.length == 2) {
+        // Convert both parts of the slash chord independently
+        String basePart = parts[0].trim();
+        String bassPart = parts[1].trim();
+
+        // Recursive call to convert each part
+        String baseNashville = chordToNashville(basePart, key);
+
+        // For the bass note, we need to extract just the Nashville number
+        String bassNashville;
+        if (bassPart.length == 1 ||
+            (bassPart.length == 2 &&
+                (bassPart[1] == '#' || bassPart[1] == 'b'))) {
+          // If just a root note, convert normally
+          bassNashville =
+              chordToNashville(bassPart, key).replaceAll(RegExp(r'[^\d]'), '');
+        } else {
+          // If it has extensions, just use the root
+          String bassRoot = bassPart.replaceAll(RegExp(r'[^A-Ga-g#b]'), '');
+          bassNashville =
+              chordToNashville(bassRoot, key).replaceAll(RegExp(r'[^\d]'), '');
+        }
+
+        return "$baseNashville/$bassNashville";
+      }
     }
 
     // Extract root note and modifiers
@@ -84,11 +168,16 @@ class ChordUtils {
       throw FormatException("Invalid Chord: $chord");
     }
 
-    // Convert chord "m" to Nashville "-" for minor chords
+    // Handle different types of chord modifiers
     String finalModifiers = modifiers;
-    if (modifiers.startsWith('m')) {
+
+    // Convert minor chords ("m") to Nashville "-"
+    if (modifiers.startsWith('m') && !modifiers.startsWith('maj')) {
       finalModifiers = '-${modifiers.substring(1)}';
     }
+
+    // Other modifiers (sus, dim, aug, etc.) can stay as is
+    // Nashville notation uses the same notation for these
 
     return nashvilleNumber! + finalModifiers;
   }

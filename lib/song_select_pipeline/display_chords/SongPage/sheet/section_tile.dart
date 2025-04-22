@@ -1,7 +1,5 @@
-import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/line_builds.dart';
+import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

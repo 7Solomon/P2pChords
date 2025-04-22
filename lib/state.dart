@@ -1,16 +1,10 @@
-import 'dart:developer';
-import 'dart:typed_data';
-
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/networking/services/data_sync_service.dart';
 import 'package:P2pChords/networking/services/message_handler_service.dart';
 import 'package:P2pChords/networking/services/notification_service.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:nearby_connections/nearby_connections.dart';
-
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
-import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/networking/services/permission_service.dart';
 import 'package:P2pChords/networking/nearby_service.dart';
 import 'package:P2pChords/networking/websocket_service.dart';

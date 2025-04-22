@@ -1,11 +1,7 @@
-import 'dart:convert';
-import 'dart:math';
-
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -38,11 +34,12 @@ class Songoverviewpage extends StatelessWidget {
                     .getSongsInGroup(currentData.currentGroup!)[index];
                 final name = song.header.name;
                 final hash = song.hash;
-                if (song.isCorrupted()) {
-                  print('Corrupted song: $name');
-                  MultiJsonStorage.removeJson(song.hash);
-                  return Container();
-                }
+                // Dont like
+                //if (song.isCorrupted()) {
+                //  print('Corrupted song: $name');
+                //  dataProvider.removeSong(song.hash);
+                //  return Container();
+                //}
                 return CListTile(
                   title: name,
                   subtitle: song.header.authors.isNotEmpty

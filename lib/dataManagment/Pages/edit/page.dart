@@ -3,7 +3,7 @@ import 'package:P2pChords/dataManagment/Pages/edit/editor_component.dart';
 import 'package:P2pChords/dataManagment/Pages/edit/style.dart';
 import 'package:P2pChords/dataManagment/Pages/file_picker.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:crypto/crypto.dart';
@@ -273,10 +273,6 @@ class _SongEditPageState extends State<SongEditPage> {
           onTap: () => FilePickerUtil.pickAndEditSongFile(
             context,
             groupName: null,
-            onSongAdded: () {
-              Provider.of<DataLoadeProvider>(context, listen: false)
-                  .refreshData();
-            },
           ),
         ),
       ]),

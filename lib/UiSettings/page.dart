@@ -1,8 +1,9 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/UiSettings/songWithControlls.dart';
-import 'package:P2pChords/UiSettings/ui_styles.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:P2pChords/state.dart';
 
 import 'package:flutter/material.dart';
@@ -100,8 +101,8 @@ class _UisettingsPageState extends State<UisettingsPage> {
         return false;
       }
 
-      if (dataLoader.songs != null && dataLoader.songs!.isNotEmpty) {
-        String songHash = dataLoader.songs!.values.first.hash;
+      if (dataLoader.songs.isNotEmpty) {
+        String songHash = dataLoader.songs.values.first.hash;
         String? group = dataLoader.getGroupOfSong(songHash);
         if (group == null) {
           return false;
@@ -148,7 +149,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
           builder: (context, currentSelection, dataLoader, sheetUiProvider,
               connectionProvider, _) {
             // Error handling for missing data
-            if (dataLoader.songs == null || dataLoader.songs!.isEmpty) {
+            if (dataLoader.songs.isEmpty) {
               return const Scaffold(
                 body: Center(child: Text('Keine Lieder vorhanden')),
               );

@@ -119,7 +119,7 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
               foregroundColor: widget.foregroundColor ?? Colors.white,
               elevation: widget.elevation,
               onPressed: () {
-                print("Main button pressed");
+                //print("Main button pressed");
                 _toggleMainDial();
               },
               child: AnimatedIcon(
@@ -134,7 +134,7 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
   }
 
   void _toggleMainDial() {
-    print("Toggling dial: current state=$_isOpen");
+    //print("Toggling dial: current state=$_isOpen");
     setState(() {
       _isOpen = !_isOpen;
       _activeCategory = null;
@@ -144,7 +144,7 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
         _animationController.reverse();
       }
     });
-    print("After toggle: new state=$_isOpen");
+    //print("After toggle: new state=$_isOpen");
   }
 
   void _openCategory(SpeedDialCategory category) {

@@ -1,7 +1,7 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/Pages/file_picker.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
@@ -25,9 +25,6 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
       context,
       groupName: _groupSelector.text.isNotEmpty ? _groupSelector.text : null,
     );
-    if (mounted) {
-      Provider.of<DataLoadeProvider>(context, listen: false).refreshData();
-    }
     setState(() => _isLoading = false);
   }
 

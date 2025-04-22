@@ -1,8 +1,7 @@
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/provider.dart';
-import 'package:P2pChords/dataManagment/storageManager.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/quick_select_overlay/overlay.dart'
-    as quick_overlay;
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/quick_select_overlay/overlay.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
@@ -63,13 +62,14 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             ),
           );
         }
-
+        // Get Current Data
         final List<Song> songs =
             dataLoader.getSongsInGroup(currentSelection.currentGroup!);
         final int songIndex = dataLoader.getSongIndex(
             currentSelection.currentGroup!, currentSelection.currentSongHash!);
         final Song? currentSong =
             dataLoader.getSongByHash(currentSelection.currentSongHash!);
+        // return Empty check
         if (songs.isEmpty) {
           return const Scaffold(
             body: Center(
@@ -80,6 +80,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
 
         if (songIndex == -1 || currentSong == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            print(currentSong);
+            print(dataLoader.songs.keys
+                .contains(currentSelection.currentSongHash!));
             displaySnack('Song Index ist -1 oder currentSong is null');
           });
 
@@ -130,13 +133,29 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                   }
                 },
                 onSongChanged: (index) {
+                  print('Changing to song index: $index');
                   String? hash = dataLoader.getHashByIndex(
                       currentSelection.currentGroup!, index);
+                  print('got hash: $hash');
                   if (hash == null) {
                     displaySnack('Song nicht gefunden');
                     return;
                   }
                   currentSelection.setCurrentSong(hash);
+                  print(
+                      'Songs contain Hash: ${dataLoader.songs.keys.contains(hash)}');
+                  print('*');
+                  print(
+                      "Group songs: ${dataLoader.groups[currentSelection.currentGroup!]}");
+                  print("Available songs: ${dataLoader.songs.keys.toList()}");
+                  final groupSongs =
+                      dataLoader.groups[currentSelection.currentGroup!]!;
+                  for (int i = 0; i < groupSongs.length; i++) {
+                    final hash = groupSongs[i];
+                    final exists = dataLoader.songs.containsKey(hash);
+                    print("Song $i: $hash - exists in DB: $exists");
+                  }
+
                   if (connectionProvider.userState == UserState.server) {
                     connectionProvider.dataSyncService
                         .sendUpdateToAllClients(currentSelection.toJson());
