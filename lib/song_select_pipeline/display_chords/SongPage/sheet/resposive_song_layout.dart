@@ -33,7 +33,12 @@ class ResponsiveSongLayout extends StatelessWidget {
         // Create a key for the current section for scrolling
         // Collect sections to display
         final sectionsToDisplay = _collectSections(uiVariables);
-        print("Sections to display: ${sectionsToDisplay.length}");
+
+        // DEBUGGING
+        //for (int i = 0; i < sectionsToDisplay.length; i++) {
+        //  print('Section ${i + 1}: ${sectionsToDisplay[i].section.title}');
+        //}
+
         // Safety check
         if (sectionsToDisplay.isEmpty) {
           return const Center(child: Text("No sections to display"));

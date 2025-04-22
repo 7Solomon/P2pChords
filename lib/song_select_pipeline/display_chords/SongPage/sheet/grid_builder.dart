@@ -37,13 +37,27 @@ class CGridViewBuild extends StatelessWidget {
       sectionKeys[i] = GlobalKey();
     }
 
+    // Find the index of the current section in sectionsToDisplay
+    int indexToScroll = -1;
+    for (int i = 0; i < sectionsToDisplay.length; i++) {
+      SectionTile tile = sectionsToDisplay[i];
+      if (tile.songIndex == currentSongIndex &&
+          tile.sectionIndex == currentSectionIndex) {
+        indexToScroll = i;
+        break;
+      }
+    }
     // Scroll to current section after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (currentSectionIndex >= 0 &&
-          currentSectionIndex < sectionsToDisplay.length &&
-          sectionKeys[currentSectionIndex]?.currentContext != null) {
+      if (indexToScroll >= 0 &&
+          indexToScroll < sectionsToDisplay.length &&
+          sectionKeys[indexToScroll]?.currentContext != null) {
+        //final sectionName = sectionsToDisplay[indexToScroll].section.title;
+        //print('currentSectionIndex: $currentSectionIndex');
+        //print('Actual display index: $indexToScroll');
+        //print('Scrolling to section: $sectionName');
         Scrollable.ensureVisible(
-          sectionKeys[currentSectionIndex]!.currentContext!,
+          sectionKeys[indexToScroll]!.currentContext!,
           duration: const Duration(milliseconds: 300),
           alignment: 0.0,
         );
