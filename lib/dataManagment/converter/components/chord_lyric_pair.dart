@@ -1,8 +1,4 @@
-import 'dart:math';
-import 'dart:ui';
-
 import 'package:P2pChords/dataManagment/converter/functions.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/converter/components/chord_editor.dart';
 
@@ -16,7 +12,8 @@ class ChordLyricPair extends StatefulWidget {
   final Function(int, int, String) onUpdateLineText;
   final Function(int, int) onRemoveLine;
   final Function(int, int) onMoveLine;
-  final Function(int, int) onSplitPair; // Add this new callback
+  final Function(int, int) onSplitPair;
+  final String songKey;
 
   const ChordLyricPair({
     super.key,
@@ -28,7 +25,8 @@ class ChordLyricPair extends StatefulWidget {
     required this.onUpdateLineText,
     required this.onRemoveLine,
     required this.onMoveLine,
-    required this.onSplitPair, // Add this parameter
+    required this.onSplitPair,
+    required this.songKey,
   });
 
   @override
@@ -102,7 +100,7 @@ class _ChordLyricPairState extends State<ChordLyricPair> {
               ),
               const Spacer(),
 
-              // Add split button
+              // Split button
               IconButton(
                 icon: const Icon(Icons.call_split, size: 16),
                 tooltip: 'Split into separate lines',
@@ -117,11 +115,13 @@ class _ChordLyricPairState extends State<ChordLyricPair> {
 
           // Chord editor and lyrics field
           ChordEditor(
-            text: widget.chordLine.text,
+            chordText: widget.chordLine.text,
             onTextChanged: _updateChordText,
             accentColor: Colors.blue,
-            // Don't show text field since we need to align chords with lyrics
+            fontSize: 16,
             showTextField: false,
+            songKey: widget.songKey,
+            lyricsRefrence: widget.lyricLine.text,
           ),
 
           // Lyrics field

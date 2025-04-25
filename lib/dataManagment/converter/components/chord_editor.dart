@@ -7,21 +7,23 @@ import 'package:P2pChords/dataManagment/converter/functions.dart';
 
 /// A reusable widget for editing chords visually
 class ChordEditor extends StatefulWidget {
-  final String text;
+  final String chordText;
   final Function(String) onTextChanged;
   final Color accentColor;
   final bool showTextField;
   final double fontSize;
-  final bool monospaceText;
+  final String songKey;
+  final String? lyricsRefrence;
 
   const ChordEditor({
     super.key,
-    required this.text,
+    required this.chordText,
     required this.onTextChanged,
+    required this.fontSize,
     this.accentColor = Colors.amber,
     this.showTextField = true,
-    this.fontSize = 16.0,
-    this.monospaceText = true,
+    this.songKey = '',
+    this.lyricsRefrence,
   });
 
   @override
@@ -29,55 +31,54 @@ class ChordEditor extends StatefulWidget {
 }
 
 class _ChordEditorState extends State<ChordEditor> {
-  late TextEditingController _textController;
   final SongConverter converter = SongConverter();
   List<Chord> _chords = [];
   bool _isDraggingChord = false;
+  double? _dragStartX;
+  int? _initialChordPosition;
   int? _selectedChordIndex;
   String? _songKey;
 
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: widget.text);
-
-    _songKey = converter.key;
+    _songKey = widget.songKey;
     _parseChords();
   }
 
   @override
   void didUpdateWidget(ChordEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      _textController.text = widget.text;
+    if (oldWidget.chordText != widget.chordText) {
       _parseChords();
     }
 
-    // Update if key changed
-    final currentKey = converter.key;
-    if (_songKey != currentKey) {
-      _songKey = currentKey;
+    if (oldWidget.songKey != widget.songKey) {
+      _songKey = widget.songKey;
       setState(() {});
     }
   }
 
   @override
   void dispose() {
-    _textController.dispose();
     super.dispose();
   }
 
   // Parse chord text into positions and values
   void _parseChords() {
     _chords = [];
-    final chordText = widget.text;
 
     // Find all chord positions and values using regex
-    final chordMatches = RegExp(r'(\S+)').allMatches(chordText);
-
+    final chordMatches = RegExp(r'(\S+)').allMatches(widget.chordText);
+    print(widget.chordText);
+    print(widget.lyricsRefrence);
     for (var match in chordMatches) {
       final chordValue = match.group(0)!;
       final position = match.start;
+      print({
+        'chordValue': chordValue,
+        'position': position,
+      });
       _chords.add(Chord(position: position, value: chordValue));
     }
   }
@@ -132,7 +133,7 @@ class _ChordEditorState extends State<ChordEditor> {
     // Check if the new position conflicts with other chords
     final movingChord = _chords[chordIndex];
     final chordWidth = movingChord.value.length;
-
+    //print('Moving chord: ${movingChord.value} to $newPosition');
     for (int i = 0; i < _chords.length; i++) {
       if (i == chordIndex) continue; // Skip the chord being moved
 
@@ -203,7 +204,7 @@ class _ChordEditorState extends State<ChordEditor> {
   // Update the chord line text
   void _updateChordLine() {
     final newChordText = _chordsToText();
-    _textController.text = newChordText;
+    //_textController.text = newChordText;
     widget.onTextChanged(newChordText);
   }
 
@@ -234,13 +235,13 @@ class _ChordEditorState extends State<ChordEditor> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Container(
-        width: _calculateTextWidth(_textController.text.length + 10),
+      child: SizedBox(
+        width: _calculateTextWidth(widget.chordText.length + 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Chords line with visual positioning
-            Container(
+            SizedBox(
               height: 40, // Increased height to accommodate Nashville notation
               child: Stack(
                 clipBehavior: Clip.none,
@@ -268,12 +269,14 @@ class _ChordEditorState extends State<ChordEditor> {
 
                     // Get Nashville notation for this chord
                     String nashville = "";
+                    //print(_songKey);
                     if (_songKey != null && _songKey!.isNotEmpty) {
                       try {
                         nashville =
                             ChordUtils.chordToNashville(chord.value, _songKey!);
                       } catch (e) {
                         nashville = "?";
+                        //print('Error converting to Nashville: $e');
                       }
                     }
 
@@ -282,19 +285,29 @@ class _ChordEditorState extends State<ChordEditor> {
                       child: GestureDetector(
                         onTap: () => _editChord(index),
                         onLongPress: () => _deleteChord(index),
-                        onPanStart: (_) {
+                        onPanStart: (details) {
                           setState(() {
                             _isDraggingChord = true;
                             _selectedChordIndex = index;
+                            _dragStartX = details.localPosition.dx;
+                            _initialChordPosition = chord.position;
                           });
                         },
                         onPanUpdate: (details) {
                           if (_isDraggingChord &&
                               _selectedChordIndex == index) {
-                            final position = _getPositionFromX(
-                              details.localPosition.dx + xPosition,
-                            );
-                            _updateChordPosition(index, position);
+                            // Calculate delta movement
+                            final deltaX =
+                                details.localPosition.dx - _dragStartX!;
+
+                            // Convert pixel movement to character position change
+                            final charDelta = (deltaX / 9.5)
+                                .round(); // Using your existing character width
+
+                            // Apply delta to original position
+                            final newPosition =
+                                _initialChordPosition! + charDelta;
+                            _updateChordPosition(index, newPosition);
                           }
                         },
                         onPanEnd: (_) {
@@ -337,8 +350,7 @@ class _ChordEditorState extends State<ChordEditor> {
                                       ),
                                     ),
                                     TextSpan(
-                                      text:
-                                          nashville.isNotEmpty ? nashville : '',
+                                      text: nashville,
                                       style: TextStyle(
                                         fontSize: (widget.fontSize - 2) *
                                             0.7, // Smaller font for subscript
@@ -347,8 +359,7 @@ class _ChordEditorState extends State<ChordEditor> {
                                         fontFeatures: const [
                                           FontFeature.subscripts()
                                         ],
-                                        height:
-                                            1.5, // Adjusts the vertical position
+                                        height: 1.5,
                                       ),
                                     ),
                                   ],
@@ -359,34 +370,10 @@ class _ChordEditorState extends State<ChordEditor> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
-
-            // Text field (optional)
-            if (widget.showTextField)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: TextField(
-                  controller: _textController,
-                  onChanged: (value) {
-                    widget.onTextChanged(value);
-                    _parseChords();
-                  },
-                  style: TextStyle(
-                    fontSize: widget.fontSize,
-                    height: 1.0,
-                    fontFamily: widget.monospaceText ? 'monospace' : null,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Enter chords',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

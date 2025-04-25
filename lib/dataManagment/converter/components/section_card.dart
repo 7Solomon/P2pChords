@@ -14,6 +14,7 @@ class SectionCard extends StatelessWidget {
   final Function(int) onAddLine;
   final Function(int, int) onMoveLine;
   final Function(int, int) onSplitChordLyricPair;
+  final String songKey;
 
   const SectionCard({
     super.key,
@@ -27,6 +28,7 @@ class SectionCard extends StatelessWidget {
     required this.onAddLine,
     required this.onMoveLine,
     required this.onSplitChordLyricPair,
+    required this.songKey,
   });
 
   @override
@@ -85,7 +87,7 @@ class SectionCard extends StatelessWidget {
     final List<Widget> lineWidgets = [];
 
     for (int i = 0; i < lines.length; i++) {
-      final isChordLine = lines[i].isChordLine;
+      //final isChordLine = lines[i].isChordLine;
       final bool isPaired = i < lines.length - 1 &&
           lines[i].isChordLine &&
           !lines[i + 1].isChordLine &&
@@ -93,7 +95,6 @@ class SectionCard extends StatelessWidget {
           !lines[i + 1].wasSplit; // Check that it wasn't split
 
       if (isPaired) {
-        // Create a chord-lyric pair with the split callback
         lineWidgets.add(ChordLyricPair(
           chordLine: lines[i],
           lyricLine: lines[i + 1],
@@ -103,7 +104,9 @@ class SectionCard extends StatelessWidget {
           onUpdateLineText: onUpdateLineText,
           onRemoveLine: onRemoveLine,
           onMoveLine: onMoveLine,
-          onSplitPair: onSplitChordLyricPair, // Pass the callback
+          onSplitPair: onSplitChordLyricPair,
+          songKey: songKey,
+          // Replace with your desired color
         ));
         i++; // Skip the next line as we've already included it
       } else {

@@ -127,10 +127,10 @@ class _LineItemState extends State<LineItem> {
           // Content: chord editor or lyric text field
           isChordLine
               ? ChordEditor(
-                  text: widget.line.text,
+                  chordText: widget.line.text,
                   onTextChanged: _updateLineText,
                   accentColor: accentColor,
-                  showTextField: !isChordLine,
+                  fontSize: 16,
                 )
               : TextField(
                   controller: _textController,

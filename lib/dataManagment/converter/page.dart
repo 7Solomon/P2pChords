@@ -63,7 +63,10 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
 
   // Add this method to handle key changes
   void _onKeyChanged(String newKey) {
-    converter.key = newKey;
+    if (newKey.trim().isEmpty) {
+      return;
+    }
+    setState(() {});
   }
 
   void _splitChordLyricPair(int sectionIndex, int chordLineIndex) {
@@ -214,14 +217,11 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
               final song = _finalizeSong();
               bool result = await dataLoadeProvider.addSong(song);
               if (result) {
-                //ScaffoldMessenger.of(context).showSnackBar(
-                //  SnackBar(
-                //      content:
-                //          Text('')),
-                //);
                 SnackService().showSuccess(
                     'Erfolgreich gespeichert: ${song.header.name}');
-                Navigator.of(context).pop();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
               } else {
                 SnackService().showError('Fehler beim Speichern!');
               }
@@ -351,6 +351,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
                 onAddLine: _addLineToSection,
                 onMoveLine: _moveLine,
                 onSplitChordLyricPair: _splitChordLyricPair,
+                songKey: keyController.text,
               ),
 
             // Add new section button

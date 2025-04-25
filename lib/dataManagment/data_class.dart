@@ -160,6 +160,29 @@ class Song {
     return hash.isEmpty || header.name.isEmpty || sections.isEmpty;
   }
 
+  toRawString() {
+    String rawString = '';
+    for (var section in sections) {
+      rawString += [section.title].toString() + '\n';
+      rawString += '\n';
+
+      for (var line in section.lines) {
+        String chordLine = '';
+        for (var chord in line.chords) {
+          while (line.chords.length < chord.position) {
+            chordLine += ' ';
+          }
+          chordLine += chord.value;
+        }
+        rawString += chordLine + '\n';
+        rawString += line.lyrics + '\n';
+
+        rawString += '\n';
+      }
+    }
+    return rawString;
+  }
+
   factory Song.empty() {
     return Song(
       hash: sha256.convert(utf8.encode('empty')).toString(),
