@@ -4,9 +4,8 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui' as ui; // Import dart:ui for TextPainter
+import 'dart:ui' as ui;
 
-// LineSegment class remains the same
 class LineSegment {
   final String text;
   final List<Chord> chords;

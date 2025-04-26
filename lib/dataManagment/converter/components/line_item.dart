@@ -5,7 +5,6 @@ import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
 
-/// Widget for displaying a single line (chord or lyric)
 class LineItem extends StatefulWidget {
   final PreliminaryLine line;
   final int sectionIndex;

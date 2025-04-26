@@ -192,7 +192,7 @@ class SongConverter {
       finalSections.add(
         SongSection(
           title: prelimSection.title,
-          lines: processLyricLines(sectionLines),
+          lines: processReviewedLines(prelimSection.lines),
         ),
       );
     }
