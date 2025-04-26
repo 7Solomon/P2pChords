@@ -134,7 +134,6 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     return;
                   }
                   currentSelection.setCurrentSong(hash);
-
                   if (connectionProvider.userState == UserState.server) {
                     connectionProvider.dataSyncService
                         .sendUpdateToAllClients(currentSelection.toJson());

@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:P2pChords/dataManagment/converter/components/chord_editor.dart';
+import 'package:P2pChords/dataManagment/converter/components/chord_editor.dart'; // Ensure import
 import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +33,6 @@ class LineItem extends StatefulWidget {
 class _LineItemState extends State<LineItem> {
   late TextEditingController _textController;
 
-  //bool _showRawChordText = false; // FOR implemettaion of just chord line
   @override
   void initState() {
     super.initState();
@@ -121,16 +120,23 @@ class _LineItemState extends State<LineItem> {
               ),
             ],
           ),
-
           const SizedBox(height: 8),
 
           // Content: chord editor or lyric text field
           isChordLine
-              ? ChordEditor(
-                  chordText: widget.line.text,
-                  onTextChanged: _updateLineText,
-                  accentColor: accentColor,
-                  fontSize: 16,
+              ? SingleChildScrollView(
+                  // Wrap standalone ChordEditor in ScrollView
+                  scrollDirection: Axis.horizontal,
+                  child: ChordEditor(
+                    chordText: widget.line.text,
+                    onTextChanged: _updateLineText,
+                    accentColor: accentColor,
+                    fontSize: 16, // Adjust as needed
+                    editorHeight: 40, // Adjust as needed
+                    // NOTE: Do NOT pass getXFromPosition, getPositionFromX,
+                    // lyricsLength, requiredWidth, or songKey here.
+                    // Let ChordEditor use its fallback standalone mode.
+                  ),
                 )
               : TextField(
                   controller: _textController,
@@ -142,21 +148,6 @@ class _LineItemState extends State<LineItem> {
                         EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 ),
-
-          // Help text for chord lines
-          // is unecessary looks verbose
-          //if (isChordLine)
-          //  Padding(
-          //    padding: const EdgeInsets.only(top: 8),
-          //    child: Text(
-          //      '• Tap to add chord, drag to reposition, tap to edit, long press to delete',
-          //      style: TextStyle(
-          //        fontSize: 12,
-          //        color: Colors.grey.shade700,
-          //        fontStyle: FontStyle.italic,
-          //      ),
-          //    ),
-          //  ),
         ],
       ),
     );

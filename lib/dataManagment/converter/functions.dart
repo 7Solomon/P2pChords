@@ -45,8 +45,6 @@ class PreliminaryLine {
 }
 
 class SongConverter {
-  // Singeltone
-
   SongConverter();
 
   String key = "";

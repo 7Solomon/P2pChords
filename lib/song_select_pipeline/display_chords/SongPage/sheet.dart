@@ -61,7 +61,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     _currentSongIndex = widget.songIndex;
 
     // Line builder function
-    _sectionBuilder = LineBuildFunction(context, widget.currentKey);
+    _sectionBuilder = LineBuildFunction(context);
   }
 
   @override
@@ -83,7 +83,7 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
 
     // For LineBuilderFunction, check if the current key or uiVariables have changed, changed to just key
     if (oldWidget.currentKey != widget.currentKey) {
-      _sectionBuilder = LineBuildFunction(context, widget.currentKey);
+      _sectionBuilder = LineBuildFunction(context);
     }
   }
 
