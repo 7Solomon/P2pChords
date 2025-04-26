@@ -52,7 +52,7 @@ class SheetUiProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final String jsonData = jsonEncode(toJson());
-      print('Saving SheetUiProvider state: $jsonData');
+      //print('Saving SheetUiProvider state: $jsonData');
       await prefs.setString('sheet_ui_settings', jsonData);
     } catch (e) {
       debugPrint('Error saving SheetUiProvider state: $e');

@@ -3,6 +3,7 @@ import 'package:P2pChords/dataManagment/Pages/file_picker.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
@@ -21,10 +22,27 @@ class _JsonFilePickerPageState extends State<JsonFilePickerPage> {
   Future<void> _pickFile() async {
     setState(() => _isLoading = true);
 
-    await FilePickerUtil.pickAndEditSongFile(
+    Song? song = await FilePickerUtil.pickSongFile(
       context,
-      groupName: _groupSelector.text.isNotEmpty ? _groupSelector.text : null,
     );
+
+    if (song != null && mounted) {
+      // Navigate to a new instance of the editor with the loaded song
+      Navigator.pushReplacement(
+        // Use pushReplacement to replace the current editor
+        context,
+        MaterialPageRoute(
+          builder: (context) => SongEditPage(
+            song: song,
+            group: _groupSelector.text.isNotEmpty ? _groupSelector.text : null,
+          ),
+        ),
+      );
+    } else if (song == null) {
+      // Handle case where no file was picked or parsing failed
+      SnackService()
+          .showInfo('Keine Datei geladen oder es ist ein Fehler aufgetreten.');
+    }
     setState(() => _isLoading = false);
   }
 

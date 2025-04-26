@@ -83,13 +83,36 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     setState(() {
       final section = preliminaryData.sections[sectionIndex];
 
-      // The chord line should already be marked as a chord line, but let's ensure it
-      section.lines[chordLineIndex].isChordLine = true;
-      section.lines[chordLineIndex].wasSplit = true; // Set the flag
+      // Ensure wasSplit is set to true for both lines when splitting
+      if (chordLineIndex < section.lines.length) {
+        section.lines[chordLineIndex].isChordLine =
+            true; // Ensure type is correct
+        section.lines[chordLineIndex].wasSplit = true; // Set the flag
+      }
+      if (chordLineIndex + 1 < section.lines.length) {
+        section.lines[chordLineIndex + 1].isChordLine =
+            false; // Ensure type is correct
+        section.lines[chordLineIndex + 1].wasSplit = true; // Set the flag
+      }
+    });
+  }
 
-      // The lyric line should already be marked as not a chord line, but let's ensure it
-      section.lines[chordLineIndex + 1].isChordLine = false;
-      section.lines[chordLineIndex + 1].wasSplit = true; // Set the flag
+  // --- NEW: Callback to combine lines ---
+  void _combineLines(int sectionIndex, int chordLineIndex) {
+    setState(() {
+      final section = preliminaryData.sections[sectionIndex];
+      // Ensure wasSplit is set to false for both lines when combining
+      if (chordLineIndex < section.lines.length) {
+        section.lines[chordLineIndex].wasSplit =
+            false; // Mark chord line as combined
+      }
+      // Check bounds for lyric line
+      if (chordLineIndex + 1 < section.lines.length &&
+          !section.lines[chordLineIndex + 1].isChordLine) {
+        // Ensure it's a lyric line
+        section.lines[chordLineIndex + 1].wasSplit =
+            false; // Mark lyric line as combined
+      }
     });
   }
 
@@ -351,6 +374,8 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
                 sectionIndex < preliminaryData.sections.length;
                 sectionIndex++)
               SectionCard(
+                key: ValueKey(
+                    'section_$sectionIndex'), // Add key for state management
                 section: preliminaryData.sections[sectionIndex],
                 sectionIndex: sectionIndex,
                 onUpdateSectionTitle: _updateSectionTitle,
@@ -361,6 +386,8 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
                 onAddLine: _addLineToSection,
                 onMoveLine: _moveLine,
                 onSplitChordLyricPair: _splitChordLyricPair,
+                // --- ADDED: Pass the combine callback ---
+                onCombineLines: _combineLines,
                 songKey: keyController.text,
               ),
 

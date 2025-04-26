@@ -1,8 +1,8 @@
 import 'dart:math';
 
-import 'package:P2pChords/dataManagment/converter/components/chord_editor.dart'; // Ensure import
+// Assuming ChordEditor is defined here based on previous context
+import 'package:P2pChords/dataManagment/converter/components/chord_editor.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
 
 class LineItem extends StatefulWidget {
@@ -13,6 +13,8 @@ class LineItem extends StatefulWidget {
   final Function(int, int) onToggleLineType;
   final Function(int, int) onRemoveLine;
   final Function(int, int) onMoveLine;
+  // Keep combine callback
+  final Function(int, int)? onCombineLines;
 
   const LineItem({
     super.key,
@@ -23,6 +25,7 @@ class LineItem extends StatefulWidget {
     required this.onToggleLineType,
     required this.onRemoveLine,
     required this.onMoveLine,
+    this.onCombineLines,
   });
 
   @override
@@ -30,6 +33,7 @@ class LineItem extends StatefulWidget {
 }
 
 class _LineItemState extends State<LineItem> {
+  // Keep controller for lyric TextField
   late TextEditingController _textController;
 
   @override
@@ -41,8 +45,27 @@ class _LineItemState extends State<LineItem> {
   @override
   void didUpdateWidget(LineItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.line.text != widget.line.text) {
-      _textController.text = widget.line.text;
+    // Update lyric controller only if it's not a chord line
+    if (!widget.line.isChordLine && oldWidget.line.text != widget.line.text) {
+      // Use WidgetsBinding to schedule update after build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _textController.text != widget.line.text) {
+          _textController.text = widget.line.text;
+          // Optionally move cursor to end
+          _textController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _textController.text.length),
+          );
+        }
+      });
+    }
+    // If switching from lyric to chord, ensure controller has latest text
+    // (ChordEditor will take over displaying/editing)
+    else if (widget.line.isChordLine && !oldWidget.line.isChordLine) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _textController.text != widget.line.text) {
+          _textController.text = widget.line.text;
+        }
+      });
     }
   }
 
@@ -52,6 +75,7 @@ class _LineItemState extends State<LineItem> {
     super.dispose();
   }
 
+  // Keep helper for consistency
   void _updateLineText(String newText) {
     widget.onUpdateLineText(widget.sectionIndex, widget.lineIndex, newText);
   }
@@ -59,94 +83,115 @@ class _LineItemState extends State<LineItem> {
   @override
   Widget build(BuildContext context) {
     final isChordLine = widget.line.isChordLine;
-    final accentColor = isChordLine ? Colors.amber : Colors.green;
+    // Use orange for chords, green for lyrics
+    final Color borderColor =
+        isChordLine ? Colors.amber.shade200 : Colors.green.shade200;
+    final Color backgroundColor =
+        isChordLine ? Colors.amber.shade50 : Colors.green.shade50;
+    final Color accentColor = isChordLine
+        ? Colors.amber.shade800
+        : Colors.green.shade800; // For text/icons
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8.0),
+      margin: const EdgeInsets.symmetric(
+          vertical: 4.0), // Use symmetric vertical margin
       padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        border: Border.all(color: accentColor.shade200),
+        // Use dynamic colors based on line type
+        border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(8.0),
-        color: accentColor.shade50,
+        color: backgroundColor,
       ),
-      child: Column(
+      child: Row(
+        // Use Row for main layout
         children: [
-          // Header with type toggle and actions
-          Row(
-            children: [
-              // Chord/lyric toggle switch
-              Switch(
-                value: isChordLine,
-                onChanged: (value) => widget.onToggleLineType(
-                    widget.sectionIndex, widget.lineIndex),
-                activeColor: Colors.amber.shade800,
-                inactiveThumbColor: Colors.green.shade800,
-                activeTrackColor: Colors.amber.shade200,
-                inactiveTrackColor: Colors.green.shade200,
-              ),
-              Text(
-                isChordLine ? 'Chord Line' : 'Lyric Line',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isChordLine
-                      ? Colors.amber.shade800
-                      : Colors.green.shade800,
+          Expanded(
+            child: Column(
+              // Use Column for content (editor/textfield)
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Switch(
+                  value: isChordLine,
+                  onChanged: (value) => widget.onToggleLineType(
+                      widget.sectionIndex, widget.lineIndex),
+                  activeColor: Colors.amber.shade800, // Chord color
+                  inactiveThumbColor: Colors.green.shade800, // Lyric color
+                  activeTrackColor: Colors.amber.shade200,
+                  inactiveTrackColor: Colors.green.shade200,
                 ),
-              ),
-
-              const Spacer(),
-
-              // Move and delete actions
-              IconButton(
-                icon: const Icon(Icons.arrow_upward, size: 20),
-                onPressed: widget.lineIndex > 0
-                    ? () => widget.onMoveLine(
-                        widget.sectionIndex, widget.lineIndex - 1)
-                    : null,
-                tooltip: 'Move up',
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_downward, size: 20),
-                onPressed: () =>
-                    widget.onMoveLine(widget.sectionIndex, widget.lineIndex),
-                tooltip: 'Move down',
-              ),
-              IconButton(
-                icon: const Icon(Icons.clear, size: 20),
-                onPressed: () =>
-                    widget.onRemoveLine(widget.sectionIndex, widget.lineIndex),
-                tooltip: 'Remove line',
-              ),
-            ],
+                Text(
+                  isChordLine ? 'Chord Line' : 'Lyric Line',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: accentColor, // Use dynamic accent color
+                  ),
+                ),
+                isChordLine
+                    ? SingleChildScrollView(
+                        // Keep ScrollView for ChordEditor
+                        scrollDirection: Axis.horizontal,
+                        child: ChordEditor(
+                          // Pass necessary props for standalone ChordEditor
+                          chordText: widget.line.text,
+                          onTextChanged: _updateLineText,
+                          accentColor: accentColor, // Pass dynamic accent color
+                          fontSize: 16, // Example font size
+                          editorHeight: 40, // Example height
+                          // Let ChordEditor handle its internal logic
+                        ),
+                      )
+                    : TextField(
+                        controller: _textController,
+                        onChanged: _updateLineText, // Use helper
+                        decoration: const InputDecoration(
+                          hintText: 'Enter lyrics',
+                          // Restore simpler border for TextField
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style:
+                            TextStyle(color: accentColor), // Style lyric text
+                      ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-
-          // Content: chord editor or lyric text field
-          isChordLine
-              ? SingleChildScrollView(
-                  // Wrap standalone ChordEditor in ScrollView
-                  scrollDirection: Axis.horizontal,
-                  child: ChordEditor(
-                    chordText: widget.line.text,
-                    onTextChanged: _updateLineText,
-                    accentColor: accentColor,
-                    fontSize: 16, // Adjust as needed
-                    editorHeight: 40, // Adjust as needed
-                    // NOTE: Do NOT pass getXFromPosition, getPositionFromX,
-                    // lyricsLength, requiredWidth, or songKey here.
-                    // Let ChordEditor use its fallback standalone mode.
+          // Action Buttons Column
+          Column(
+              mainAxisSize: MainAxisSize.min, // Take minimum space
+              children: [
+                // Combine Button (Conditional)
+                if (widget.onCombineLines != null)
+                  IconButton(
+                    icon: const Icon(Icons.merge_type,
+                        color: Colors
+                            .blue), // Keep blue for merge? Or use a neutral color?
+                    tooltip: 'Combine with next line',
+                    onPressed: () => widget.onCombineLines!(
+                        widget.sectionIndex, widget.lineIndex),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                )
-              : TextField(
-                  controller: _textController,
-                  onChanged: _updateLineText,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter lyrics',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
+                //IconButton(
+                //  icon: const Icon(Icons.arrow_downward, color: Colors.black54),
+                //  tooltip: 'Move Line Down',
+                //  onPressed: () =>
+                //      widget.onMoveLine(widget.sectionIndex, widget.lineIndex),
+                //  iconSize: 20,
+                //  padding: EdgeInsets.zero,
+                //  constraints: const BoxConstraints(),
+                //),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Delete Line',
+                  onPressed: () => widget.onRemoveLine(
+                      widget.sectionIndex, widget.lineIndex),
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
+              ])
         ],
       ),
     );

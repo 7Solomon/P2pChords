@@ -12,8 +12,11 @@ class SectionCard extends StatelessWidget {
   final Function(int, int) onToggleLineType;
   final Function(int, int) onRemoveLine;
   final Function(int) onAddLine;
-  final Function(int, int) onMoveLine;
+  final Function(int, int)
+      onMoveLine; // Assuming direction is handled within callback
   final Function(int, int) onSplitChordLyricPair;
+  // --- ADDED: Callback for combining lines ---
+  final Function(int, int) onCombineLines;
   final String songKey;
 
   const SectionCard({
@@ -28,6 +31,8 @@ class SectionCard extends StatelessWidget {
     required this.onAddLine,
     required this.onMoveLine,
     required this.onSplitChordLyricPair,
+    // --- ADDED: Required parameter ---
+    required this.onCombineLines,
     required this.songKey,
   });
 
@@ -68,7 +73,7 @@ class SectionCard extends StatelessWidget {
             const SizedBox(height: 8),
 
             // Lines in this section, grouped by pairs
-            _buildLineGroups(),
+            _buildLineGroups(), // This method needs adjustment
 
             // Add line button
             TextButton.icon(
@@ -85,41 +90,59 @@ class SectionCard extends StatelessWidget {
   Widget _buildLineGroups() {
     final lines = section.lines;
     final List<Widget> lineWidgets = [];
+    int i = 0; // Use a while loop for better control over index increment
 
-    for (int i = 0; i < lines.length; i++) {
-      //final isChordLine = lines[i].isChordLine;
-      final bool isPaired = i < lines.length - 1 &&
-          lines[i].isChordLine &&
-          !lines[i + 1].isChordLine &&
-          !lines[i].wasSplit && // Check that it wasn't split
-          !lines[i + 1].wasSplit; // Check that it wasn't split
+    while (i < lines.length) {
+      final currentLine = lines[i];
+      final bool canBePairStart =
+          currentLine.isChordLine && !currentLine.wasSplit;
+      final bool hasNextLine = i + 1 < lines.length;
+      final bool nextLineIsLyric = hasNextLine && !lines[i + 1].isChordLine;
+      final bool nextLineIsNotSplit = hasNextLine && !lines[i + 1].wasSplit;
 
-      if (isPaired) {
+      // Check if it should be rendered as a ChordLyricPair
+      if (canBePairStart &&
+          hasNextLine &&
+          nextLineIsLyric &&
+          nextLineIsNotSplit) {
         lineWidgets.add(ChordLyricPair(
-          chordLine: lines[i],
+          key: ValueKey('pair_${sectionIndex}_$i'), // Add key
+          chordLine: currentLine,
           lyricLine: lines[i + 1],
           chordLineIndex: i,
           lyricLineIndex: i + 1,
           sectionIndex: sectionIndex,
           onUpdateLineText: onUpdateLineText,
-          onRemoveLine: onRemoveLine,
-          onMoveLine: onMoveLine,
+          onRemoveLine:
+              onRemoveLine, // Removing a pair might need special handling
+          onMoveLine: onMoveLine, // Moving a pair might need special handling
           onSplitPair: onSplitChordLyricPair,
           songKey: songKey,
-          // Replace with your desired color
         ));
-        i++; // Skip the next line as we've already included it
+        i += 2; // Increment by 2 as we processed a pair
       } else {
-        // Create a single line
+        // Render as a single LineItem
+        // Check if this line *could* be combined with the next one
+        bool canCombine = currentLine.isChordLine &&
+            currentLine.wasSplit &&
+            hasNextLine &&
+            nextLineIsLyric &&
+            lines[i + 1].wasSplit;
+
         lineWidgets.add(LineItem(
-          line: lines[i],
+          key: ValueKey('line_${sectionIndex}_$i'), // Add key
+          line: currentLine,
           sectionIndex: sectionIndex,
           lineIndex: i,
           onUpdateLineText: onUpdateLineText,
           onToggleLineType: onToggleLineType,
           onRemoveLine: onRemoveLine,
           onMoveLine: onMoveLine,
+
+          onCombineLines:
+              canCombine ? onCombineLines : null, // Pass only if combinable
         ));
+        i++; // Increment by 1
       }
     }
 

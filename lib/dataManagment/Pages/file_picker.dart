@@ -8,10 +8,9 @@ import 'package:file_picker/file_picker.dart';
 
 class FilePickerUtil {
   /// Opens file picker and loads a song JSON file
-  static Future<void> pickAndEditSongFile(
-    BuildContext context, {
-    String? groupName,
-  }) async {
+  static Future<Song?> pickSongFile(
+    BuildContext context,
+  ) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -27,21 +26,12 @@ class FilePickerUtil {
         Map<String, dynamic> jsonData = jsonDecode(content);
         Song loadedSong = Song.fromMap(jsonData);
 
-        // Navigate to the edit page with the loaded song
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SongEditPage(
-                song: loadedSong,
-                group: groupName,
-              ),
-            ),
-          ).then((_) {});
-        }
+        return loadedSong;
       }
+      return null;
     } catch (e) {
       SnackService().showError('Fehler beim Laden der Datei: ${e.toString()}');
+      return null;
     }
   }
 }
