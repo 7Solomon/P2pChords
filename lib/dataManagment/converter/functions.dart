@@ -63,8 +63,8 @@ class SongConverter {
     key = setKey;
     title = setTitle;
 
-    // Parse the text into sections
-    final sections = parseSections(text);
+    // Parse the text into sections, passing the key
+    final sections = parseSections(text, key); // Pass key here
 
     // Create a hash for the song
     final hash = sha256
@@ -192,7 +192,7 @@ class SongConverter {
       finalSections.add(
         SongSection(
           title: prelimSection.title,
-          lines: processReviewedLines(prelimSection.lines),
+          lines: processReviewedLines(prelimSection.lines, key),
         ),
       );
     }
@@ -217,7 +217,8 @@ class SongConverter {
   }
 
   /// Parses text into SongSection objects
-  List<SongSection> parseSections(String text) {
+  List<SongSection> parseSections(String text, String key) {
+    // Add key parameter
     final List<SongSection> sections = [];
     String? currentSectionTitle;
     List<String> currentSectionLines = [];
@@ -245,7 +246,8 @@ class SongConverter {
           sections.add(
             SongSection(
               title: currentSectionTitle,
-              lines: processLyricLines(currentSectionLines),
+              lines:
+                  processLyricLines(currentSectionLines, key), // Pass key here
             ),
           );
           currentSectionLines = [];
@@ -272,7 +274,7 @@ class SongConverter {
       sections.add(
         SongSection(
           title: currentSectionTitle,
-          lines: processLyricLines(currentSectionLines),
+          lines: processLyricLines(currentSectionLines, key), // Pass key here
         ),
       );
     }
@@ -281,7 +283,8 @@ class SongConverter {
   }
 
   /// Processes lines in a section to createLineDataobjects with chords
-  List<LineData> processLyricLines(List<String> lines) {
+  List<LineData> processLyricLines(List<String> lines, String key) {
+    // Add key parameter
     List<LineData> lyricLines = [];
 
     // Process pairs of lines (chord line followed by lyric line)
@@ -297,8 +300,9 @@ class SongConverter {
         final chordLine = lines[i];
         final lyricLine = lines[i + 1];
 
-        // Extract chords with their positions
-        final chords = extractChords(chordLine, lyricLine);
+        // Extract chords with their positions, passing the key
+        final chords =
+            extractChords(chordLine, lyricLine, key); // Pass key here
 
         // CreateLineDataobject
         lyricLines.add(
@@ -326,7 +330,7 @@ class SongConverter {
 
   /// Takes the lines after they've been organized as chord/lyric pairs
   /// and processes them into LineData objects
-  List<LineData> processReviewedLines(List<PreliminaryLine> lines) {
+  List<LineData> processReviewedLines(List<PreliminaryLine> lines, String key) {
     List<LineData> lyricLines = [];
 
     for (int i = 0; i < lines.length; i++) {
@@ -337,8 +341,8 @@ class SongConverter {
         final chordLine = lines[i].text;
         final lyricLine = lines[i + 1].text;
 
-        // Extract chords with their positions
-        final chords = extractChords(chordLine, lyricLine);
+        // Extract chords with their positions - Already correctly passing key
+        final chords = extractChords(chordLine, lyricLine, key);
 
         // Create LineData object
         lyricLines.add(
@@ -380,7 +384,7 @@ class SongConverter {
   }
 
   /// Extract chords and their positions from a chord line and lyrics line
-  List<Chord> extractChords(String chordLine, String lyricLine) {
+  List<Chord> extractChords(String chordLine, String lyricLine, String key) {
     List<Chord> chords = [];
     //print('lyricLine: $lyricLine, chordLine: $chordLine');
 

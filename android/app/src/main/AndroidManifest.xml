@@ -20,7 +20,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
-        android:label="P2pController"
+        android:label="P2PChords"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="true"
