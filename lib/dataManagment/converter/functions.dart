@@ -465,3 +465,96 @@ class SongConverter {
     );
   }
 }
+
+bool sectionsAreIdentical(PreliminarySection s1, PreliminarySection s2) {
+  if (s1.lines.length != s2.lines.length) {
+    return false;
+  }
+  for (int i = 0; i < s1.lines.length; i++) {
+    if (s1.lines[i].text != s2.lines[i].text ||
+        s1.lines[i].isChordLine != s2.lines[i].isChordLine) {
+      return false;
+    }
+  }
+  return true;
+}
+
+List<PreliminarySection> processDuplicateSections(
+    List<PreliminarySection> originalSections) {
+  final Map<String, List<int>> sectionsByTitle = {};
+  for (int i = 0; i < originalSections.length; i++) {
+    sectionsByTitle.putIfAbsent(originalSections[i].title, () => []).add(i);
+  }
+
+  final List<PreliminarySection> finalSections = [];
+  final Set<int> processedIndices = {};
+
+  for (int i = 0; i < originalSections.length; i++) {
+    if (processedIndices.contains(i)) continue;
+
+    final currentSection = originalSections[i];
+    final title = currentSection.title;
+    final indices = sectionsByTitle[title]!;
+
+    if (indices.length == 1) {
+      // Unique title, just add it
+      finalSections.add(currentSection);
+      processedIndices.add(i);
+    } else {
+      // Duplicate title found, check content
+      final List<PreliminarySection> group =
+          indices.map((idx) => originalSections[idx]).toList();
+      final List<PreliminarySection> uniqueSectionsInGroup = [];
+      final List<int> uniqueOriginalIndices = [];
+
+      for (int k = 0; k < group.length; k++) {
+        final currentGroupSection = group[k];
+        final originalIndex = indices[k];
+        bool foundMatch = false;
+        for (final uniqueSection in uniqueSectionsInGroup) {
+          if (sectionsAreIdentical(currentGroupSection, uniqueSection)) {
+            foundMatch = true;
+            break;
+          }
+        }
+        if (!foundMatch) {
+          uniqueSectionsInGroup.add(currentGroupSection);
+          uniqueOriginalIndices.add(
+              originalIndex); // Keep track of the first index for this unique content
+        }
+      }
+
+      if (uniqueSectionsInGroup.length == 1) {
+        // All sections with this title are identical, add the first one
+        finalSections.add(currentSection); // Add the one at index i
+        processedIndices.addAll(indices); // Mark all as processed
+      } else {
+        // Different sections with the same title, rename and add all
+        int count = 1;
+        // Iterate through the original indices to maintain order
+        for (final idx in indices) {
+          if (processedIndices.contains(idx)) {
+            continue;
+          } // Should not happen here, but safe check
+
+          final sectionToRename = originalSections[idx];
+          // Find which unique section it matches to assign the correct base for renaming if needed
+          // (Simpler: just rename based on occurrence order)
+          final renamedSection = PreliminarySection(
+            title: "${sectionToRename.title} ($count)",
+            lines: sectionToRename.lines
+                .map((l) => PreliminaryLine(
+                    text: l.text,
+                    isChordLine: l.isChordLine,
+                    wasSplit: l.wasSplit))
+                .toList(), // Deep copy lines
+          );
+          finalSections.add(renamedSection);
+          processedIndices.add(idx);
+          count++;
+        }
+      }
+    }
+  }
+  return finalSections;
+}

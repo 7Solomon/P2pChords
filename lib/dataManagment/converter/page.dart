@@ -43,12 +43,22 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     converter = SongConverter();
 
     // Initialize the preliminary data
-    preliminaryData = converter.convertTextToSongInteractive(
+    PreliminarySongData initialPreliminaryData =
+        converter.convertTextToSongInteractive(
       widget.rawText,
       widget.initialTitle,
       authors: widget.initialAuthors,
     );
-
+    // Process sections to handle duplicates
+    final processedSections =
+        processDuplicateSections(initialPreliminaryData.sections);
+    preliminaryData = PreliminarySongData(
+      originalText: initialPreliminaryData.originalText,
+      sections: processedSections,
+      title: initialPreliminaryData.title,
+      authors: initialPreliminaryData.authors,
+      key: initialPreliminaryData.key,
+    );
     // Initialize author controllers
     authorControllers = preliminaryData.authors
         .map((author) => TextEditingController(text: author))
