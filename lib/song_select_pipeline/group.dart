@@ -2,8 +2,13 @@ import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
+import 'package:P2pChords/groupManagement/floating_buttons.dart';
+import 'package:P2pChords/groupManagement/functions.dart';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 
@@ -22,6 +27,8 @@ class Songoverviewpage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Songs in ${currentData.currentGroup}'),
       ),
+      floatingActionButton:
+          buildFloatingActionButtonForGroup(context, currentData.currentGroup!),
       body: Column(
         children: [
           Expanded(
@@ -34,48 +41,67 @@ class Songoverviewpage extends StatelessWidget {
                     .getSongsInGroup(currentData.currentGroup!)[index];
                 final name = song.header.name;
                 final hash = song.hash;
-                // Dont like
-                //if (song.isCorrupted()) {
-                //  print('Corrupted song: $name');
-                //  dataProvider.removeSong(song.hash);
-                //  return Container();
-                //}
-                return CListTile(
-                  title: name,
-                  subtitle: song.header.authors.isNotEmpty
-                      ? song.header.authors[0]
-                      : '',
-                  context: context,
-                  onTap: () {
-                    currentData.setCurrentSong(hash);
-                    currentData.setCurrentSectionIndex(0);
 
-                    musicSyncProvider.dataSyncService
-                        .sendUpdateToAllClients(currentData.toJson());
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ChordSheetPage(),
-                      ),
-                    );
+                return CDissmissible.deleteAndAction(
+                  key: Key(hash),
+                  deleteConfirmation: () =>
+                      CDissmissible.showDeleteConfirmationDialog(context),
+                  confirmDeleteDismiss: () async {
+                    if (currentData.currentGroup == null) {
+                      SnackService().showError(
+                        'Ein Fehler ist passiert, Bitte erst eine Gruppe auswählen!',
+                      );
+                      return false;
+                    }
+                    await dataProvider.removeSongFromGroup(
+                        currentData.currentGroup!, hash);
+                    (hash);
+                    return true;
                   },
-                  onLongPress: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SongEditPage(
-                          song: song,
-                          group: currentData.currentGroup,
+                  confirmActionDismiss: () {
+                    exportSong(song).then((value) {
+                      SnackService().showInfo(
+                        'Song exportiert!',
+                      );
+                    });
+                    return Future.value(false);
+                  },
+                  child: CListTile(
+                    title: name,
+                    subtitle: song.header.authors.isNotEmpty
+                        ? song.header.authors[0]
+                        : '',
+                    context: context,
+                    onTap: () {
+                      currentData.setCurrentSong(hash);
+                      currentData.setCurrentSectionIndex(0);
+
+                      musicSyncProvider.dataSyncService
+                          .sendUpdateToAllClients(currentData.toJson());
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChordSheetPage(),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                    onLongPress: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SongEditPage(
+                            song: song,
+                            group: currentData.currentGroup,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
-          ) //;
-          //})
+          )
         ],
       ),
     );

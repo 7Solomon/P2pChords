@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 
 Future<void> importGroup() async {
   // Pick a file
@@ -30,6 +33,46 @@ Future<void> importGroup() async {
       }
     }
   }
+}
+
+Future<void> createNewGroupDialog(BuildContext context) async {
+  final TextEditingController controller = TextEditingController();
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Erstelle eine neue Gruppe'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Gruppen Name'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Abbrechen'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: const Text('Erstellen'),
+            onPressed: () async {
+              String newGroup = controller.text.trim();
+              if (newGroup.isNotEmpty) {
+                //await MultiJsonStorage.saveNewGroup(newGroup);
+                Provider.of<DataLoadeProvider>(context, listen: false)
+                    .addGroup(newGroup);
+
+                SnackService().showSuccess(
+                  'Gruppe "$newGroup" erstellt',
+                );
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
 }
 
 Future<bool> exportGroupsData(SongData songsData) async {

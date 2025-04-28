@@ -13,7 +13,7 @@ enum UserState { server, client, pc, none }
 
 enum ConnectionMode { nearby, webSocket, hybrid }
 
-class CustomeService {
+abstract class CustomeService {
   // Device Information
   Set<String> connectedDeviceIds = {};
   Set<String> visibleDevices = {};
@@ -23,6 +23,8 @@ class CustomeService {
   bool isServerRunning = false;
   bool isAdvertising = false;
   bool isDiscovering = false;
+
+  VoidCallback? onConnectionStateChanged;
 
   // Callbacks for Service
   late Function(SongData) sendSongData;
@@ -74,6 +76,7 @@ class ConnectionProvider with ChangeNotifier {
     if (_connectionMode == ConnectionMode.nearby ||
         _connectionMode == ConnectionMode.hybrid) {
       nearbyService.userNickName = _deviceName;
+      nearbyService.onConnectionStateChanged = notifyListeners;
 
       // Callbacks
       nearbyService.onNotification = (message) {
@@ -86,6 +89,7 @@ class ConnectionProvider with ChangeNotifier {
     if (_connectionMode == ConnectionMode.webSocket ||
         _connectionMode == ConnectionMode.hybrid) {
       webSocketService.userNickName = _deviceName;
+      webSocketService.onConnectionStateChanged = notifyListeners;
 
       // Callbacks
       webSocketService.onNotification = (message) {
@@ -205,6 +209,11 @@ class ConnectionProvider with ChangeNotifier {
   }
 
   void setConnectionMode(ConnectionMode mode) {
+    if (_connectionMode == mode) return; // No changed
+
+    // Clear old callbacks before setting new ones
+    nearbyService.onConnectionStateChanged = null;
+    webSocketService.onConnectionStateChanged = null;
     _connectionMode = mode;
     _initializeServiceCallbacks();
     _initializeDataSyncServiceCallbacks();

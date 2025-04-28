@@ -116,7 +116,7 @@ class WebSocketService extends CustomeService {
       // Add to connected devices
       connectedDeviceIds.add(serverId);
       knownDevices.add(serverId);
-
+      onConnectionStateChanged?.call();
       // Set up listener for incoming messages
       socket.listen(
         (dynamic data) {
@@ -144,11 +144,13 @@ class WebSocketService extends CustomeService {
         onDone: () {
           _notify('Connection to server closed');
           connectedDeviceIds.remove(serverId);
+          onConnectionStateChanged?.call();
           //_isReconnecting = false;
         },
         onError: (error) {
           _notify('WebSocket error: $error');
           connectedDeviceIds.remove(serverId);
+          onConnectionStateChanged?.call();
           //_isReconnecting = false;
         },
         cancelOnError: true,
@@ -157,6 +159,7 @@ class WebSocketService extends CustomeService {
       //_serverConnection = WebSocketClient(serverAddress, 'Server', socket);
 
       _notify('Successfully connected to server at $wsUrl');
+      onConnectionStateChanged?.call();
       return true;
     } catch (e) {
       _notify('Error connecting to server: $e');
@@ -303,6 +306,7 @@ class WebSocketService extends CustomeService {
                         // Add to connected devices
                         connectedDeviceIds.add(clientId);
                         knownDevices.add(clientId);
+                        onConnectionStateChanged?.call();
 
                         // Notify about new connection
                         _notify('Client connected: $clientName');
@@ -354,9 +358,13 @@ class WebSocketService extends CustomeService {
       isServerRunning = false;
       isAdvertising = false;
       _notify('WebSocket server stopped');
+      onConnectionStateChanged?.call();
+
       return true;
     } catch (e) {
       _notify('Error stopping WebSocket server: $e');
+      onConnectionStateChanged?.call();
+
       return false;
     }
   }
@@ -381,7 +389,7 @@ class WebSocketService extends CustomeService {
 
       _clients.remove(client);
       connectedDeviceIds.remove(clientId);
-
+      onConnectionStateChanged?.call();
       _notify('Client ${client.name} disconnected');
       return true;
     } catch (e) {

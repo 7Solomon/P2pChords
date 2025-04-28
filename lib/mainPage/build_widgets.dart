@@ -11,7 +11,7 @@ import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
-import 'package:P2pChords/groupManagement/Pages/groups.dart';
+//import 'package:P2pChords/groupManagement/Pages/groups.dart';
 
 import 'package:P2pChords/dataManagment/local_manager/config_system_stub.dart'
     if (dart.library.io) 'package:P2pChords/dataManagment/local_manager/config_system.dart';
@@ -82,22 +82,16 @@ Widget buildMainContent(
 
           // Main action button - different for client and server
           AppButton(
-            text: isClient ? 'Folge den Lider' : 'Spiele Lieder',
+            text: isClient ? 'Folge den Songs' : 'Songs',
             icon: isClient ? Icons.queue_music : Icons.library_music,
             onPressed: () async {
               if (isClient) {
-                if (Platform.isWindows || Platform.isLinux) {
-                  bool beamer = await _handleBeamer(context) ?? false;
-                  if (beamer) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const BeamerPage()),
-                    );
-                  } else {
-                    _handleClientSongAction(
-                        context, songSyncProvider, currentSection, dataLoader);
-                  }
+                bool beamer = await _handleBeamer(context) ?? false;
+                if (beamer) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BeamerPage()),
+                  );
                 } else {
                   _handleClientSongAction(
                       context, songSyncProvider, currentSection, dataLoader);
@@ -115,19 +109,19 @@ Widget buildMainContent(
           const SizedBox(height: 20),
 
           // Manage groups button
-          AppButton(
-            text: 'Gruppen verwalten',
-            icon: Icons.group,
-            type: AppButtonType.secondary,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ManageGroupPage()),
-              );
-            },
-          ),
+          //AppButton(
+          //  text: 'Gruppen verwalten',
+          //  icon: Icons.group,
+          //  type: AppButtonType.secondary,
+          //  onPressed: () {
+          //    Navigator.push(
+          //      context,
+          //      MaterialPageRoute(builder: (context) => ManageGroupPage()),
+          //    );
+          //  },
+          //),
 
-          const SizedBox(height: 20),
+          //const SizedBox(height: 20),
 
           // Ui  Stuff
           AppButton(
@@ -182,7 +176,7 @@ Future<bool?> _handleBeamer(BuildContext context) async {
       return AlertDialog(
         title: const Text('Beamer Option'),
         content: const Text(
-            'Du bist auf einem PC: Willst du eine Beamer Display, oder die Normale Seitenansicht?'),
+            'Du bist auf ein Client: Willst du eine Beamer Display, oder die Normale Seitenansicht?'),
         actions: <Widget>[
           TextButton(
             child: const Text('Normale ansicht'),
@@ -210,7 +204,7 @@ void _handleClientSongAction(
   if (songSyncProvider.connectedDeviceIds.isNotEmpty) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ChordSheetPage()),
+      MaterialPageRoute(builder: (context) => const ChordSheetPage()),
     );
   } else {
     SnackService().showInfo(

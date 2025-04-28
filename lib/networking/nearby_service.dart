@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:P2pChords/state.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Keep for debugPrint
 import 'package:nearby_connections/nearby_connections.dart';
 
 // Service
@@ -27,15 +27,14 @@ class NearbyService extends CustomeService {
   // For discovery management , Maybe move to CustomeService
   bool _isReconnecting = false;
 
-  // Notification callback for important events
+  // Callbacks assigned by ConnectionProvider
   late String userNickName;
   late Function(String) onNotification;
   late Function(String, Payload) onPayloadReceived;
-  late Function(String) addConnectedDevice;
 
-  // Data
-  void _notify(String message) {
-    onNotification(message);
+  // Internal logging helper (optional)
+  void _log(String message) {
+    debugPrint("NearbyService: $message");
   }
 
   // Ovverides
@@ -68,93 +67,111 @@ class NearbyService extends CustomeService {
   Future<bool> startAdvertising() async {
     try {
       if (isAdvertising) {
-        _notify("Already advertising. Stopping current advertising session.");
+        // _log("Already advertising. Stopping current advertising session.");
         await stopAdvertising();
       }
 
-      _notify("Starting advertising as: $userNickName");
-      isAdvertising = true;
+      _log("Starting advertising as: $userNickName");
+      isAdvertising = true; // Set state before async call
 
       bool advertisingResult = await _nearby.startAdvertising(
         userNickName,
         Strategy.P2P_CLUSTER,
         onConnectionInitiated: (id, info) {
-          _notify("Connection initiated with $id (${info.endpointName})");
+          _log("Connection initiated with $id (${info.endpointName})");
           _acceptConnection(id);
         },
         onConnectionResult: (id, status) {
-          _notify("Connection result for $id: $status");
+          _log("Connection result for $id: $status");
           if (status == Status.CONNECTED) {
-            connectedDeviceIds.add(id);
+            final added = connectedDeviceIds.add(id);
             knownDevices.add(id);
-            // Store device for potential reconnection
-            _notify("Successfully connected to $id");
+            if (added) {
+              onConnectionStateChanged?.call(); // Notify provider
+              onNotification("Verbindung aufgebaut: ${id.substring(0, 4)}");
+            }
           } else if (status == Status.REJECTED) {
-            _notify("Connection rejected by $id");
+            onNotification("Verbindung abgelehnt: ${id.substring(0, 4)}");
           } else if (status == Status.ERROR) {
-            _notify("Error connecting to $id");
+            onNotification("Verbindungsfehler: ${id.substring(0, 4)}");
           }
-
-          //if (onConnectionResult != null) {
-          //  onConnectionResult(id, status);
-          //}
         },
         onDisconnected: (id) {
-          _notify("Disconnected from $id");
-          connectedDeviceIds.remove(id);
-
-          // Maybe add if statement to check if device was known
-          _startReconnection(id);
-
-          //if (onDisconnected != null) {
-          //  onDisconnected(id);
-          //}
+          // _log("Disconnected from $id");
+          final removed = connectedDeviceIds.remove(id);
+          if (removed) {
+            onConnectionStateChanged?.call(); // Notify provider
+            onNotification("Verbindung getrennt: ${id.substring(0, 4)}");
+          }
+          // Only attempt reconnection if it was a known device
+          if (knownDevices.contains(id)) {
+            _startReconnection(id);
+          }
         },
       );
 
-      _notify(advertisingResult
-          ? "Successfully started advertising"
-          : "Failed to start advertising");
+      if (!advertisingResult) {
+        isAdvertising = false; // Revert state on failure
+        onNotification("Fehler beim Starten des Advertisings");
+      } else {
+        // Optional: Notify success if needed
+        // onNotification("Advertising gestartet");
+      }
 
       return advertisingResult;
     } catch (e) {
       isAdvertising = false;
-      _notify('Error starting advertising: $e');
+      _log('Error starting advertising: $e'); // Log error for debugging
+      onNotification("Fehler beim Starten des Advertisings: $e");
       return false;
     }
   }
 
   // Attempt to reconnect to a device
   void _startReconnection(String endpointId) {
-    if (_isReconnecting) return;
+    if (_isReconnecting || !knownDevices.contains(endpointId))
+      return; // Only reconnect known devices
 
     _isReconnecting = true;
     _reconnectionAttempts = 0;
 
-    _notify("Starting reconnection attempts to $endpointId");
+    // _log("Starting reconnection attempts to $endpointId");
     _attemptReconnection(endpointId);
   }
 
   void _attemptReconnection(String endpointId) {
+    if (!knownDevices.contains(endpointId)) {
+      // Stop if device was explicitly disconnected
+      _isReconnecting = false;
+      _reconnectionTimer?.cancel();
+      _reconnectionTimer = null;
+      _log("Reconnection stopped for $endpointId (no longer known)");
+      return;
+    }
+
     if (_reconnectionAttempts >= _maxReconnectionAttempts ||
         connectedDeviceIds.contains(endpointId)) {
       _isReconnecting = false;
       _reconnectionTimer?.cancel();
       _reconnectionTimer = null;
+      _log("Reconnection attempts finished for $endpointId");
       return;
     }
 
     _reconnectionAttempts++;
-    _notify("Reconnection attempt $_reconnectionAttempts to $endpointId");
+    _log("Reconnection attempt $_reconnectionAttempts to $endpointId");
 
     // Try to reconnect
     requestConnection(endpointId: endpointId);
 
-    // Schedule next attempt if needed
+    // Schedule next attempt
     _reconnectionTimer?.cancel();
     _reconnectionTimer = Timer(_reconnectionInterval, () {
-      if (!connectedDeviceIds.contains(endpointId)) {
+      if (knownDevices.contains(endpointId) &&
+          !connectedDeviceIds.contains(endpointId)) {
         _attemptReconnection(endpointId);
+      } else {
+        _isReconnecting = false; // Stop if connected or no longer known
       }
     });
   }
@@ -163,44 +180,45 @@ class NearbyService extends CustomeService {
   Future<bool> startDiscovery() async {
     try {
       if (isDiscovering) {
-        _notify("Already discovering. Stopping current discovery.");
+        _log("Already discovering. Stopping current discovery.");
         await stopDiscovery();
       }
 
-      _notify("Starting discovery as: $userNickName");
-      isDiscovering = true;
+      _log("Starting discovery as: $userNickName");
+      isDiscovering = true; // Set state before async call
 
       bool discoveryResult = await _nearby.startDiscovery(
         userNickName,
         Strategy.P2P_CLUSTER,
         onEndpointFound: (id, name, serviceId) {
-          //_notify("Found endpoint: $id ($name)");
-          visibleDevices.add(id);
+          _log("Found endpoint: $id ($name)");
+          final added = visibleDevices.add(id);
+          if (added) {
+            onConnectionStateChanged?.call();
+          }
         },
         onEndpointLost: (id) {
-          //_notify("Lost endpoint: $id");
-          visibleDevices.remove(id);
+          // _log("Lost endpoint: $id");
+          final removed = visibleDevices.remove(id);
+          if (removed) {
+            onConnectionStateChanged?.call();
+          }
         },
       );
 
-      _notify(discoveryResult
-          ? "Successfully started discovery"
-          : "Failed to start discovery");
-
-      // Set up optional timeout
-      //if (timeout != null && discoveryResult) {
-      //  Timer(timeout, () {
-      //    if (_isDiscovering) {
-      //      stopDiscovery();
-      //      _notify("Discovery stopped after timeout");
-      //    }
-      //  });
-      //}
+      if (!discoveryResult) {
+        isDiscovering = false; // Revert state on failure
+        onNotification("Fehler beim Starten der Suche");
+      } else {
+        onNotification("Suche gestartet");
+      }
 
       return discoveryResult;
     } catch (e) {
       isDiscovering = false;
-      _notify('Error starting discovery: $e');
+      _log('Error starting discovery: $e');
+
+      onNotification("Fehler beim Starten der Suche: $e");
       return false;
     }
   }
@@ -208,37 +226,54 @@ class NearbyService extends CustomeService {
   // Request connection to a discovered endpoint
   Future<bool> requestConnection({required String endpointId}) async {
     try {
-      _notify("Requesting connection to $endpointId");
+      _log("Requesting connection to $endpointId");
 
-      bool result = await _nearby.requestConnection(
+      _nearby.requestConnection(
         userNickName,
         endpointId,
         onConnectionInitiated: (id, info) {
-          _notify(
+          _log(
               "Connection initiated by request with $id (${info.endpointName})");
           _acceptConnection(id);
         },
         onConnectionResult: (id, status) {
-          _notify("Connection result for request to $id: $status");
+          _log("Connection result for request to $id: $status");
           if (status == Status.CONNECTED) {
-            connectedDeviceIds.add(id);
+            final added = connectedDeviceIds.add(id);
+            // vielliecht entfernen den add
+            knownDevices.add(id);
+            if (added) {
+              onConnectionStateChanged?.call(); // Notify provider
+              onNotification(
+                  "Verbindung angefragt & aufgebaut: ${id.substring(0, 4)}");
+            }
           } else if (status == Status.REJECTED) {
-            _notify("Connection request rejected by $id");
+            onNotification(
+                "Verbindungsanfrage abgelehnt: ${id.substring(0, 4)}");
           } else if (status == Status.ERROR) {
-            _notify("Error requesting connection to $id");
+            onNotification(
+                "Fehler bei Verbindungsanfrage: ${id.substring(0, 4)}");
           }
         },
         onDisconnected: (id) {
-          _notify("Disconnected from requested connection $id");
-          connectedDeviceIds.remove(id);
-
-          _startReconnection(id);
+          _log("Disconnected from requested connection $id");
+          final removed = connectedDeviceIds.remove(id);
+          if (removed) {
+            onConnectionStateChanged?.call(); // Notify provider
+            onNotification(
+                "Verbindung getrennt (Anfrage): ${id.substring(0, 4)}");
+          }
+          // requested connections should trigger auto-reconnect? ka
+          if (knownDevices.contains(id)) {
+            _startReconnection(id);
+          }
         },
       );
 
-      return result;
+      return true; // Indicate the request was sent, not necessarily successful yet
     } catch (e) {
-      _notify('Error requesting connection: $e');
+      _log('Error requesting connection: $e'); // Log error for debugging
+      onNotification("Fehler bei Verbindungsanfrage: $e");
       return false;
     }
   }
@@ -251,7 +286,8 @@ class NearbyService extends CustomeService {
         onPayloadReceived(endid, payload);
       },
     ).catchError((e) {
-      _notify("Error accepting connection: $e");
+      _log("Error accepting connection: $e");
+      onNotification("Fehler beim Akzeptieren der Verbindung: $e");
     });
   }
 
@@ -260,9 +296,11 @@ class NearbyService extends CustomeService {
     try {
       await _nearby.stopAdvertising();
       isAdvertising = false;
+      onNotification("Advertising gestoppt");
       return true;
     } catch (e) {
-      _notify('Error stopping advertising: $e');
+      _log('Error stopping advertising: $e');
+      onNotification("Fehler beim Stoppen des Advertisings: $e");
       return false;
     }
   }
@@ -272,9 +310,11 @@ class NearbyService extends CustomeService {
     try {
       await _nearby.stopDiscovery();
       isDiscovering = false;
+      // Optional: onNotification("Suche gestoppt");
       return true;
     } catch (e) {
-      _notify('Error stopping discovery: $e');
+      _log('Error stopping discovery: $e');
+      onNotification("Fehler beim Stoppen der Suche: $e");
       return false;
     }
   }
@@ -283,12 +323,18 @@ class NearbyService extends CustomeService {
   Future<bool> disconnectFromEndpoint(String endpointId) async {
     try {
       await _nearby.disconnectFromEndpoint(endpointId);
-      connectedDeviceIds.remove(endpointId);
+      final removed = connectedDeviceIds.remove(endpointId);
       knownDevices.remove(
           endpointId); // Remove from known devices to prevent reconnection
+      if (removed) {
+        onConnectionStateChanged?.call(); // Notify provider
+        onNotification(
+            "Verbindung manuell getrennt: ${endpointId.substring(0, 4)}");
+      }
       return true;
     } catch (e) {
-      _notify('Error disconnecting from endpoint: $e');
+      _log('Error disconnecting from endpoint: $e');
+      onNotification("Fehler beim Trennen der Verbindung: $e");
       return false;
     }
   }
@@ -296,11 +342,24 @@ class NearbyService extends CustomeService {
   // Disconnect from all connected devices
   Future<void> disconnectFromAllEndpoints() async {
     try {
-      await _nearby.stopAllEndpoints();
-      connectedDeviceIds.clear();
-      knownDevices.clear(); // Clear known devices to prevent reconnection
+      if (connectedDeviceIds.isNotEmpty) {
+        // Only notify if there were connections
+        await _nearby.stopAllEndpoints();
+        final hadConnections = connectedDeviceIds.isNotEmpty;
+        connectedDeviceIds.clear();
+        knownDevices.clear(); // Clear known devices to prevent reconnection
+        if (hadConnections) {
+          onConnectionStateChanged?.call(); // Notify change
+          onNotification("Alle Verbindungen getrennt");
+        }
+      } else {
+        await _nearby
+            .stopAllEndpoints(); // Still stop endpoints even if set was empty
+        knownDevices.clear();
+      }
     } catch (e) {
-      _notify('Error disconnecting from all endpoints: $e');
+      _log('Error disconnecting from all endpoints: $e');
+      onNotification("Fehler beim Trennen aller Verbindungen: $e");
     }
   }
 
@@ -309,7 +368,9 @@ class NearbyService extends CustomeService {
       await _nearby.sendBytesPayload(endpointId, bytes);
       return true;
     } catch (e) {
-      _notify('Error sending bytes payload: $e');
+      _log('Error sending bytes payload: $e');
+      // Maybe notify user? Depends on context.
+      onNotification("Fehler beim Senden von Daten: $e");
       return false;
     }
   }
