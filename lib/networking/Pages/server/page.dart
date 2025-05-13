@@ -338,7 +338,8 @@ class _ServerPageState extends State<ServerPage>
 
                 // Server IP address display
                 if (provider.isServerRunning &&
-                    provider.connectionMode == ConnectionMode.webSocket)
+                    (provider.connectionMode == ConnectionMode.webSocket ||
+                        provider.connectionMode == ConnectionMode.hybrid)) ...[
                   FutureBuilder<String?>(
                     future: provider.webSocketService.getServerAddress(),
                     builder: (context, snapshot) {
@@ -353,11 +354,22 @@ class _ServerPageState extends State<ServerPage>
                         return Text(
                             'Error getting server address: ${snapshot.error}');
                       } else {
-                        print('snapshot.data: ${snapshot.data}');
+                        // print('snapshot.data: ${snapshot.data}'); // Already present
                         return serverIpDisplay(snapshot.data, context);
                       }
                     },
                   ),
+                  const SizedBox(height: 16),
+                  qrScannerButtonForServer(
+                    context: context,
+                    onScanComplete: (scannedToken) {
+                      provider.webSocketService
+                          .announceServerToClient(scannedToken);
+                      SnackService().showInfo(
+                          'Ankündigung an Client gesendet: $scannedToken');
+                    },
+                  ),
+                ],
                 // Connected clients section
                 const SizedBox(height: 24),
                 Row(

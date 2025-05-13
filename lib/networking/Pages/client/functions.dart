@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 void showManualAddressDialog(BuildContext context) {
   final addressController = TextEditingController();
@@ -211,4 +212,67 @@ Future<String?> _showQrScanner(BuildContext context) async {
   ).whenComplete(() => controller.dispose());
 
   return result;
+}
+
+Future<void> showClientQrDialog(
+    BuildContext context, String clientToken, VoidCallback onDismiss) async {
+  await showDialog(
+    context: context,
+    barrierDismissible: true, // Allow dismissing by tapping outside
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        'Server soll diesen QR-Code scannen',
+        style: Theme.of(context)
+            .textTheme
+            .titleLarge
+            ?.copyWith(fontWeight: FontWeight.bold),
+        textAlign: TextAlign.center,
+      ),
+      content: SizedBox(
+        // Wrap the Column with SizedBox
+        width: 280, // Provide a fixed width
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(
+              data: clientToken,
+              version: QrVersions.auto,
+              size: 220,
+              backgroundColor: Colors.white,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Token: $clientToken",
+              style: const TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Warte auf Serververbindung...',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            // onDismiss will be called by `whenComplete`
+          },
+          child: const Text('Schließen'),
+        ),
+      ],
+    ),
+  ).whenComplete(onDismiss);
 }

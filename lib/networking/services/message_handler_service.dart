@@ -12,6 +12,7 @@ class MessageHandlerService {
   // Callbacks for different message types
   late Function(Map<String, dynamic>) onUpdateMessage;
   late Function(SongData) onSongDataMessage;
+  late Function() onConnectionEstablished;
   late Function(Map<String, dynamic>) onMetronomeUpdate;
   late Function(String)? onDisconnection;
 
@@ -42,8 +43,8 @@ class MessageHandlerService {
 
       switch (data['type']) {
         case 'connection_established':
-          //_notify('Connection established with ${data['content']['name']}');
-          break; // Wird doxh nicht gebraucht
+          onConnectionEstablished(); // Wird doxh nicht gebraucht
+
         case 'disconnect':
           String deviceId = data['content']['deviceId'];
           if (onDisconnection != null) {

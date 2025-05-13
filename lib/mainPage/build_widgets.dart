@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:P2pChords/UiSettings/page.dart';
+import 'package:P2pChords/UiSettings/beamer/page.dart';
+import 'package:P2pChords/UiSettings/song_page/page.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/song_select_pipeline/beamer.dart';
@@ -132,6 +133,21 @@ Widget buildMainContent(
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const UisettingsPage()),
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Ui  Stuff
+          AppButton(
+            text: 'Beamer Einstellungen',
+            icon: Icons.palette,
+            type: AppButtonType.secondary,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const BeamerSettingsPage()),
               );
             },
           ),

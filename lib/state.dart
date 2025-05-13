@@ -6,19 +6,15 @@ import 'package:P2pChords/networking/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/networking/services/permission_service.dart';
-import 'package:P2pChords/networking/nearby_service.dart';
-import 'package:P2pChords/networking/websocket_service.dart';
+import 'package:P2pChords/networking/nearby/nearby_service.dart';
+import 'package:P2pChords/networking/websocket/websocket_service.dart';
+import 'package:nearby_connections/nearby_connections.dart';
 
 enum UserState { server, client, pc, none }
 
 enum ConnectionMode { nearby, webSocket, hybrid }
 
 abstract class CustomeService {
-  // Device Information
-  Set<String> connectedDeviceIds = {};
-  Set<String> visibleDevices = {};
-  Set<String> knownDevices = {};
-
   // State
   bool isServerRunning = false;
   bool isAdvertising = false;
@@ -39,6 +35,13 @@ abstract class CustomeService {
   Future<bool> stopClient() async => throw UnimplementedError();
   Future<bool> connectToServer(String serverId) async =>
       throw UnimplementedError();
+
+  void initializeDeviceIds({
+    required Set<String> connectedDeviceIds,
+    required Set<String> visibleDevices,
+    required Set<String> knownDevices,
+  });
+  Future<void> dispose();
 }
 
 // Unified connection provider that manages all connection types
@@ -60,6 +63,10 @@ class ConnectionProvider with ChangeNotifier {
   final MessageHandlerService _messageHandlerService = MessageHandlerService();
   final NotificationService _notificationService = NotificationService();
   final PermissionService _permissionService = PermissionService();
+
+  final Set<String> _connectedDeviceIds = {};
+  final Set<String> _visibleDevices = {};
+  final Set<String> _knownDevices = {};
 
   // Initialization
   ConnectionProvider({
@@ -85,6 +92,12 @@ class ConnectionProvider with ChangeNotifier {
       nearbyService.onPayloadReceived = (endpointId, payload) {
         _messageHandlerService.handlePayload(endpointId, payload);
       };
+
+      nearbyService.initializeDeviceIds(
+        connectedDeviceIds: _connectedDeviceIds,
+        visibleDevices: _visibleDevices,
+        knownDevices: _knownDevices,
+      );
     }
     if (_connectionMode == ConnectionMode.webSocket ||
         _connectionMode == ConnectionMode.hybrid) {
@@ -95,9 +108,15 @@ class ConnectionProvider with ChangeNotifier {
       webSocketService.onNotification = (message) {
         _notificationService.showInfo(message);
       };
-      webSocketService.onPayloadReceived = (message) {
+      webSocketService.onMessageReceived = (message) {
         _messageHandlerService.handleIncomingMessage(message);
       };
+
+      webSocketService.initializeDeviceIds(
+        connectedDeviceIds: _connectedDeviceIds,
+        visibleDevices: _visibleDevices,
+        knownDevices: _knownDevices,
+      );
     }
   }
 
@@ -111,7 +130,7 @@ class ConnectionProvider with ChangeNotifier {
       _dataSyncService.sendBytesPayload = nearbyService.sendBytesPayload;
 
       // Connected Devices
-      _dataSyncService.connectedDeviceIds = nearbyService.connectedDeviceIds;
+      _dataSyncService.connectedDeviceIds = _connectedDeviceIds;
     }
     if (_connectionMode == ConnectionMode.webSocket ||
         _connectionMode == ConnectionMode.hybrid) {
@@ -119,7 +138,7 @@ class ConnectionProvider with ChangeNotifier {
       _dataSyncService.sendBytesPayload = webSocketService.sendBytesPayload;
 
       // Connected Devices
-      _dataSyncService.connectedDeviceIds = webSocketService.connectedDeviceIds;
+      _dataSyncService.connectedDeviceIds = _connectedDeviceIds;
     }
   }
 
@@ -134,9 +153,14 @@ class ConnectionProvider with ChangeNotifier {
       _dataLoader.addSongsData(songData);
     };
 
+    _messageHandlerService.onConnectionEstablished = () {
+      _connectedDeviceIds.add(_deviceName);
+      notifyListeners();
+    };
+
     _messageHandlerService.onDisconnection = (deviceId) {
       _notificationService.showInfo("Disconnected from $deviceId");
-      webSocketService.connectedDeviceIds.remove(deviceId);
+      _connectedDeviceIds.remove(deviceId);
       notifyListeners();
     };
   }
@@ -145,12 +169,10 @@ class ConnectionProvider with ChangeNotifier {
   UserState get userState => _userState;
   ConnectionMode get connectionMode => _connectionMode;
   String get deviceName => _deviceName;
-  Set<String> get connectedDeviceIds {
-    return {
-      ...nearbyService.connectedDeviceIds,
-      ...webSocketService.connectedDeviceIds
-    };
-  }
+
+  Set<String> get connectedDeviceIds => _connectedDeviceIds;
+  Set<String> get visibleDevices => _visibleDevices;
+  Set<String> get knownDevices => _knownDevices;
 
   // Server State Getter
   bool get isServerRunning {

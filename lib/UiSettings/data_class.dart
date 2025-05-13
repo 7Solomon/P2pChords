@@ -140,3 +140,44 @@ class UiVariables {
     return result;
   }
 }
+
+// BEAMER
+
+class BeamerUiVariables {
+  double fontSize;
+  String fontFamily;
+
+  BeamerUiVariables({
+    this.fontSize = 22.0,
+    this.fontFamily = 'Courier New',
+  });
+
+  // Method to create a copy
+  BeamerUiVariables copyWith({
+    double? fontSize,
+    String? fontFamily,
+  }) {
+    return BeamerUiVariables(
+      fontSize: fontSize ?? this.fontSize,
+      fontFamily: fontFamily ?? this.fontFamily,
+    );
+  }
+
+  // Method to check for differences
+  bool isDifferent(BeamerUiVariables other) {
+    return fontSize != other.fontSize || fontFamily != other.fontFamily;
+  }
+
+  // Add methods for serialization if needed (e.g., for saving to SharedPreferences)
+  Map<String, dynamic> toJson() => {
+        'fontSize': fontSize,
+        'fontFamily': fontFamily,
+      };
+
+  factory BeamerUiVariables.fromJson(Map<String, dynamic> json) {
+    return BeamerUiVariables(
+      fontSize: json['fontSize'] as double? ?? 22.0,
+      fontFamily: json['fontFamily'] as String? ?? 'Courier New',
+    );
+  }
+}

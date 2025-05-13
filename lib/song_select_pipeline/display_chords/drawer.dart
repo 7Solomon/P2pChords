@@ -1,4 +1,4 @@
-import 'package:P2pChords/UiSettings/page.dart';
+import 'package:P2pChords/UiSettings/song_page/page.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';

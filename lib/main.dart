@@ -1,4 +1,5 @@
 import 'package:P2pChords/dataManagment/provider/app_ui_provider.dart';
+import 'package:P2pChords/dataManagment/provider/beamer_ui_provider.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
@@ -9,7 +10,6 @@ import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'state.dart';
-import 'package:P2pChords/dataManagment/storageManager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +37,7 @@ void main() async {
                 )),
         ChangeNotifierProvider(create: (_) => SheetUiProvider()),
         ChangeNotifierProvider(create: (_) => AppUiProvider()),
+        ChangeNotifierProvider(create: (_) => BeamerUiProvider()),
       ],
       child: MyApp(),
     ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:P2pChords/networking/nearby/utils.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart'; // Keep for debugPrint
 import 'package:nearby_connections/nearby_connections.dart';
@@ -9,32 +10,40 @@ class NearbyService extends CustomeService {
   static final NearbyService _instance = NearbyService._internal();
   factory NearbyService() => _instance;
 
-  NearbyService._internal() {
-    // Initialize empty sets
-    connectedDeviceIds = {};
-    visibleDevices = {};
-    knownDevices = {};
-  }
+  late Set<String> connectedDeviceIds;
+  late Set<String> visibleDevices;
+  late Set<String> knownDevices;
+  late Reconnection reconnectManager;
+
+  NearbyService._internal();
 
   final Nearby _nearby = Nearby();
-
-  // Vars for managing reconnectoin
-  Timer? _reconnectionTimer;
-  int _reconnectionAttempts = 0;
-  static const int _maxReconnectionAttempts = 5;
-  static const Duration _reconnectionInterval = Duration(seconds: 5);
-
-  // For discovery management , Maybe move to CustomeService
-  bool _isReconnecting = false;
 
   // Callbacks assigned by ConnectionProvider
   late String userNickName;
   late Function(String) onNotification;
   late Function(String, Payload) onPayloadReceived;
 
-  // Internal logging helper (optional)
   void _log(String message) {
     debugPrint("NearbyService: $message");
+  }
+
+  @override
+  void initializeDeviceIds({
+    required Set<String> connectedDeviceIds,
+    required Set<String> visibleDevices,
+    required Set<String> knownDevices,
+  }) {
+    this.connectedDeviceIds = connectedDeviceIds;
+    this.visibleDevices = visibleDevices;
+    this.knownDevices = knownDevices;
+
+    // Dont like but okay
+    reconnectManager = Reconnection(
+      requestConnection: requestConnection,
+      connectedDeviceIds: this.connectedDeviceIds,
+      knownDevices: this.knownDevices,
+    );
   }
 
   // Ovverides
@@ -105,7 +114,7 @@ class NearbyService extends CustomeService {
           }
           // Only attempt reconnection if it was a known device
           if (knownDevices.contains(id)) {
-            _startReconnection(id);
+            reconnectManager.startReconnection(id);
           }
         },
       );
@@ -127,55 +136,6 @@ class NearbyService extends CustomeService {
     }
   }
 
-  // Attempt to reconnect to a device
-  void _startReconnection(String endpointId) {
-    if (_isReconnecting || !knownDevices.contains(endpointId))
-      return; // Only reconnect known devices
-
-    _isReconnecting = true;
-    _reconnectionAttempts = 0;
-
-    // _log("Starting reconnection attempts to $endpointId");
-    _attemptReconnection(endpointId);
-  }
-
-  void _attemptReconnection(String endpointId) {
-    if (!knownDevices.contains(endpointId)) {
-      // Stop if device was explicitly disconnected
-      _isReconnecting = false;
-      _reconnectionTimer?.cancel();
-      _reconnectionTimer = null;
-      _log("Reconnection stopped for $endpointId (no longer known)");
-      return;
-    }
-
-    if (_reconnectionAttempts >= _maxReconnectionAttempts ||
-        connectedDeviceIds.contains(endpointId)) {
-      _isReconnecting = false;
-      _reconnectionTimer?.cancel();
-      _reconnectionTimer = null;
-      _log("Reconnection attempts finished for $endpointId");
-      return;
-    }
-
-    _reconnectionAttempts++;
-    _log("Reconnection attempt $_reconnectionAttempts to $endpointId");
-
-    // Try to reconnect
-    requestConnection(endpointId: endpointId);
-
-    // Schedule next attempt
-    _reconnectionTimer?.cancel();
-    _reconnectionTimer = Timer(_reconnectionInterval, () {
-      if (knownDevices.contains(endpointId) &&
-          !connectedDeviceIds.contains(endpointId)) {
-        _attemptReconnection(endpointId);
-      } else {
-        _isReconnecting = false; // Stop if connected or no longer known
-      }
-    });
-  }
-
   // Start discovery to find other devices
   Future<bool> startDiscovery() async {
     try {
@@ -193,6 +153,7 @@ class NearbyService extends CustomeService {
         onEndpointFound: (id, name, serviceId) {
           _log("Found endpoint: $id ($name)");
           final added = visibleDevices.add(id);
+          knownDevices.add(id);
           if (added) {
             onConnectionStateChanged?.call();
           }
@@ -265,7 +226,7 @@ class NearbyService extends CustomeService {
           }
           // requested connections should trigger auto-reconnect? ka
           if (knownDevices.contains(id)) {
-            _startReconnection(id);
+            reconnectManager.startReconnection(id);
           }
         },
       );
@@ -376,8 +337,9 @@ class NearbyService extends CustomeService {
   }
 
   // Clean up resources
+  @override
   Future<void> dispose() async {
-    _reconnectionTimer?.cancel();
+    await reconnectManager.dispose();
     await disconnectFromAllEndpoints();
     await stopAdvertising();
     await stopDiscovery();

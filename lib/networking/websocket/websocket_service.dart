@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:P2pChords/state.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:uuid/uuid.dart';
@@ -14,7 +15,14 @@ class WebSocketClient {
 
   WebSocketClient(this.id, this.name, this.socket);
 
-  Future<void> disconnect() async {
+  Future<void> disconnect(name, id) async {
+    send({
+      'type': 'disconnect',
+      'content': {
+        'name': name,
+        'id': id,
+      }
+    });
     await socket.close();
   }
 
@@ -32,13 +40,7 @@ class WebSocketService extends CustomeService {
   static final WebSocketService _instance = WebSocketService._internal();
   factory WebSocketService() => _instance;
 
-  WebSocketService._internal() {
-    // Initialize empty sets to match NearbyService
-    connectedDeviceIds = {};
-    visibleDevices = {};
-    knownDevices = {};
-  }
-
+  WebSocketService._internal();
   // Server variables
   HttpServer? _httpServer;
   final Set<WebSocketClient> _clients = {};
@@ -47,11 +49,31 @@ class WebSocketService extends CustomeService {
   // Notification callback for important events
   late String userNickName;
   late Function(String) onNotification;
-  late Function(String) onPayloadReceived;
+  late Function(String) onMessageReceived;
   late Function(String) addConnectedDevice;
+
+  late Set<String> connectedDeviceIds;
+  late Set<String> visibleDevices;
+  late Set<String> knownDevices;
+
+  RawDatagramSocket? _discoveryListenerSocket;
+  String? _listeningForClientId;
+  WebSocket? _clientToServerSocket;
+  static const int QR_DISCOVERY_PORT = 45679;
 
   // Getters
   List<WebSocketClient> get clients => _clients.toList();
+
+  @override
+  void initializeDeviceIds({
+    required Set<String> connectedDeviceIds,
+    required Set<String> visibleDevices,
+    required Set<String> knownDevices,
+  }) {
+    this.connectedDeviceIds = connectedDeviceIds;
+    this.visibleDevices = visibleDevices;
+    this.knownDevices = knownDevices;
+  }
 
   // Override base class methods to match NearbyService
   @override
@@ -71,17 +93,41 @@ class WebSocketService extends CustomeService {
 
   @override
   Future<bool> stopClient() async {
-    print("NOT IMPLEMENTED: stopClient");
+    _notify("Stopping client operations...");
+    await stopListeningForServerAnnouncement(); // Stop UDP listener
+
+    if (_clientToServerSocket != null) {
+      try {
+        // The onDone/onError handlers in listenOnServer should remove from connectedDeviceIds
+        await _clientToServerSocket!.close();
+        _notify("Closed client connection to server.");
+      } catch (e) {
+        _notify("Error closing client connection to server: $e");
+      }
+      _clientToServerSocket = null;
+    }
+    // Consider if connectedDeviceIds related to this client's connection should be cleared here
+    // or rely on onDone/onError in listenOnServer.
     return true;
   }
 
   @override
-  Future<bool> connectToServer(String serverId) async {
-    if (serverId == await getServerAddress()) {
-      _notify('Cannot connect to self');
+  Future<bool> connectToServer(String serverId) => listenOnServer(serverId);
+
+  Future<bool> listenOnServer(String serverId) async {
+    if (_clientToServerSocket != null &&
+        _clientToServerSocket!.readyState == WebSocket.open) {
+      _notify(
+          "Already connected to a server. Please disconnect first or implement multi-server support.");
       return false;
     }
-    // Parse address into IP and port
+
+    final ownAddress = await getServerAddress();
+    if (ownAddress != null && serverId == ownAddress) {
+      _notify("Cannot connect to self.");
+      return false;
+    }
+
     try {
       final parts = serverId.split(':');
       if (parts.length != 2) {
@@ -92,33 +138,35 @@ class WebSocketService extends CustomeService {
       final ip = parts[0];
       final port = int.parse(parts[1]);
 
-      // Create WebSocket URL
       final wsUrl = 'ws://$ip:$port';
       _notify('Attempting to connect to $wsUrl');
 
-      // Connect to the WebSocket server
-      final socket = await WebSocket.connect(wsUrl).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('Connection timed out'),
-      );
-      final clientId = _uuid.v4();
+      _clientToServerSocket = await WebSocket.connect(wsUrl)
+          .timeout(const Duration(seconds: 10), onTimeout: () {
+        _clientToServerSocket = null; // Ensure socket is nulled on timeout
+        throw TimeoutException('Connection timed out');
+      });
 
       final initialMessage = {
-        'type': 'connection_established',
+        'type':
+            'listening', // Or a more client-specific type like 'client_hello'
         'content': {
           'name': userNickName,
-          'id': clientId,
+          'id': _uuid.v4(), // Unique ID for this connection instance
         },
       };
 
-      socket.add(jsonEncode(initialMessage));
+      _clientToServerSocket!.add(jsonEncode(initialMessage));
 
       // Add to connected devices
-      connectedDeviceIds.add(serverId);
+      connectedDeviceIds
+          .add(serverId); // serverId here is the address of the server
       knownDevices.add(serverId);
+
       onConnectionStateChanged?.call();
+
       // Set up listener for incoming messages
-      socket.listen(
+      _clientToServerSocket!.listen(
         (dynamic data) {
           //print('Received data: $data');
           try {
@@ -136,33 +184,35 @@ class WebSocketService extends CustomeService {
               jsonString = utf8.decode(base64.decode(data));
             }
 
-            onPayloadReceived(jsonString);
+            onMessageReceived(jsonString);
           } catch (e) {
             _notify('Error processing message: $e');
           }
         },
         onDone: () {
-          _notify('Connection to server closed');
+          _notify('Connection to server $serverId closed');
           connectedDeviceIds.remove(serverId);
           onConnectionStateChanged?.call();
-          //_isReconnecting = false;
+          _clientToServerSocket = null; // Clear the socket reference
         },
         onError: (error) {
-          _notify('WebSocket error: $error');
+          _notify('WebSocket error with server $serverId: $error');
           connectedDeviceIds.remove(serverId);
           onConnectionStateChanged?.call();
-          //_isReconnecting = false;
+          _clientToServerSocket = null; // Clear the socket reference
         },
         cancelOnError: true,
       );
-      // Store the connection for future use? Maybe good idea
-      //_serverConnection = WebSocketClient(serverAddress, 'Server', socket);
 
       _notify('Successfully connected to server at $wsUrl');
-      onConnectionStateChanged?.call();
       return true;
     } catch (e) {
-      _notify('Error connecting to server: $e');
+      _notify('Error connecting to server $serverId: $e');
+      if (_clientToServerSocket != null &&
+          _clientToServerSocket?.closeCode == null) {
+        // If connect threw after socket was assigned but before fully established or if timeout didn't null it
+        _clientToServerSocket = null;
+      }
       return false;
     }
   }
@@ -195,6 +245,125 @@ class WebSocketService extends CustomeService {
     } catch (e) {
       debugPrint('Error getting server address: $e');
       return "127.0.0.1:$port"; //also this
+    }
+  }
+
+  Future<void> announceServerToClient(String clientQRCodeId) async {
+    final serverAddress = await getServerAddress();
+    if (serverAddress == null) {
+      _notify("Server address not available. Cannot announce.");
+      return;
+    }
+
+    try {
+      // Use a temporary socket for sending the broadcast
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      socket.broadcastEnabled = true;
+
+      final messagePayload = jsonEncode({
+        'type': 'SERVER_ANNOUNCEMENT_FOR_CLIENT',
+        'serverAddress': serverAddress,
+        'targetClientId': clientQRCodeId,
+      });
+
+      final data = utf8.encode(messagePayload);
+      // Sends to the broadcast address on the dedicated QR discovery port
+      socket.send(data, InternetAddress('255.255.255.255'), QR_DISCOVERY_PORT);
+      _notify(
+          'Announced server $serverAddress for client ID $clientQRCodeId via broadcast on port $QR_DISCOVERY_PORT.');
+      socket.close(); // Close the socket after sending
+    } catch (e) {
+      _notify('Error announcing server to client: $e');
+    }
+  }
+
+  Future<bool> listenForServerAnnouncement(String clientQRCodeId) async {
+    if (_discoveryListenerSocket != null) {
+      // If already listening, decide on behavior (e.g., stop old, start new)
+      if (_listeningForClientId == clientQRCodeId) {
+        _notify(
+            "Already listening for server announcement for this ID: $clientQRCodeId.");
+        return true; // Already correctly listening
+      }
+      // Stop previous listener if it was for a different ID or to refresh
+      await stopListeningForServerAnnouncement();
+    }
+
+    _listeningForClientId = clientQRCodeId;
+    _notify(
+        "Client listening for server announcement for ID: $_listeningForClientId on port $QR_DISCOVERY_PORT");
+
+    try {
+      _discoveryListenerSocket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4, QR_DISCOVERY_PORT);
+      _discoveryListenerSocket!.listen((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = _discoveryListenerSocket!.receive();
+          if (datagram == null) return;
+
+          try {
+            final messageString = String.fromCharCodes(datagram.data);
+            final messageJson = jsonDecode(messageString);
+
+            print(
+                'Received UDP data from ${datagram.address}:${datagram.port}: "$messageString"');
+
+            if (messageJson['type'] == 'SERVER_ANNOUNCEMENT_FOR_CLIENT' &&
+                messageJson['targetClientId'] == _listeningForClientId) {
+              final serverAddress = messageJson['serverAddress'] as String;
+              print('JOE: $serverAddress');
+              _notify(
+                  'Received server announcement: $serverAddress for my ID $_listeningForClientId. Attempting to connect...');
+
+              // Stop listening once the target message is received and processed.
+              // Do this before attempting to connect to avoid race conditions or further processing.
+              stopListeningForServerAnnouncement();
+
+              connectToServer(serverAddress).then((success) {
+                if (success) {
+                  _notify(
+                      "Successfully connected to server $serverAddress via QR code announcement.");
+                } else {
+                  _notify(
+                      "Failed to connect to server $serverAddress after QR code announcement.");
+                  // UI should handle this, possibly allowing user to retry listening.
+                }
+              });
+            }
+          } catch (e) {
+            // Silently ignore packets that are not in the expected JSON format or not for us
+            // debugPrint('UDP: Error processing packet or not our message: $e');
+          }
+        }
+      }, onError: (error) {
+        _notify('UDP listener error for ID $_listeningForClientId: $error');
+        stopListeningForServerAnnouncement(); // Clean up on error
+      }, onDone: () {
+        // This is called when the socket is closed.
+        // _notify('UDP listener stopped for ID: $_listeningForClientId.');
+        // _listeningForClientId and _discoveryListenerSocket are nulled by stopListeningForServerAnnouncement
+      });
+      return true;
+    } catch (e) {
+      _notify(
+          'Error setting up UDP listener for server announcement (ID $clientQRCodeId): $e');
+      _listeningForClientId = null; // Clear ID if setup failed
+      if (_discoveryListenerSocket != null) {
+        _discoveryListenerSocket!.close();
+        _discoveryListenerSocket = null;
+      }
+      return false;
+    }
+  }
+
+  /// Stops the UDP listener for server announcements.
+  Future<void> stopListeningForServerAnnouncement() async {
+    if (_discoveryListenerSocket != null) {
+      _notify(
+          "Stopping UDP listener for server announcements (ID: $_listeningForClientId).");
+      _discoveryListenerSocket!.close();
+      _discoveryListenerSocket = null;
+      _listeningForClientId = null;
     }
   }
 
@@ -295,7 +464,7 @@ class WebSocketService extends CustomeService {
                   // Handle initial connection
                   if (!_clients.any((client) => client.id == clientId)) {
                     if (message.containsKey('type')) {
-                      if (message['type'] == 'connection_established') {
+                      if (message['type'] == 'listening') {
                         // Handle connection established message
                         final clientName = message['content']['name'] as String;
                         final clientId = message['content']['id'] as String;
@@ -308,14 +477,14 @@ class WebSocketService extends CustomeService {
                         knownDevices.add(clientId);
                         onConnectionStateChanged?.call();
 
-                        // Notify about new connection
-                        _notify('Client connected: $clientName');
+                        SnackService()
+                            .showInfo('Client connected: $clientName');
                       }
                     }
                   }
                   // Handle messages from connected clients
                   else {
-                    onPayloadReceived(message);
+                    onMessageReceived(message);
                   }
                 } catch (e) {
                   _notify('Error processing message: $e');
@@ -323,7 +492,7 @@ class WebSocketService extends CustomeService {
               },
               onDone: () => disconnectFromEndpoint(clientId),
               onError: (error) {
-                _notify('WebSocket error: $error');
+                SnackService().showError('WebSocket error: $error');
                 disconnectFromEndpoint(clientId);
               },
               cancelOnError: true,
@@ -336,7 +505,7 @@ class WebSocketService extends CustomeService {
 
       return true;
     } catch (e) {
-      _notify('Failed to start WebSocket server: $e');
+      SnackService().showError('Failed to start WebSocket server: $e');
       isServerRunning = false;
       isAdvertising = false;
       return false;
@@ -347,8 +516,9 @@ class WebSocketService extends CustomeService {
     try {
       // Disconnect all clients
       for (final client in _clients.toList()) {
-        await client.disconnect();
+        await client.disconnect(userNickName, _uuid.v4());
       }
+
       _clients.clear();
       connectedDeviceIds.clear();
 
@@ -421,8 +591,10 @@ class WebSocketService extends CustomeService {
     onNotification.call(message);
   }
 
-  /// Clean up resources
+  @override
   Future<void> dispose() async {
-    await stopAdvertising();
+    await stopClient(); // Ensure client resources are freed
+    await stopServer(); // Ensure server resources are freed (stopAdvertising handles this)
+    // Original dispose only called stopAdvertising. Adding stopClient for completeness.
   }
 }

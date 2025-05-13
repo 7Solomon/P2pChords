@@ -8,6 +8,7 @@ import 'package:P2pChords/device.dart';
 import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/networking/Pages/components.dart';
 import 'package:P2pChords/utils/notification_service.dart';
+import 'package:uuid/uuid.dart';
 
 class ClientPage extends StatefulWidget {
   const ClientPage({Key? key}) : super(key: key);
@@ -27,6 +28,8 @@ class _ClientPageState extends State<ClientPage>
   //String? _connectingServerId;
   //String? _connectedServerId;
   bool _isModeSelectorExpanded = false;
+  String? _myClientTokenForQR;
+  bool _isDisplayingQRForServer = false;
 
   // Animation variables
   int _animationProgress = 0;
@@ -116,9 +119,9 @@ class _ClientPageState extends State<ClientPage>
         success = await provider.nearbyService.startClient();
 
         // Register discovered servers
-        provider.nearbyService.visibleDevices.forEach((id) {
+        for (var id in provider.visibleDevices) {
           _onServerDiscovered(id, "Nearby Server", "nearby");
-        });
+        }
       }
 
       if (_selectedMode == ConnectionMode.webSocket ||
@@ -485,11 +488,77 @@ class _ClientPageState extends State<ClientPage>
                 if (provider.connectionMode == ConnectionMode.webSocket) ...[
                   qrScannerButton(
                     context: context,
-                    onScanComplete: (address) {
-                      provider.webSocketService.connectToServer(address);
+                    onScanComplete: (scannedData) async {
+                      // This is for client scanning server's QR (old flow, can be kept or removed)
+                      // For the new flow, the server scans the client's QR.
+                      // Consider if this button's purpose needs to be clarified or if it's for a different use case.
+                      // For now, assuming it's for a scenario where server shows QR.
+                      bool isListening = await provider.webSocketService
+                          .listenForServerAnnouncement(scannedData);
+                      if (isListening) {
+                        _showSnackBar(
+                            'QR-Code erfolgreich gescannt. Warte auf Server...');
+                      } else {
+                        _showSnackBar(
+                            'Fehler beim Starten des Listeners für QR-Code. Bitte erneut versuchen.');
+                      }
                     },
-                    buttonText: 'Server per QR-Code verbinden',
+                    buttonText: 'Server-QR scannen (alt)', // Clarified text
                   ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('QR für Server anzeigen'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
+                    ),
+                    onPressed: _isDisplayingQRForServer
+                        ? null
+                        : () async {
+                            final token = const Uuid().v4();
+                            setState(() {
+                              _myClientTokenForQR = token;
+                              _isDisplayingQRForServer = true;
+                            });
+
+                            bool listening = await provider.webSocketService
+                                .listenForServerAnnouncement(token);
+                            if (listening) {
+                              if (!mounted) return;
+                              showClientQrDialog(context, token, () {
+                                // This onDismiss is called when the dialog is closed.
+                                final bool stillWaitingForConnectionViaThisQR =
+                                    _isDisplayingQRForServer;
+                                setState(() {
+                                  _isDisplayingQRForServer = false;
+                                  _myClientTokenForQR = null;
+                                });
+                                // If the dialog was closed AND we were still in the "displaying QR" state
+                                // (meaning connection didn't happen through this QR flow to clear the flag),
+                                // then stop listening.
+                                // The listenForServerAnnouncement itself stops on success/error/done.
+                                // This handles user manually closing the dialog.
+                                if (stillWaitingForConnectionViaThisQR &&
+                                    !provider.connectedDeviceIds.isNotEmpty) {
+                                  // Check if not already connected
+                                  provider.webSocketService
+                                      .stopListeningForServerAnnouncement();
+                                  _showSnackBar(
+                                      "QR-Scan vom Server abgebrochen.");
+                                }
+                              });
+                            } else {
+                              setState(() {
+                                _isDisplayingQRForServer = false;
+                                _myClientTokenForQR = null;
+                              });
+                              _showSnackBar(
+                                  "Fehler beim Starten des QR-Listeners.");
+                            }
+                          },
+                  ),
+                  const SizedBox(height: 8),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.keyboard),
                     label: const Text('Server-Adresse manuell eingeben'),
