@@ -370,17 +370,25 @@ class SongConverter {
 
   /// Checks if a line is likely a chord line
   bool isChordLine(String line) {
-    // Most chord lines have chord names with spaces between them
-    // Common chords are like A, Bm, C#m7, etc.
-    final chordPattern = RegExp(
-        r'^[\s]*([A-G][#b]?(?:maj|min|m|aug|dim|sus|add)?(?:[2-9]|[1-9][0-9])?\s*)+$');
-
-    // Consider lines with N.C. (no chord) or * notation (e.g., F#m*)
-    if (line.contains("N.C.") || RegExp(r'[A-G][#b]?\w*\*').hasMatch(line)) {
-      return true;
+    final trimmedLine = line.trim();
+    if (trimmedLine.isEmpty) {
+      return false;
     }
-
-    return chordPattern.hasMatch(line);
+    // Split the line into potential chord tokens
+    final potentialChords = trimmedLine.split(RegExp(r'\s+'));
+    if (potentialChords.isEmpty ||
+        (potentialChords.length == 1 && potentialChords[0].isEmpty)) {
+      return false;
+    }
+    for (final token in potentialChords) {
+      if (token.isNotEmpty) {
+        // Ensure we don't check empty strings if split somehow produces them
+        if (!ChordUtils.isPotentialChordToken(token)) {
+          return false;
+        }
+      }
+    }
+    return true; // All tokens are chords
   }
 
   /// Extract chords and their positions from a chord line and lyrics line

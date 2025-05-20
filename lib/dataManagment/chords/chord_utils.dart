@@ -12,7 +12,8 @@ class ChordUtils {
       r'(\d+)?' // Number/extension (7, 9, etc.)
       r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' // Additional modifiers/parenthetical
       r'(\/[A-Ga-g][#b]?)?' // Optional bass note
-      r'$');
+      r'(\*)?$' // Optional trailing asterisk for repeated chords
+      );
 
   // Enhanced Nashville pattern to recognize various parts of a Nashville chord
   static final RegExp _nashvillePattern = RegExp(r'^(\d+)' // Number
@@ -376,6 +377,17 @@ class ChordUtils {
     }
 
     return nashvilleNumber!;
+  }
+
+  static bool isPotentialChordToken(String token) {
+    final trimmedToken = token.trim();
+    if (trimmedToken.isEmpty) {
+      return false;
+    }
+    if (trimmedToken == "N.C.") {
+      return true;
+    }
+    return _chordPattern.hasMatch(trimmedToken);
   }
 
   /// Check if the ChordUtils has been properly initialized
