@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/chords_parsing.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 

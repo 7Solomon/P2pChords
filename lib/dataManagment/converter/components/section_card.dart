@@ -3,7 +3,7 @@ import 'package:P2pChords/dataManagment/converter/components/line_item.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:flutter/material.dart';
 
-class SectionCard extends StatelessWidget {
+class SectionCard extends StatefulWidget {
   final PreliminarySection section;
   final int sectionIndex;
   final Function(int, String) onUpdateSectionTitle;
@@ -15,7 +15,6 @@ class SectionCard extends StatelessWidget {
   final Function(int, int)
       onMoveLine; // Assuming direction is handled within callback
   final Function(int, int) onSplitChordLyricPair;
-  // --- ADDED: Callback for combining lines ---
   final Function(int, int) onCombineLines;
   final String songKey;
 
@@ -31,10 +30,16 @@ class SectionCard extends StatelessWidget {
     required this.onAddLine,
     required this.onMoveLine,
     required this.onSplitChordLyricPair,
-    // --- ADDED: Required parameter ---
     required this.onCombineLines,
     required this.songKey,
   });
+
+  @override
+  State<SectionCard> createState() => _SectionCardState();
+}
+
+class _SectionCardState extends State<SectionCard> {
+  bool _isExpanded = true; // State variable for expansion
 
   @override
   Widget build(BuildContext context) {
@@ -46,14 +51,14 @@ class SectionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section title with edit capability
             Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: TextEditingController(text: section.title),
+                    controller:
+                        TextEditingController(text: widget.section.title),
                     onChanged: (value) =>
-                        onUpdateSectionTitle(sectionIndex, value),
+                        widget.onUpdateSectionTitle(widget.sectionIndex, value),
                     decoration: const InputDecoration(
                       labelText: 'Section Title',
                       border: OutlineInputBorder(),
@@ -61,25 +66,42 @@ class SectionCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
+                  icon:
+                      Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
+                  onPressed: () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  },
+                  tooltip: _isExpanded ? 'Collapse section' : 'Expand section',
+                ),
+                IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: () => onRemoveSection(sectionIndex),
+                  onPressed: () => widget.onRemoveSection(widget.sectionIndex),
                   tooltip: 'Delete section',
                 ),
               ],
             ),
+            Visibility(
+              visible: _isExpanded,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+                  const Divider(thickness: 1.5),
+                  const SizedBox(height: 8),
 
-            const SizedBox(height: 12),
-            const Divider(thickness: 1.5),
-            const SizedBox(height: 8),
+                  // Lines in this section, grouped by pairs
+                  _buildLineGroups(), // This method needs adjustment
 
-            // Lines in this section, grouped by pairs
-            _buildLineGroups(), // This method needs adjustment
-
-            // Add line button
-            TextButton.icon(
-              icon: const Icon(Icons.add),
-              label: const Text('Add Line'),
-              onPressed: () => onAddLine(sectionIndex),
+                  // Add line button
+                  TextButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Line'),
+                    onPressed: () => widget.onAddLine(widget.sectionIndex),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -88,7 +110,7 @@ class SectionCard extends StatelessWidget {
   }
 
   Widget _buildLineGroups() {
-    final lines = section.lines;
+    final lines = widget.section.lines;
     final List<Widget> lineWidgets = [];
     int i = 0; // Use a while loop for better control over index increment
 
@@ -106,18 +128,19 @@ class SectionCard extends StatelessWidget {
           nextLineIsLyric &&
           nextLineIsNotSplit) {
         lineWidgets.add(ChordLyricPair(
-          key: ValueKey('pair_${sectionIndex}_$i'), // Add key
+          key: ValueKey('pair_${widget.sectionIndex}_$i'), // Add key
           chordLine: currentLine,
           lyricLine: lines[i + 1],
           chordLineIndex: i,
           lyricLineIndex: i + 1,
-          sectionIndex: sectionIndex,
-          onUpdateLineText: onUpdateLineText,
-          onRemoveLine:
-              onRemoveLine, // Removing a pair might need special handling
-          onMoveLine: onMoveLine, // Moving a pair might need special handling
-          onSplitPair: onSplitChordLyricPair,
-          songKey: songKey,
+          sectionIndex: widget.sectionIndex,
+          onUpdateLineText: widget.onUpdateLineText,
+          onRemoveLine: widget
+              .onRemoveLine, // Removing a pair might need special handling
+          onMoveLine:
+              widget.onMoveLine, // Moving a pair might need special handling
+          onSplitPair: widget.onSplitChordLyricPair,
+          songKey: widget.songKey,
         ));
         i += 2; // Increment by 2 as we processed a pair
       } else {
@@ -130,17 +153,18 @@ class SectionCard extends StatelessWidget {
             lines[i + 1].wasSplit;
 
         lineWidgets.add(LineItem(
-          key: ValueKey('line_${sectionIndex}_$i'), // Add key
+          key: ValueKey('line_${widget.sectionIndex}_$i'), // Add key
           line: currentLine,
-          sectionIndex: sectionIndex,
+          sectionIndex: widget.sectionIndex,
           lineIndex: i,
-          onUpdateLineText: onUpdateLineText,
-          onToggleLineType: onToggleLineType,
-          onRemoveLine: onRemoveLine,
-          onMoveLine: onMoveLine,
+          onUpdateLineText: widget.onUpdateLineText,
+          onToggleLineType: widget.onToggleLineType,
+          onRemoveLine: widget.onRemoveLine,
+          onMoveLine: widget.onMoveLine,
 
-          onCombineLines:
-              canCombine ? onCombineLines : null, // Pass only if combinable
+          onCombineLines: canCombine
+              ? widget.onCombineLines
+              : null, // Pass only if combinable
         ));
         i++; // Increment by 1
       }

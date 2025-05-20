@@ -96,11 +96,12 @@ class _SongSheetDisplayState extends State<SongSheetDisplay> {
     } else if (_currentSongIndex > 0) {
       setState(() {
         _currentSongIndex--;
-        // Fix where empty sections were a problem
         _currentSectionIndex = widget.songs[_currentSongIndex].sections.isEmpty
             ? 0
             : widget.songs[_currentSongIndex].sections.length - 1;
+
         widget.onSongChanged(_currentSongIndex);
+        widget.onSectionChanged(_currentSectionIndex);
       });
     }
   }

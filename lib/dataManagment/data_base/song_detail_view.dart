@@ -1,17 +1,20 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SongDetailView extends StatefulWidget {
   final List<Song> songs;
   final int initialSongIndex;
 
   const SongDetailView({
-    Key? key,
+    super.key,
     required this.songs,
     required this.initialSongIndex,
-  }) : super(key: key);
+  });
 
   @override
   State<SongDetailView> createState() => _SongDetailViewState();
@@ -43,7 +46,7 @@ class _SongDetailViewState extends State<SongDetailView> {
     });
   }
 
-  Future<void> _saveSong() async {
+  Future<void> _saveSong(BuildContext context) async {
     setState(() {
       _isSaving = true;
       _saveMessage = 'Saving song...';
@@ -52,14 +55,12 @@ class _SongDetailViewState extends State<SongDetailView> {
     try {
       final song = widget.songs[_currentSongIndex];
 
-      print('NOT IMPLEMENTED: Saving song "${song.header.name}"...');
-
-      // 2. Saving it to your local database/storage
-      await Future.delayed(Duration(seconds: 1)); // Simulate saving
-
+      final dataProvider =
+          Provider.of<DataLoadeProvider>(context, listen: false);
+      dataProvider.addSong(song);
       setState(() {
         _isSaving = false;
-        _saveMessage = 'Song "${song.header.name}" saved successfully!';
+        _saveMessage = 'Song "${song.header.name}" Gespeichert!';
       });
 
       // Clear the message after a few seconds
@@ -91,16 +92,19 @@ class _SongDetailViewState extends State<SongDetailView> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _isSaving ? null : _saveSong,
-          ),
+              icon: const Icon(Icons.save),
+              onPressed: _isSaving
+                  ? null
+                  : () {
+                      _saveSong(context);
+                    }),
         ],
       ),
       body: Stack(
         children: [
           // Song display
           SongSheetDisplay(
-            songs: widget.songs,
+            songs: [currentSong],
             songIndex: _currentSongIndex,
             sectionIndex: _currentSectionIndex,
             currentKey: currentSong.header.key,

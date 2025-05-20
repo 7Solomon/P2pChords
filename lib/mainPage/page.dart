@@ -2,6 +2,7 @@ import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/groupManagement/floating_buttons.dart';
 import 'package:P2pChords/mainPage/build_widgets.dart';
 import 'package:P2pChords/state.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,7 @@ class _MainPageState extends State<MainPage> {
           builder:
               (context, connectionProvider, currentSection, dataLoader, child) {
             return Scaffold(
+              floatingActionButton: buildFloatingActionButtonForUI(context),
               appBar: AppBar(
                 title: const Text('P2P Chords'),
                 actions: [

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/foundation.dart';
-
+import 'package:bonsoir/bonsoir.dart';
 import 'package:uuid/uuid.dart';
 
 /// Client connection to WebSocket server
@@ -46,6 +46,12 @@ class WebSocketService extends CustomeService {
   final Set<WebSocketClient> _clients = {};
   final _uuid = const Uuid();
 
+  // Bonsoir variables
+  BonsoirBroadcast? _bonsoirBroadcast;
+  BonsoirDiscovery? _bonsoirDiscovery;
+  StreamSubscription<BonsoirDiscoveryEvent>? _discoverySubscription;
+  static const String _serviceType = '_p2pchords._tcp'; // Bonsoir service type
+
   // Notification callback for important events
   late String userNickName;
   late Function(String) onNotification;
@@ -53,13 +59,10 @@ class WebSocketService extends CustomeService {
   late Function(String) addConnectedDevice;
 
   late Set<String> connectedDeviceIds;
-  late Set<String> visibleDevices;
+  late Set<String> visibleDevices; // Stores "ip:port" of discovered services
   late Set<String> knownDevices;
 
-  RawDatagramSocket? _discoveryListenerSocket;
-  String? _listeningForClientId;
   WebSocket? _clientToServerSocket;
-  static const int QR_DISCOVERY_PORT = 45679;
 
   // Getters
   List<WebSocketClient> get clients => _clients.toList();
@@ -75,7 +78,6 @@ class WebSocketService extends CustomeService {
     this.knownDevices = knownDevices;
   }
 
-  // Override base class methods to match NearbyService
   @override
   Future<bool> startServer() async {
     return await startAdvertising();
@@ -88,17 +90,19 @@ class WebSocketService extends CustomeService {
 
   @override
   Future<bool> startClient() async {
-    return true;
+    _notify("Starting client and Bonsoir discovery...");
+    await startBonsoirDiscovery();
+    onConnectionStateChanged?.call();
+    return isDiscovering;
   }
 
   @override
   Future<bool> stopClient() async {
-    _notify("Stopping client operations...");
-    await stopListeningForServerAnnouncement(); // Stop UDP listener
+    _notify("Stopping client operations and Bonsoir discovery...");
+    await stopBonsoirDiscovery();
 
     if (_clientToServerSocket != null) {
       try {
-        // The onDone/onError handlers in listenOnServer should remove from connectedDeviceIds
         await _clientToServerSocket!.close();
         _notify("Closed client connection to server.");
       } catch (e) {
@@ -106,9 +110,8 @@ class WebSocketService extends CustomeService {
       }
       _clientToServerSocket = null;
     }
-    // Consider if connectedDeviceIds related to this client's connection should be cleared here
-    // or rely on onDone/onError in listenOnServer.
-    return true;
+    onConnectionStateChanged?.call();
+    return !isDiscovering; // Return true if discovery stopped successfully
   }
 
   @override
@@ -131,59 +134,57 @@ class WebSocketService extends CustomeService {
     try {
       final parts = serverId.split(':');
       if (parts.length != 2) {
-        _notify('Invalid server address format. Use IP:PORT');
+        _notify('Invalid server address format. Use IP:PORT. Got: $serverId');
         return false;
       }
 
       final ip = parts[0];
-      final port = int.parse(parts[1]);
+      final port = int.tryParse(parts[1]);
+
+      if (port == null) {
+        _notify('Invalid port in server address: $serverId');
+        return false;
+      }
 
       final wsUrl = 'ws://$ip:$port';
       _notify('Attempting to connect to $wsUrl');
 
       _clientToServerSocket = await WebSocket.connect(wsUrl)
           .timeout(const Duration(seconds: 10), onTimeout: () {
-        _clientToServerSocket = null; // Ensure socket is nulled on timeout
+        _clientToServerSocket = null;
         throw TimeoutException('Connection timed out');
       });
 
       final initialMessage = {
-        'type':
-            'listening', // Or a more client-specific type like 'client_hello'
+        'type': 'listening',
         'content': {
           'name': userNickName,
-          'id': _uuid.v4(), // Unique ID for this connection instance
+          'id': _uuid.v4(),
         },
       };
 
       _clientToServerSocket!.add(jsonEncode(initialMessage));
 
-      // Add to connected devices
-      connectedDeviceIds
-          .add(serverId); // serverId here is the address of the server
+      connectedDeviceIds.add(serverId);
       knownDevices.add(serverId);
-
+      if (visibleDevices.contains(serverId)) {
+        visibleDevices.remove(serverId);
+      }
       onConnectionStateChanged?.call();
 
-      // Set up listener for incoming messages
       _clientToServerSocket!.listen(
         (dynamic data) {
-          //print('Received data: $data');
           try {
-            // A bit wanky, but it dont know how to decode the data otherwise
             String jsonString;
             if (data is String) {
-              // Remove quotes if present at beginning and end
               String cleanData = data;
               if (cleanData.startsWith('"') && cleanData.endsWith('"')) {
                 cleanData = cleanData.substring(1, cleanData.length - 1);
               }
               jsonString = utf8.decode(base64.decode(cleanData));
             } else {
-              // Now really decode the data
               jsonString = utf8.decode(base64.decode(data));
             }
-
             onMessageReceived(jsonString);
           } catch (e) {
             _notify('Error processing message: $e');
@@ -193,25 +194,28 @@ class WebSocketService extends CustomeService {
           _notify('Connection to server $serverId closed');
           connectedDeviceIds.remove(serverId);
           onConnectionStateChanged?.call();
-          _clientToServerSocket = null; // Clear the socket reference
+          _clientToServerSocket = null;
         },
         onError: (error) {
           _notify('WebSocket error with server $serverId: $error');
           connectedDeviceIds.remove(serverId);
           onConnectionStateChanged?.call();
-          _clientToServerSocket = null; // Clear the socket reference
+          _clientToServerSocket = null;
         },
         cancelOnError: true,
       );
-
+      onConnectionStateChanged?.call();
       _notify('Successfully connected to server at $wsUrl');
       return true;
     } catch (e) {
       _notify('Error connecting to server $serverId: $e');
       if (_clientToServerSocket != null &&
           _clientToServerSocket?.closeCode == null) {
-        // If connect threw after socket was assigned but before fully established or if timeout didn't null it
         _clientToServerSocket = null;
+      }
+      if (connectedDeviceIds.contains(serverId)) {
+        connectedDeviceIds.remove(serverId);
+        onConnectionStateChanged?.call();
       }
       return false;
     }
@@ -221,17 +225,12 @@ class WebSocketService extends CustomeService {
     if (_httpServer == null || !isServerRunning) {
       return null;
     }
-
     final port = _httpServer!.port;
-
     try {
-      // Get all network interfaces
       final interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
         includeLinkLocal: false,
       );
-
-      // Find a suitable network address (not loopback)
       for (var interface in interfaces) {
         for (var addr in interface.addresses) {
           if (!addr.isLoopback) {
@@ -239,261 +238,261 @@ class WebSocketService extends CustomeService {
           }
         }
       }
-
-      // Fallback if no suitable interface found
-      return "127.0.0.1:$port"; // maybe make null
+      return "${InternetAddress.loopbackIPv4.address}:$port";
     } catch (e) {
       debugPrint('Error getting server address: $e');
-      return "127.0.0.1:$port"; //also this
+      return "${InternetAddress.loopbackIPv4.address}:$port";
     }
   }
 
-  Future<void> announceServerToClient(String clientQRCodeId) async {
-    final serverAddress = await getServerAddress();
-    if (serverAddress == null) {
-      _notify("Server address not available. Cannot announce.");
+  Future<void> startBonsoirDiscovery() async {
+    // Corrected: Rely on isDiscovering flag and null check for _bonsoirDiscovery
+    if (isDiscovering && _bonsoirDiscovery != null) {
+      _notify("Bonsoir discovery already active.");
       return;
     }
-
     try {
-      // Use a temporary socket for sending the broadcast
-      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-      socket.broadcastEnabled = true;
+      _bonsoirDiscovery = BonsoirDiscovery(type: _serviceType);
+      await _bonsoirDiscovery!.ready;
 
-      final messagePayload = jsonEncode({
-        'type': 'SERVER_ANNOUNCEMENT_FOR_CLIENT',
-        'serverAddress': serverAddress,
-        'targetClientId': clientQRCodeId,
-      });
+      visibleDevices
+          .clear(); // Clear previous visible devices before starting new discovery
+      onConnectionStateChanged?.call();
 
-      final data = utf8.encode(messagePayload);
-      // Sends to the broadcast address on the dedicated QR discovery port
-      socket.send(data, InternetAddress('255.255.255.255'), QR_DISCOVERY_PORT);
-      _notify(
-          'Announced server $serverAddress for client ID $clientQRCodeId via broadcast on port $QR_DISCOVERY_PORT.');
-      socket.close(); // Close the socket after sending
-    } catch (e) {
-      _notify('Error announcing server to client: $e');
-    }
-  }
+      _discoverySubscription = _bonsoirDiscovery!.eventStream!.listen(
+        (event) {
+          if (event.service == null) return;
 
-  Future<bool> listenForServerAnnouncement(String clientQRCodeId) async {
-    if (_discoveryListenerSocket != null) {
-      // If already listening, decide on behavior (e.g., stop old, start new)
-      if (_listeningForClientId == clientQRCodeId) {
-        _notify(
-            "Already listening for server announcement for this ID: $clientQRCodeId.");
-        return true; // Already correctly listening
-      }
-      // Stop previous listener if it was for a different ID or to refresh
-      await stopListeningForServerAnnouncement();
-    }
-
-    _listeningForClientId = clientQRCodeId;
-    _notify(
-        "Client listening for server announcement for ID: $_listeningForClientId on port $QR_DISCOVERY_PORT");
-
-    try {
-      _discoveryListenerSocket = await RawDatagramSocket.bind(
-          InternetAddress.anyIPv4, QR_DISCOVERY_PORT);
-      _discoveryListenerSocket!.listen((RawSocketEvent event) {
-        if (event == RawSocketEvent.read) {
-          final datagram = _discoveryListenerSocket!.receive();
-          if (datagram == null) return;
-
-          try {
-            final messageString = String.fromCharCodes(datagram.data);
-            final messageJson = jsonDecode(messageString);
-
-            print(
-                'Received UDP data from ${datagram.address}:${datagram.port}: "$messageString"');
-
-            if (messageJson['type'] == 'SERVER_ANNOUNCEMENT_FOR_CLIENT' &&
-                messageJson['targetClientId'] == _listeningForClientId) {
-              final serverAddress = messageJson['serverAddress'] as String;
-              print('JOE: $serverAddress');
-              _notify(
-                  'Received server announcement: $serverAddress for my ID $_listeningForClientId. Attempting to connect...');
-
-              // Stop listening once the target message is received and processed.
-              // Do this before attempting to connect to avoid race conditions or further processing.
-              stopListeningForServerAnnouncement();
-
-              connectToServer(serverAddress).then((success) {
-                if (success) {
-                  _notify(
-                      "Successfully connected to server $serverAddress via QR code announcement.");
-                } else {
-                  _notify(
-                      "Failed to connect to server $serverAddress after QR code announcement.");
-                  // UI should handle this, possibly allowing user to retry listening.
-                }
-              });
+          if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
+            print('FOUND');
+            _notify('Bonsoir: Service found: ${event.service!.name}');
+            // Request resolution
+            event.service!.resolve(_bonsoirDiscovery!.serviceResolver);
+          } else if (event.type ==
+              BonsoirDiscoveryEventType.discoveryServiceResolved) {
+            final resolvedService = event.service as ResolvedBonsoirService;
+            final serverAddress =
+                "${resolvedService.host}:${resolvedService.port}";
+            _notify(
+                'Bonsoir: Service resolved: ${resolvedService.name} at $serverAddress');
+            if (!visibleDevices.contains(serverAddress) &&
+                !connectedDeviceIds.contains(serverAddress)) {
+              visibleDevices.add(serverAddress);
+              onConnectionStateChanged?.call();
+              _notify("Bonsoir: Added $serverAddress to visible devices.");
             }
-          } catch (e) {
-            // Silently ignore packets that are not in the expected JSON format or not for us
-            // debugPrint('UDP: Error processing packet or not our message: $e');
+          } else if (event.type ==
+              BonsoirDiscoveryEventType.discoveryServiceLost) {
+            _notify('Bonsoir: Service lost: ${event.service!.name}');
+            if (event.service is ResolvedBonsoirService) {
+              final lostService = event.service as ResolvedBonsoirService;
+              final serverAddress = "${lostService.host}:${lostService.port}";
+              if (visibleDevices.remove(serverAddress)) {
+                onConnectionStateChanged?.call();
+                _notify(
+                    "Bonsoir: Removed $serverAddress from visible devices.");
+              }
+            } else {
+              _notify(
+                  "Bonsoir: Lost service ${event.service!.name} was not resolved, cannot remove by IP:Port directly.");
+            }
           }
-        }
-      }, onError: (error) {
-        _notify('UDP listener error for ID $_listeningForClientId: $error');
-        stopListeningForServerAnnouncement(); // Clean up on error
-      }, onDone: () {
-        // This is called when the socket is closed.
-        // _notify('UDP listener stopped for ID: $_listeningForClientId.');
-        // _listeningForClientId and _discoveryListenerSocket are nulled by stopListeningForServerAnnouncement
-      });
-      return true;
+        },
+        onError: (dynamic error) {
+          String errorMessage = 'Bonsoir discovery error: $error';
+          if (error is Error) {
+            errorMessage += '\nStack trace: ${error.stackTrace}';
+          }
+          _notify(errorMessage);
+          isDiscovering = false; // Ensure flag is reset on error
+          onConnectionStateChanged?.call();
+        },
+        onDone: () {
+          _notify('Bonsoir discovery stream closed.');
+          isDiscovering = false; // Ensure flag is reset when stream is done
+          onConnectionStateChanged?.call();
+        },
+      );
+      await _bonsoirDiscovery!.start();
+      isDiscovering = true; // Set after successful start
+      _notify("Bonsoir discovery started for type '$_serviceType'.");
+      onConnectionStateChanged?.call();
     } catch (e) {
-      _notify(
-          'Error setting up UDP listener for server announcement (ID $clientQRCodeId): $e');
-      _listeningForClientId = null; // Clear ID if setup failed
-      if (_discoveryListenerSocket != null) {
-        _discoveryListenerSocket!.close();
-        _discoveryListenerSocket = null;
+      _notify("Error starting Bonsoir discovery: $e");
+      isDiscovering = false; // Ensure flag is reset on error
+      if (_bonsoirDiscovery != null) {
+        try {
+          // Corrected: No need to check _bonsoirDiscovery.isSearching, just stop if it was initialized
+          await _bonsoirDiscovery!.stop();
+        } catch (stopError) {
+          _notify(
+              "Error trying to stop Bonsoir discovery during error handling: $stopError");
+        }
       }
-      return false;
+      _bonsoirDiscovery = null; // Nullify on error
+      await _discoverySubscription?.cancel(); // Cancel if subscription was made
+      _discoverySubscription = null;
+      onConnectionStateChanged?.call(); // Reflect state change
     }
   }
 
-  /// Stops the UDP listener for server announcements.
-  Future<void> stopListeningForServerAnnouncement() async {
-    if (_discoveryListenerSocket != null) {
-      _notify(
-          "Stopping UDP listener for server announcements (ID: $_listeningForClientId).");
-      _discoveryListenerSocket!.close();
-      _discoveryListenerSocket = null;
-      _listeningForClientId = null;
+  Future<void> stopBonsoirDiscovery() async {
+    if (_bonsoirDiscovery != null) {
+      _notify("Stopping Bonsoir discovery.");
+      try {
+        await _bonsoirDiscovery!.stop();
+      } catch (e) {
+        _notify("Error during Bonsoir discovery stop: $e");
+      }
+      await _discoverySubscription?.cancel();
+      _discoverySubscription = null;
+      _bonsoirDiscovery = null; // Dispose of the object
+
+      if (isDiscovering) {
+        isDiscovering = false;
+        onConnectionStateChanged?.call();
+        _notify("Bonsoir discovery stopped.");
+      }
+    } else {
+      if (isDiscovering) {
+        isDiscovering = false;
+        onConnectionStateChanged?.call();
+        _notify(
+            "Bonsoir discovery was marked active but object was null. State corrected.");
+      }
     }
   }
 
   Future<List<String>> startDiscovery() async {
-    //  final discoveredServers = <String>[];
-    //  final completer = Completer<List<String>>();
-//
-    //  try {
-    //    // Bind to any available port for sending/receiving discovery
-    //    final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-//
-    //    socket.broadcastEnabled = true; // Enable broadcast
-    //    // Set up listener for responses
-    //    socket.listen((event) {
-    //      if (event == RawSocketEvent.read) {
-    //        final datagram = socket.receive();
-    //        if (datagram == null) return;
-//
-    //        final message = String.fromCharCodes(datagram.data);
-    //        if (message.startsWith('P2P_CHORDS_SERVER:')) {
-    //          final serverInfo = message.split(':');
-    //          if (serverInfo.length == 3) {
-    //            final ip = serverInfo[1];
-    //            final port = serverInfo[2];
-    //            final serverAddress = '$ip:$port';
-//
-    //            if (!discoveredServers.contains(serverAddress)) {
-    //              discoveredServers.add(serverAddress);
-    //              print('Found server via UDP broadcast: $serverAddress');
-    //            }
-    //          }
-    //        }
-    //      }
-    //    });
-//
-    //    // Broadcast discovery message
-    //    _notify('Broadcasting discovery message...');
-    //    final broadcastAddress = InternetAddress('255.255.255.255');
-    //    socket.send(
-    //        'P2P_CHORDS_DISCOVERY'.codeUnits, broadcastAddress, DISCOVERY_PORT);
-//
-    //    // Wait for responses (2 seconds)
-    //    await Future.delayed(const Duration(seconds: 2));
-//
-    //    // Clean up
-    //    socket.close();
-    //    completer.complete(discoveredServers);
-    //  } catch (e) {
-    //    _notify('Discovery failed: $e');
-    //    completer.complete([]);
-    //  }
-//
-    //  return completer.future;
-    return [];
+    _notify(
+        "Bonsoir discovery initiated via startClient(). Check visibleDevices.");
+    if (!isDiscovering) {
+      await startClient(); // This will call _startBonsoirDiscovery
+    }
+    return visibleDevices.toList(); // Returns a snapshot
   }
 
-  // WebSocket-specific methods with similar patterns to NearbyService
   Future<bool> startAdvertising() async {
+    // Corrected: Rely on isAdvertising flag and null check for _bonsoirBroadcast
+    if (isAdvertising && _bonsoirBroadcast != null) {
+      _notify('Server is already advertising (Bonsoir)');
+      return true;
+    }
+    if (isServerRunning && _httpServer == null) {
+      _notify(
+          "Server was marked as running but HTTP server is null. Attempting to stop and restart.");
+      await stopAdvertising(); // Try to clean up inconsistent state
+    }
+
     try {
-      if (isServerRunning) {
-        _notify('Server is already running');
-        return true;
-      }
-      if (isAdvertising) {
-        _notify('Server is already advertising');
-        return true;
-      }
-
-      const port =
-          0; // Dynamic port assignment, OS will choose an available one
-
-      try {
-        _httpServer = await HttpServer.bind(InternetAddress.anyIPv4, port);
-        final assignedPort = _httpServer!.port;
-        print(_httpServer);
-
-        _notify('WebSocket server started on port $assignedPort');
-      } catch (e) {
-        print('DETAILED ERROR: Failed to start WebSocket server: $e');
-        _notify('Failed to start WebSocket server: $e');
-        return false;
+      if (_httpServer == null) {
+        const port = 0;
+        try {
+          _httpServer = await HttpServer.bind(InternetAddress.anyIPv4, port);
+          _notify('WebSocket server started on port ${_httpServer!.port}');
+        } catch (e) {
+          _notify('Failed to start WebSocket server: $e');
+          isServerRunning = false;
+          isAdvertising = false;
+          return false;
+        }
       }
       isServerRunning = true;
-      isAdvertising = true;
+
+      final serviceName =
+          'P2PChords-${userNickName.replaceAll(' ', '_')}-${_uuid.v4().substring(0, 4)}';
+      final service = BonsoirService(
+        name: serviceName,
+        type: _serviceType,
+        port: _httpServer!.port,
+      );
+
+      _bonsoirBroadcast = BonsoirBroadcast(service: service);
+      await _bonsoirBroadcast!.ready;
+      await _bonsoirBroadcast!.start();
+
+      isAdvertising = true; // Set after successful start
+      _notify(
+          "Bonsoir: Service '$serviceName' advertised on port ${_httpServer!.port}.");
+      onConnectionStateChanged?.call();
 
       _httpServer!.listen((HttpRequest request) async {
         if (WebSocketTransformer.isUpgradeRequest(request)) {
           try {
             final socket = await WebSocketTransformer.upgrade(request);
-            final clientId = _uuid.v4();
-
-            // Wait for initial message with client name
             socket.listen(
               (dynamic data) {
                 try {
                   final message = jsonDecode(data);
+                  String? clientIdFromMessage;
+                  String? clientNameFromMessage;
 
-                  // Handle initial connection
-                  if (!_clients.any((client) => client.id == clientId)) {
-                    if (message.containsKey('type')) {
-                      if (message['type'] == 'listening') {
-                        // Handle connection established message
-                        final clientName = message['content']['name'] as String;
-                        final clientId = message['content']['id'] as String;
-                        final client =
-                            WebSocketClient(clientId, clientName, socket);
-                        _clients.add(client);
-
-                        // Add to connected devices
-                        connectedDeviceIds.add(clientId);
-                        knownDevices.add(clientId);
-                        onConnectionStateChanged?.call();
-
-                        SnackService()
-                            .showInfo('Client connected: $clientName');
-                      }
-                    }
+                  if (message.containsKey('type') &&
+                      message['type'] == 'listening' &&
+                      message.containsKey('content')) {
+                    clientIdFromMessage = message['content']['id'] as String?;
+                    clientNameFromMessage =
+                        message['content']['name'] as String?;
                   }
-                  // Handle messages from connected clients
-                  else {
-                    onMessageReceived(message);
+
+                  if (clientIdFromMessage != null &&
+                      clientNameFromMessage != null &&
+                      !_clients
+                          .any((client) => client.id == clientIdFromMessage)) {
+                    final client = WebSocketClient(
+                        clientIdFromMessage, clientNameFromMessage, socket);
+                    _clients.add(client);
+
+                    connectedDeviceIds.add(clientIdFromMessage);
+                    knownDevices.add(clientIdFromMessage);
+                    onConnectionStateChanged?.call();
+                    SnackService().showInfo(
+                        'Client connected: $clientNameFromMessage ($clientIdFromMessage)');
+                    _notify(
+                        "Client connected: $clientNameFromMessage ($clientIdFromMessage)");
+                  } else if (_clients.any((c) => c.socket == socket)) {
+                    String jsonString;
+                    if (data is String) {
+                      String cleanData = data;
+                      if (cleanData.startsWith('"') &&
+                          cleanData.endsWith('"')) {
+                        cleanData =
+                            cleanData.substring(1, cleanData.length - 1);
+                      }
+                      jsonString = utf8.decode(base64.decode(cleanData));
+                    } else {
+                      jsonString = utf8.decode(base64.decode(data));
+                    }
+                    onMessageReceived(jsonString);
+                  } else {
+                    _notify(
+                        "Received message from unknown or unassociated socket, or malformed initial message.");
                   }
                 } catch (e) {
-                  _notify('Error processing message: $e');
+                  _notify('Error processing message: $e. Data: $data');
                 }
               },
-              onDone: () => disconnectFromEndpoint(clientId),
+              onDone: () {
+                final client = _clients.firstWhere((c) => c.socket == socket,
+                    orElse: () => WebSocketClient("", "", socket));
+                if (client.id.isNotEmpty) {
+                  disconnectFromEndpoint(client.id);
+                } else {
+                  _notify(
+                      "Socket closed for a client not fully registered or already removed.");
+                }
+              },
               onError: (error) {
-                SnackService().showError('WebSocket error: $error');
-                disconnectFromEndpoint(clientId);
+                final client = _clients.firstWhere((c) => c.socket == socket,
+                    orElse: () => WebSocketClient("", "", socket));
+                if (client.id.isNotEmpty) {
+                  SnackService()
+                      .showError('WebSocket error for ${client.name}: $error');
+                  disconnectFromEndpoint(client.id);
+                } else {
+                  _notify(
+                      "WebSocket error for a client not fully registered or already removed: $error");
+                }
               },
               cancelOnError: true,
             );
@@ -502,68 +501,108 @@ class WebSocketService extends CustomeService {
           }
         }
       });
-
       return true;
     } catch (e) {
-      SnackService().showError('Failed to start WebSocket server: $e');
-      isServerRunning = false;
+      SnackService().showError(
+          'Failed to start WebSocket server or Bonsoir advertising: $e');
+      _notify('Failed to start WebSocket server or Bonsoir advertising: $e');
+      isServerRunning = false; // Ensure flags are reset
       isAdvertising = false;
+
+      if (_bonsoirBroadcast != null) {
+        // Check if broadcast object exists
+        try {
+          // Corrected: No need to check _bonsoirBroadcast.isBroadcasting
+          await _bonsoirBroadcast!.stop();
+        } catch (stopError) {
+          _notify(
+              "Error stopping Bonsoir broadcast during error handling: $stopError");
+        }
+      }
+      _bonsoirBroadcast = null; // Nullify on error
+
+      await _httpServer?.close(force: true);
+      _httpServer = null;
+      onConnectionStateChanged?.call(); // Reflect state change
       return false;
     }
   }
 
   Future<bool> stopAdvertising() async {
+    bool wasAdvertising = isAdvertising; // Capture original state
+
     try {
-      // Disconnect all clients
+      // Corrected: Rely on isAdvertising flag and null check
+      if (_bonsoirBroadcast != null && isAdvertising) {
+        _notify(
+            "Bonsoir: Unadvertising service '${_bonsoirBroadcast!.service.name}'.");
+        try {
+          // Corrected: Removed _bonsoirBroadcast.isBroadcasting check
+          await _bonsoirBroadcast!.stop();
+          _notify("Bonsoir: Service unadvertised.");
+        } catch (e) {
+          _notify("Error stopping Bonsoir broadcast: $e");
+          // Still proceed with cleanup
+        }
+      }
+      _bonsoirBroadcast = null; // Always nullify
+      isAdvertising = false; // Set after attempting to stop
+
       for (final client in _clients.toList()) {
         await client.disconnect(userNickName, _uuid.v4());
       }
-
       _clients.clear();
-      connectedDeviceIds.clear();
 
-      // Close server
-      await _httpServer?.close();
+      await _httpServer?.close(force: true);
       _httpServer = null;
       isServerRunning = false;
-      isAdvertising = false;
       _notify('WebSocket server stopped');
-      onConnectionStateChanged?.call();
+
+      if (wasAdvertising || isServerRunning) {
+        // If advertising state or server state changed
+        onConnectionStateChanged?.call();
+      }
 
       return true;
     } catch (e) {
-      _notify('Error stopping WebSocket server: $e');
-      onConnectionStateChanged?.call();
-
+      _notify('Error stopping WebSocket server or Bonsoir advertising: $e');
+      isAdvertising = false; // Ensure flags are reset on error
+      isServerRunning = false;
+      _bonsoirBroadcast = null; // Ensure cleanup
+      _httpServer = null;
+      onConnectionStateChanged?.call(); // Reflect state change
       return false;
     }
   }
 
-  /// Handle client disconnection
   Future<bool> disconnectFromEndpoint(String clientId) async {
     try {
-      final client = _clients.firstWhere(
-        (client) => client.id == clientId,
-        orElse: () => throw Exception('Client not found'),
-      );
+      WebSocketClient? clientToRemove;
+      try {
+        clientToRemove = _clients.firstWhere((client) => client.id == clientId);
+      } catch (e) {
+        _notify(
+            'Client $clientId not found for disconnection. Already removed or invalid ID.');
+        if (connectedDeviceIds.contains(clientId)) {
+          connectedDeviceIds.remove(clientId);
+          onConnectionStateChanged?.call();
+        }
+        return false;
+      }
 
-      final disconnectMessage = {
-        'type': 'disconnect',
-        'content': {
-          'name': userNickName,
-          'id': clientId,
-        },
-      };
-
-      client.send(jsonEncode(disconnectMessage));
-
-      _clients.remove(client);
+      await clientToRemove.socket.close();
+      _clients.remove(clientToRemove);
       connectedDeviceIds.remove(clientId);
       onConnectionStateChanged?.call();
-      _notify('Client ${client.name} disconnected');
+      _notify('Client ${clientToRemove.name} ($clientId) disconnected.');
       return true;
     } catch (e) {
-      _notify('Error handling client disconnect: $e');
+      _notify('Error handling client disconnect for $clientId: $e');
+      if (connectedDeviceIds.contains(clientId)) {
+        connectedDeviceIds.remove(clientId);
+        onConnectionStateChanged?.call();
+      }
+      _clients.removeWhere((c) => c.id == clientId);
       return false;
     }
   }
@@ -572,29 +611,27 @@ class WebSocketService extends CustomeService {
     try {
       final client = _clients.firstWhere(
         (client) => client.id == clientId,
-        orElse: () => throw Exception('Client not found'),
       );
-
-      client.send(
-        base64Encode(bytes),
-      );
+      client.send(base64Encode(bytes));
       return true;
     } catch (e) {
-      _notify('Error sending bytes payload: $e');
+      _notify(
+          'Error sending bytes payload to $clientId: $e. Client may not be connected.');
       return false;
     }
   }
 
-  /// Display notification - matching NearbyService pattern
   void _notify(String message) {
-    debugPrint(message);
+    debugPrint("WebSocketService: $message");
     onNotification.call(message);
   }
 
   @override
   Future<void> dispose() async {
-    await stopClient(); // Ensure client resources are freed
-    await stopServer(); // Ensure server resources are freed (stopAdvertising handles this)
-    // Original dispose only called stopAdvertising. Adding stopClient for completeness.
+    _notify("Disposing WebSocketService...");
+    await stopClient();
+    await stopServer();
+    // Bonsoir objects should be nullified by stopClient/stopServer
+    _notify("WebSocketService disposed.");
   }
 }

@@ -360,15 +360,15 @@ class _ServerPageState extends State<ServerPage>
                     },
                   ),
                   const SizedBox(height: 16),
-                  qrScannerButtonForServer(
-                    context: context,
-                    onScanComplete: (scannedToken) {
-                      provider.webSocketService
-                          .announceServerToClient(scannedToken);
-                      SnackService().showInfo(
-                          'Ankündigung an Client gesendet: $scannedToken');
-                    },
-                  ),
+                  //qrScannerButtonForServer(
+                  //  context: context,
+                  //  onScanComplete: (scannedToken) {
+                  //    provider.webSocketService
+                  //        .announceServerToClient(scannedToken);
+                  //    SnackService().showInfo(
+                  //        'Ankündigung an Client gesendet: $scannedToken');
+                  //  },
+                  //),
                 ],
                 // Connected clients section
                 const SizedBox(height: 24),

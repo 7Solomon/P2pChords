@@ -119,17 +119,11 @@ class _ServerImportPageState extends State<ServerImportPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Import from Custom Server'),
+        title: const Text('Importiere Songs von Server'),
       ),
       body: (_importedSongs?.isNotEmpty ?? false)
           ? SongListView(
               songs: _importedSongs!,
-              onBackPressed: () {
-                setState(() {
-                  print('AHHHH NOT IMPLEMENTED');
-                  //_importedSongs = null;
-                });
-              },
             )
           : _buildImportForm(),
     );
@@ -149,17 +143,17 @@ class _ServerImportPageState extends State<ServerImportPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'How to use:',
+                    'Bedienung:',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Enter the URL of your custom server that hosts song JSON files.',
+                    'Hier URL zu einem Server eingeben, der JSON-Dateien mit Songdaten bereitstellt.',
                     style: TextStyle(fontSize: 14),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'The server should provide a /files endpoint that lists available JSON files.',
+                    'Der server muss einen /list endpunt haben, der eine Liste von JSON-Dateien zurückgibt.',
                     style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                   ),
                 ],
@@ -174,7 +168,7 @@ class _ServerImportPageState extends State<ServerImportPage> {
             controller: _serverUrlController,
             decoration: InputDecoration(
               labelText: 'Server URL',
-              hintText: 'e.g., https://myserver.com/songs',
+              hintText: 'e.g., https://myserver.com:PORT',
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.clear),
@@ -206,10 +200,10 @@ class _ServerImportPageState extends State<ServerImportPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       SizedBox(width: 12),
-                      Text('Importing...'),
+                      Text('Importieren...'),
                     ],
                   )
-                : const Text('Import Songs from Server'),
+                : const Text('Importiere Songs von Server'),
           ),
 
           const SizedBox(height: 24),

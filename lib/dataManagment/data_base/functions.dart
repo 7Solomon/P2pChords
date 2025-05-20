@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:P2pChords/networking/auth.dart';
+import 'package:P2pChords/networking/services/notification_service.dart';
 import 'package:http/http.dart' as http;
 import '../data_class.dart';
 
@@ -14,23 +16,19 @@ Future<List<Song>?> fetchSongDataFromServer({
   required String serverUrl,
   int timeoutSeconds = 15,
 }) async {
+  final tokenManager = ApiTokenManager();
   try {
-    print('Using server URL: $serverUrl');
-
-    // Get the file list from the server
-    final fileList = await getFilesFromServer(serverUrl: serverUrl);
+    final fileList = await getFilesFromServer(
+        serverUrl: serverUrl, tokenManager: tokenManager);
 
     if (fileList == null || fileList.isEmpty) {
       print('No files found on the server or failed to list files');
       return null;
     }
-
-    print('Found ${fileList.length} files on the server');
-
     // Only process JSON files
     final jsonFiles = fileList
-        .where(
-            (file) => file['name'].toString().toLowerCase().endsWith('.json'))
+        .where((file) =>
+            file['filename'].toString().toLowerCase().endsWith('.json'))
         .toList();
 
     if (jsonFiles.isEmpty) {
@@ -38,15 +36,15 @@ Future<List<Song>?> fetchSongDataFromServer({
       return null;
     }
 
-    print('Found ${jsonFiles.length} JSON files to process');
     List<Song> songs = [];
-    // Process each JSON file
     for (final file in jsonFiles) {
-      final fileUrl = file['url'] as String;
-      final fileName = file['name'] as String;
+      final fileName = file['filename'] as String;
+      final name = file['name'] as String;
 
       final song = await fetchSongFromServer(
-        fileUrl: fileUrl,
+        baseUrl: serverUrl,
+        fileUrl: fileName,
+        tokenManager: tokenManager,
         timeoutSeconds: timeoutSeconds,
       );
       if (song == null) {
@@ -70,6 +68,8 @@ Future<List<Song>?> fetchSongDataFromServer({
 /// - A List of file metadata objects if successful, or null if an error occurred
 Future<List<Map<String, dynamic>>?> getFilesFromServer({
   required String serverUrl,
+  required ApiTokenManager tokenManager,
+  int timeoutSeconds = 10,
 }) async {
   try {
     // Remove trailing slash if present
@@ -80,30 +80,32 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
     // Assuming the server provides a file list endpoint
     final listEndpoint = '$baseUrl/files';
 
-    final response = await http.get(Uri.parse(listEndpoint));
+    final String? authToken = await tokenManager.getToken('serverApiToken');
+    Map<String, String> headers = {};
 
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    } else {
+      NotificationService()
+          .showError('Du hast keinen Token gespeichert. Bitte erstelle einen.');
+    }
+
+    final response = await http
+        .get(Uri.parse(listEndpoint), headers: headers)
+        .timeout(Duration(seconds: timeoutSeconds));
     if (response.statusCode == 200) {
       try {
-        // Parse the JSON response
-        final List<dynamic> files = json.decode(response.body);
+        final List<dynamic> files = json.decode(response.body)['files'];
         return files.cast<Map<String, dynamic>>();
       } catch (e) {
-        print('Error parsing server response: $e');
         return null;
       }
     } else {
-      print('Server returned status code: ${response.statusCode}');
-      // Fallback for testing
-      return [
-        {
-          'url': '$baseUrl/songs.json',
-          'name': 'songs.json',
-          'mimeType': 'application/json'
-        },
-      ];
+      NotificationService().showError('Status code: ${response.statusCode}');
+      return null;
     }
   } catch (e) {
-    print('Error accessing server: $e');
+    NotificationService().showError('Error: $e');
     return null;
   }
 }
@@ -117,45 +119,57 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
 /// Returns:
 /// - A [Song] object if successful, or null if an error occurred
 Future<Song?> fetchSongFromServer({
+  required String baseUrl,
   required String fileUrl,
+  required ApiTokenManager tokenManager,
   int timeoutSeconds = 10,
 }) async {
   try {
-    print('Downloading file: $fileUrl');
+    // Retrieve the token
+    final String? authToken = await tokenManager.getToken('serverApiToken');
+    Map<String, String> headers = {};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    } else {
+      NotificationService()
+          .showError('Du hast keinen Token gespeichert. Bitte erstelle einen.');
+    }
 
-    // Make the HTTP request with timeout
     final response = await http
-        .get(Uri.parse(fileUrl))
+        .get(Uri.parse('$baseUrl/$fileUrl'), headers: headers)
         .timeout(Duration(seconds: timeoutSeconds));
 
-    // Check if the request was successful
     if (response.statusCode == 200) {
-      // Check if we got HTML instead of JSON
       if (response.body.trim().startsWith('<')) {
-        print('Received HTML response instead of JSON.');
+        NotificationService()
+            .showError('Received HTML response instead of JSON.');
         return null;
       }
-
-      print('Successfully downloaded file, parsing JSON...');
 
       // Parse the JSON response
       final Map<String, dynamic> jsonData = json.decode(response.body);
 
       // Create a Song object from the parsed JSON
       return Song.fromMap(jsonData);
+    } else if (response.statusCode == 401 || response.statusCode == 403) {
+      NotificationService().showError(
+          'Authorization error: Status code ${response.statusCode}. Token might be invalid or missing.');
+      // Optionally, you could try to refresh the token or prompt for login here.
+      return null;
     } else {
       // Handle different HTTP error codes
-      print('Failed to load song data. Status code: ${response.statusCode}');
+      NotificationService().showError(
+          'Failed to load song data. Status code: ${response.statusCode}');
       return null;
     }
   } catch (e) {
     // Handle specific exceptions with more detailed error messages
     if (e is http.ClientException) {
-      print('Network error: $e');
+      NotificationService().showError('Network error: $e');
     } else if (e is FormatException) {
-      print('Error parsing JSON data: $e');
+      NotificationService().showError('Error parsing JSON data: $e');
     } else {
-      print('Error fetching song data: $e');
+      NotificationService().showError('Error fetching song data: $e');
     }
     return null;
   }

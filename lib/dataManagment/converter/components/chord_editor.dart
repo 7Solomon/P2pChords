@@ -281,6 +281,7 @@ class _ChordEditorState extends State<ChordEditor> {
               onTapUp: (details) {
                 // Use the appropriate position function for the current mode
                 final position = currentGetPos(details.localPosition.dx);
+
                 _addChordAtPosition(position);
               },
               child: Container(

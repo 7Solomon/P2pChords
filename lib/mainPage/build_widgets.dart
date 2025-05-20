@@ -124,35 +124,6 @@ Widget buildMainContent(
 
           //const SizedBox(height: 20),
 
-          // Ui  Stuff
-          AppButton(
-            text: 'UI Einstellungen',
-            icon: Icons.palette,
-            type: AppButtonType.secondary,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const UisettingsPage()),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-
-          // Ui  Stuff
-          AppButton(
-            text: 'Beamer Einstellungen',
-            icon: Icons.palette,
-            type: AppButtonType.secondary,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const BeamerSettingsPage()),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-
           // Local widget for additional features
           buildLocalWidget(context),
 

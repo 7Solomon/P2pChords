@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 
 class SongListView extends StatelessWidget {
   final List<Song> songs;
-  final VoidCallback onBackPressed;
 
   const SongListView({
-    Key? key,
+    super.key,
     required this.songs,
-    required this.onBackPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +22,8 @@ class SongListView extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: onBackPressed,
-              ),
-              const SizedBox(width: 8),
               Text(
-                'Imported Songs (${songs.length})',
+                'Verfügbare Songs ${songs.length}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -91,7 +84,7 @@ class SongListItem extends StatelessWidget {
           backgroundColor: Theme.of(context).primaryColor,
           child: Text(
             (index + 1).toString(),
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.blue),
           ),
         ),
         title: Text(
@@ -104,12 +97,14 @@ class SongListItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Artist: ${song.header.authors}'),
-            Text('Key: ${song.header.key}'),
+            Text('Artists: ${song.header.authors.join(', ')}'),
             Text('${song.sections.length} sections'),
           ],
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Icon(
+          Icons.arrow_forward,
+          color: Theme.of(context).primaryColor,
+        ),
         onTap: onTap,
       ),
     );

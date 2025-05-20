@@ -127,13 +127,17 @@ class _ClientPageState extends State<ClientPage>
       if (_selectedMode == ConnectionMode.webSocket ||
           _selectedMode == ConnectionMode.hybrid) {
         // Attempt network discovery
-
-        final discoveredAddresses =
-            await provider.webSocketService.startDiscovery();
-        for (final address in discoveredAddresses) {
-          _onServerDiscovered(address, "WLAN Server", "websocket");
+        // startDiscovery will internally call _startBonsoirDiscovery and populate visibleDevices
+        await provider.webSocketService.startDiscovery();
+        // Iterate over the visible devices from the WebSocketService
+        for (final serverId in provider.webSocketService.visibleDevices) {
+          // Assuming serverId from Bonsoir is "ip:port"
+          // You might need a more descriptive name, perhaps derived from Bonsoir service name if available
+          // For now, using the ID as the name.
+          _onServerDiscovered(serverId, serverId, "websocket");
         }
-        success = discoveredAddresses.isNotEmpty || success;
+        success =
+            provider.webSocketService.visibleDevices.isNotEmpty || success;
       }
 
       // Ensure the animation plays for at least 2 seconds
@@ -214,22 +218,48 @@ class _ClientPageState extends State<ClientPage>
   }
 
   /// Disconnect from the server
-  Future<void> _disconnectFromServer(serverId) async {
+  Future<void> _disconnectFromServer(String serverId) async {
     final provider = Provider.of<ConnectionProvider>(context, listen: false);
 
     try {
-      final serverInfo = _discoveredServers[serverId];
+      // final serverInfo = _discoveredServers[serverId]; // May not be needed if ConnectionProvider handles it
       bool success = false;
 
-      if (serverInfo?.connectionType == "nearby") {
+      // Determine the connection type. This logic assumes that if WebSocket mode was selected
+      // and the client is connected, it's a WebSocket connection.
+      // A more robust solution might involve ConnectionProvider tracking the active connection type.
+      if ((_selectedMode == ConnectionMode.webSocket ||
+              _selectedMode == ConnectionMode.hybrid) &&
+          provider.connectedDeviceIds.contains(serverId)) {
+        // For WebSocket, stopClient() will close the connection and stop discovery.
+        // The onDone handler in WebSocketService's client socket listener should update connectedDeviceIds.
+        success = await provider.webSocketService.stopClient();
+      } else if ((_selectedMode == ConnectionMode.nearby ||
+              _selectedMode == ConnectionMode.hybrid) &&
+          provider.connectedDeviceIds.contains(serverId)) {
         success = await provider.nearbyService.disconnectFromEndpoint(serverId);
       } else {
-        success =
-            await provider.webSocketService.disconnectFromEndpoint(serverId);
+        // Fallback if the connection state or type is unclear
+        // Check if any service reports this serverId as a current connection
+        if (provider.webSocketService.connectedDeviceIds.contains(serverId)) {
+          success = await provider.webSocketService.stopClient();
+        } else if (provider.nearbyService.connectedDeviceIds
+            .contains(serverId)) {
+          success =
+              await provider.nearbyService.disconnectFromEndpoint(serverId);
+        } else {
+          _showSnackBar(
+              "Unable to determine connection type for disconnection.");
+          return;
+        }
       }
 
       if (success) {
         _showSnackBar("Vom Server getrennt");
+        // UI should update based on changes to provider.connectedDeviceIds
+      } else {
+        _showSnackBar(
+            "Trennen vom Server fehlgeschlagen oder bereits getrennt.");
       }
     } catch (e) {
       _showSnackBar("Fehler beim Trennen: ${e.toString()}");
@@ -486,78 +516,78 @@ class _ClientPageState extends State<ClientPage>
                 //    ),
                 //  ),
                 if (provider.connectionMode == ConnectionMode.webSocket) ...[
-                  qrScannerButton(
-                    context: context,
-                    onScanComplete: (scannedData) async {
-                      // This is for client scanning server's QR (old flow, can be kept or removed)
-                      // For the new flow, the server scans the client's QR.
-                      // Consider if this button's purpose needs to be clarified or if it's for a different use case.
-                      // For now, assuming it's for a scenario where server shows QR.
-                      bool isListening = await provider.webSocketService
-                          .listenForServerAnnouncement(scannedData);
-                      if (isListening) {
-                        _showSnackBar(
-                            'QR-Code erfolgreich gescannt. Warte auf Server...');
-                      } else {
-                        _showSnackBar(
-                            'Fehler beim Starten des Listeners für QR-Code. Bitte erneut versuchen.');
-                      }
-                    },
-                    buttonText: 'Server-QR scannen (alt)', // Clarified text
-                  ),
+                  //qrScannerButton(
+                  //  context: context,
+                  //  onScanComplete: (scannedData) async {
+                  //    // This is for client scanning server's QR (old flow, can be kept or removed)
+                  //    // For the new flow, the server scans the client's QR.
+                  //    // Consider if this button's purpose needs to be clarified or if it's for a different use case.
+                  //    // For now, assuming it's for a scenario where server shows QR.
+                  //    bool isListening = await provider.webSocketService
+                  //        .listenForServerAnnouncement(scannedData);
+                  //    if (isListening) {
+                  //      _showSnackBar(
+                  //          'QR-Code erfolgreich gescannt. Warte auf Server...');
+                  //    } else {
+                  //      _showSnackBar(
+                  //          'Fehler beim Starten des Listeners für QR-Code. Bitte erneut versuchen.');
+                  //    }
+                  //  },
+                  //  buttonText: 'Server-QR scannen (alt)', // Clarified text
+                  //),
                   const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.qr_code_2),
-                    label: const Text('QR für Server anzeigen'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 16),
-                    ),
-                    onPressed: _isDisplayingQRForServer
-                        ? null
-                        : () async {
-                            final token = const Uuid().v4();
-                            setState(() {
-                              _myClientTokenForQR = token;
-                              _isDisplayingQRForServer = true;
-                            });
-
-                            bool listening = await provider.webSocketService
-                                .listenForServerAnnouncement(token);
-                            if (listening) {
-                              if (!mounted) return;
-                              showClientQrDialog(context, token, () {
-                                // This onDismiss is called when the dialog is closed.
-                                final bool stillWaitingForConnectionViaThisQR =
-                                    _isDisplayingQRForServer;
-                                setState(() {
-                                  _isDisplayingQRForServer = false;
-                                  _myClientTokenForQR = null;
-                                });
-                                // If the dialog was closed AND we were still in the "displaying QR" state
-                                // (meaning connection didn't happen through this QR flow to clear the flag),
-                                // then stop listening.
-                                // The listenForServerAnnouncement itself stops on success/error/done.
-                                // This handles user manually closing the dialog.
-                                if (stillWaitingForConnectionViaThisQR &&
-                                    !provider.connectedDeviceIds.isNotEmpty) {
-                                  // Check if not already connected
-                                  provider.webSocketService
-                                      .stopListeningForServerAnnouncement();
-                                  _showSnackBar(
-                                      "QR-Scan vom Server abgebrochen.");
-                                }
-                              });
-                            } else {
-                              setState(() {
-                                _isDisplayingQRForServer = false;
-                                _myClientTokenForQR = null;
-                              });
-                              _showSnackBar(
-                                  "Fehler beim Starten des QR-Listeners.");
-                            }
-                          },
-                  ),
+                  //ElevatedButton.icon(
+                  //  icon: const Icon(Icons.qr_code_2),
+                  //  label: const Text('QR für Server anzeigen'),
+                  //  style: ElevatedButton.styleFrom(
+                  //    padding: const EdgeInsets.symmetric(
+                  //        vertical: 12, horizontal: 16),
+                  //  ),
+                  //  onPressed: _isDisplayingQRForServer
+                  //      ? null
+                  //      : () async {
+                  //          final token = const Uuid().v4();
+                  //          setState(() {
+                  //            _myClientTokenForQR = token;
+                  //            _isDisplayingQRForServer = true;
+                  //          });
+//
+                  //          bool listening = await provider.webSocketService
+                  //              .listenForServerAnnouncement(token);
+                  //          if (listening) {
+                  //            if (!mounted) return;
+                  //            showClientQrDialog(context, token, () {
+                  //              // This onDismiss is called when the dialog is closed.
+                  //              final bool stillWaitingForConnectionViaThisQR =
+                  //                  _isDisplayingQRForServer;
+                  //              setState(() {
+                  //                _isDisplayingQRForServer = false;
+                  //                _myClientTokenForQR = null;
+                  //              });
+                  //              // If the dialog was closed AND we were still in the "displaying QR" state
+                  //              // (meaning connection didn't happen through this QR flow to clear the flag),
+                  //              // then stop listening.
+                  //              // The listenForServerAnnouncement itself stops on success/error/done.
+                  //              // This handles user manually closing the dialog.
+                  //              if (stillWaitingForConnectionViaThisQR &&
+                  //                  !provider.connectedDeviceIds.isNotEmpty) {
+                  //                // Check if not already connected
+                  //                provider.webSocketService
+                  //                    .stopListeningForServerAnnouncement();
+                  //                _showSnackBar(
+                  //                    "QR-Scan vom Server abgebrochen.");
+                  //              }
+                  //            });
+                  //          } else {
+                  //            setState(() {
+                  //              _isDisplayingQRForServer = false;
+                  //              _myClientTokenForQR = null;
+                  //            });
+                  //            _showSnackBar(
+                  //                "Fehler beim Starten des QR-Listeners.");
+                  //          }
+                  //        },
+                  //),
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.keyboard),
