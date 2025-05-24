@@ -14,7 +14,6 @@ import 'state.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Completely clear and reset SharedPreferences in case of corruption
   try {
     debugPrint('Initializing SharedPreferences...');
     await MultiJsonStorage.initialize();

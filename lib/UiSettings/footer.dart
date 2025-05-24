@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/UiSettings/ui_styles.dart';
