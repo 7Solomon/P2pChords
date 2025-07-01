@@ -68,11 +68,6 @@ class _ChordEditorState extends State<ChordEditor> {
     if (oldWidget.chordText != widget.chordText) {
       _parseChords();
     }
-    // No need to update _songKey state variable
-    // if (oldWidget.songKey != widget.songKey) {
-    //   _songKey = widget.songKey;
-    //   setState(() {});
-    // }
   }
 
   @override

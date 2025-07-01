@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/converter/components/section_duplicate_dialog.dart';
 import 'package:crypto/crypto.dart';
 
 // Class to represent the preliminary parsing state
@@ -54,6 +56,70 @@ class SongConverter {
 
   SongConverter createSongConverter() {
     return SongConverter();
+  }
+
+  /// Parses text into final SongSection objects for direct conversion
+  List<SongSection> parseSections(String text, String key) {
+    final List<SongSection> sections = [];
+    String? currentSectionTitle;
+    List<String> currentSectionLines = [];
+
+    final lines = text.split('\n');
+    final unbracketedSectionRegex = RegExp(
+      r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
+      caseSensitive: false,
+    );
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+
+      // Check for section headers
+      final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
+      final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(line);
+
+      if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
+        // Save previous section
+        if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
+          sections.add(
+            SongSection(
+              title: currentSectionTitle,
+              lines: processLyricLines(currentSectionLines, key),
+            ),
+          );
+          currentSectionLines = [];
+        }
+
+        // Set new section title
+        if (bracketedSectionMatch != null) {
+          currentSectionTitle = bracketedSectionMatch.group(1);
+        } else {
+          final sectionName = unbracketedSectionMatch!.group(1);
+          final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
+          currentSectionTitle = sectionNumber.isEmpty
+              ? sectionName
+              : '$sectionName $sectionNumber';
+        }
+      } else if (line.isNotEmpty) {
+        currentSectionTitle ??= "Untitled Section";
+
+        // Clean chord lines before processing
+        String processedLine =
+            isChordLine(line) ? cleanChordLineText(line) : line;
+        currentSectionLines.add(processedLine);
+      }
+    }
+
+    // Add the last section
+    if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
+      sections.add(
+        SongSection(
+          title: currentSectionTitle,
+          lines: processLyricLines(currentSectionLines, key),
+        ),
+      );
+    }
+
+    return sections;
   }
 
   /// Converts plain text with chords and lyrics to a Song object
@@ -152,11 +218,18 @@ class SongConverter {
         // If no section title yet, create a default section
         currentSectionTitle ??= "Untitled Section";
 
-        // Add the line to the current section with a preliminary chord detection
+        // Detect if this is a chord line
+        bool isChordLineDetected = isChordLine(line);
+
+        // Clean the text if it's a chord line
+        String processedText =
+            isChordLineDetected ? cleanChordLineText(line) : line;
+
+        // Add the line to the current section with cleaned text for chord lines
         currentSectionLines.add(
           PreliminaryLine(
-            text: line,
-            isChordLine: isChordLine(line),
+            text: processedText,
+            isChordLine: isChordLineDetected,
           ),
         );
       }
@@ -216,95 +289,63 @@ class SongConverter {
     );
   }
 
-  /// Parses text into SongSection objects
-  List<SongSection> parseSections(String text, String key) {
-    // Add key parameter
-    final List<SongSection> sections = [];
-    String? currentSectionTitle;
-    List<String> currentSectionLines = [];
+  /// Extract chords considering both original positions and cleaned text
+  List<Chord> extractChordsWithCleaning(String originalChordLine,
+      String cleanedChordLine, String lyricLine, String key) {
+    List<Chord> chords = [];
 
-    // Split the text into lines and process each line
-    final lines = text.split('\n');
+    // Get chord tokens from the cleaned line
+    final chordTokens = extractChordTokensFromLine(cleanedChordLine);
 
-    // Regular expression for common section names in all caps followed by optional number
-    final unbracketedSectionRegex = RegExp(
-      r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
-      caseSensitive: false,
-    );
+    // For each chord token, find its position in the original line
+    int searchStart = 0;
 
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+    for (final chordText in chordTokens) {
+      // Find the position of this chord in the original line
+      int chordPosition = originalChordLine.indexOf(chordText, searchStart);
 
-      // Check if this is a bracketed section header (e.g., [Verse 1])
-      final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
-      // Check if this is an unbracketed section header (e.g., VERSE 1)
-      final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(line);
+      if (chordPosition != -1) {
+        try {
+          // Convert chord to Nashville notation
+          String nashvilleValue = ChordUtils.chordToNashville(chordText, key);
 
-      if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
-        // If we were already processing a section, save it
-        if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
-          sections.add(
-            SongSection(
-              title: currentSectionTitle,
-              lines:
-                  processLyricLines(currentSectionLines, key), // Pass key here
-            ),
-          );
-          currentSectionLines = [];
+          // Add chord with original position
+          chords.add(Chord(
+            position: chordPosition,
+            value: nashvilleValue,
+          ));
+
+          // Update search start to avoid finding the same chord again
+          searchStart = chordPosition + chordText.length;
+        } catch (e) {
+          // Handle invalid chord conversion
+          continue; // Skip invalid chords
         }
-
-        if (bracketedSectionMatch != null) {
-          currentSectionTitle = bracketedSectionMatch.group(1);
-        } else {
-          // For unbracketed matches, format the title nicely
-          final sectionName = unbracketedSectionMatch!.group(1);
-          final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
-          currentSectionTitle = sectionNumber.isEmpty
-              ? sectionName
-              : '$sectionName $sectionNumber';
-        }
-      } else if (currentSectionTitle != null && line.isNotEmpty) {
-        // Add the line to the current section
-        currentSectionLines.add(line);
       }
     }
 
-    // Add the last section
-    if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
-      sections.add(
-        SongSection(
-          title: currentSectionTitle,
-          lines: processLyricLines(currentSectionLines, key), // Pass key here
-        ),
-      );
-    }
-
-    return sections;
+    return chords;
   }
 
-  /// Processes lines in a section to createLineDataobjects with chords
+  /// Processes lines in a section to create LineData objects with chords
   List<LineData> processLyricLines(List<String> lines, String key) {
-    // Add key parameter
     List<LineData> lyricLines = [];
 
-    // Process pairs of lines (chord line followed by lyric line)
     for (int i = 0; i < lines.length; i++) {
-      // Skip empty lines
       if (lines[i].trim().isEmpty) continue;
 
-      // Check if this is a chord line
       if (isChordLine(lines[i]) &&
           i + 1 < lines.length &&
           !isChordLine(lines[i + 1])) {
         // This is a chord line and the next is a lyric line
-        final chordLine = lines[i];
+        String originalChordLine = lines[i];
+        String cleanedChordLine = cleanChordLineText(originalChordLine);
         final lyricLine = lines[i + 1];
 
-        // Extract chords with their positions, passing the key
-        final chords =
-            extractChords(chordLine, lyricLine, key); // Pass key here
+        // Extract chords using both original and cleaned versions
+        final chords = extractChordsWithCleaning(
+            originalChordLine, cleanedChordLine, lyricLine, key);
 
-        // CreateLineDataobject
         lyricLines.add(
           LineData(
             lyrics: lyricLine,
@@ -312,10 +353,9 @@ class SongConverter {
           ),
         );
 
-        // Skip the lyric line as we've processed it
-        i++;
+        i++; // Skip the lyric line
       } else {
-        // This is just a lyric line without chords
+        // Just a lyric line without chords
         lyricLines.add(
           LineData(
             lyrics: lines[i],
@@ -374,55 +414,82 @@ class SongConverter {
     if (trimmedLine.isEmpty) {
       return false;
     }
-    // Split the line into potential chord tokens
-    final potentialChords = trimmedLine.split(RegExp(r'\s+'));
-    if (potentialChords.isEmpty ||
-        (potentialChords.length == 1 && potentialChords[0].isEmpty)) {
+
+    // Split the line into potential tokens
+    final allTokens = trimmedLine.split(RegExp(r'\s+'));
+
+    // Filter out special characters and keep only potential chord tokens
+    final chordTokens = allTokens.where((token) {
+      final cleanToken = token.trim();
+      // Skip empty tokens and common special characters used in chord charts
+      if (cleanToken.isEmpty ||
+          cleanToken == '|' ||
+          cleanToken == '||' ||
+          cleanToken == '/' ||
+          cleanToken == '-' ||
+          cleanToken == ':' ||
+          cleanToken == '.' ||
+          cleanToken == '(' ||
+          cleanToken == ')' ||
+          RegExp(r'^[|\-/:().]+$').hasMatch(cleanToken)) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    // If no valid tokens after filtering, it's not a chord line
+    if (chordTokens.isEmpty) {
       return false;
     }
-    for (final token in potentialChords) {
-      if (token.isNotEmpty) {
-        // Ensure we don't check empty strings if split somehow produces them
-        if (!ChordUtils.isPotentialChordToken(token)) {
-          return false;
-        }
+
+    // Check if all remaining tokens are potential chords
+    for (final token in chordTokens) {
+      if (!ChordUtils.isPotentialChordToken(token)) {
+        return false;
       }
     }
-    return true; // All tokens are chords
+
+    return true; // All non-special tokens are chords
   }
 
-  /// Extract chords and their positions from a chord line and lyrics line
-  List<Chord> extractChords(String chordLine, String lyricLine, String key) {
-    List<Chord> chords = [];
-    //print('lyricLine: $lyricLine, chordLine: $chordLine');
-
-    // Find each chord in the chord line
-    final chordMatches =
-        RegExp(r'([A-G][#b]?\w*(?:\*)?|N\.C\.)').allMatches(chordLine);
-    //print('chordMatches: $chordMatches');
-    for (final match in chordMatches) {
-      final chordText = match.group(0)!;
-      //final chordvalue =
-      int chordPosition = match.start;
-      String nashvilleValue;
-      try {
-        // Convert chord to Nashville notation
-        nashvilleValue = ChordUtils.chordToNashville(chordText, key);
-      } catch (e) {
-        // Handle invalid chord conversion
-        //print('Invalid chord: $chordText, error: $e');
-        nashvilleValue = chordText; // Fallback to original chord text
-        continue;
-      }
-
-      // Add chord
-      chords.add(Chord(
-        position: chordPosition,
-        value: nashvilleValue,
-      ));
+  /// Enhanced method to extract only chord tokens from a line, filtering out special characters
+  List<String> extractChordTokensFromLine(String line) {
+    final trimmedLine = line.trim();
+    if (trimmedLine.isEmpty) {
+      return [];
     }
 
-    return chords;
+    // Split the line into tokens
+    final allTokens = trimmedLine.split(RegExp(r'\s+'));
+
+    // Filter and return only valid chord tokens
+    return allTokens.where((token) {
+      final cleanToken = token.trim();
+
+      // Skip special characters commonly used in chord charts
+      if (cleanToken.isEmpty ||
+          cleanToken == '|' ||
+          cleanToken == '||' ||
+          cleanToken == '/' ||
+          cleanToken == '-' ||
+          cleanToken == ':' ||
+          cleanToken == '.' ||
+          cleanToken == '(' ||
+          cleanToken == ')' ||
+          RegExp(r'^[|\-/:().]+$').hasMatch(cleanToken)) {
+        return false;
+      }
+
+      // Only return if it's a potential chord
+      return ChordUtils.isPotentialChordToken(cleanToken);
+    }).toList();
+  }
+
+  List<Chord> extractChords(String chordLine, String lyricLine, String key) {
+    String cleanedChordLine = cleanChordLineText(chordLine);
+
+    return extractChordsWithCleaning(
+        chordLine, cleanedChordLine, lyricLine, key);
   }
 
   /// Normalize section title to a key format (e.g. "Verse 1" to "verse1")
@@ -491,82 +558,272 @@ bool sectionsAreIdentical(PreliminarySection s1, PreliminarySection s2) {
   return true;
 }
 
-List<PreliminarySection> processDuplicateSections(
-    List<PreliminarySection> originalSections) {
-  final Map<String, List<int>> sectionsByTitle = {};
-  for (int i = 0; i < originalSections.length; i++) {
-    sectionsByTitle.putIfAbsent(originalSections[i].title, () => []).add(i);
-  }
-
+/// Processes duplicate sections while preserving order and showing interactive dialogs
+///
+/// Features:
+/// - Preserves the original order of sections in the song
+/// - Shows a mobile-friendly popup dialog when duplicate section titles are found with different content
+/// - Highlights differences between sections in red for easy identification
+/// - Allows users to choose:
+///   - Keep first version only
+///   - Keep second version only
+///   - Keep both versions (automatically numbered)
+/// - Falls back to automatic numbering if dialog interaction fails
+///
+/// Usage:
+/// ```dart
+/// final processedSections = await processDuplicateSectionsInteractive(
+///   originalSections,
+///   context: context,
+///   showDialog: true, // Set to false to skip dialogs and use automatic processing
+/// );
+/// ```
+Future<List<PreliminarySection>> processDuplicateSectionsInteractive(
+  List<PreliminarySection> originalSections, {
+  required BuildContext context,
+  bool showDialog = true,
+}) async {
   final List<PreliminarySection> finalSections = [];
-  final Set<int> processedIndices = {};
+  final Map<String, List<int>> seenSectionIndices = {};
+  final Map<String, int> titleCounters = {};
 
   for (int i = 0; i < originalSections.length; i++) {
-    if (processedIndices.contains(i)) continue;
-
     final currentSection = originalSections[i];
     final title = currentSection.title;
-    final indices = sectionsByTitle[title]!;
 
-    if (indices.length == 1) {
-      // Unique title, just add it
-      finalSections.add(currentSection);
-      processedIndices.add(i);
-    } else {
-      // Duplicate title found, check content
-      final List<PreliminarySection> group =
-          indices.map((idx) => originalSections[idx]).toList();
-      final List<PreliminarySection> uniqueSectionsInGroup = [];
-      final List<int> uniqueOriginalIndices = [];
+    seenSectionIndices.putIfAbsent(title, () => []);
+    titleCounters.putIfAbsent(title, () => 0);
 
-      for (int k = 0; k < group.length; k++) {
-        final currentGroupSection = group[k];
-        final originalIndex = indices[k];
-        bool foundMatch = false;
-        for (final uniqueSection in uniqueSectionsInGroup) {
-          if (sectionsAreIdentical(currentGroupSection, uniqueSection)) {
-            foundMatch = true;
-            break;
-          }
-        }
-        if (!foundMatch) {
-          uniqueSectionsInGroup.add(currentGroupSection);
-          uniqueOriginalIndices.add(
-              originalIndex); // Keep track of the first index for this unique content
-        }
+    // Check if we've seen an identical section with this title
+    bool foundIdentical = false;
+    for (final seenIndex in seenSectionIndices[title]!) {
+      if (sectionsAreIdentical(currentSection, originalSections[seenIndex])) {
+        foundIdentical = true;
+        break;
       }
+    }
 
-      if (uniqueSectionsInGroup.length == 1) {
-        // All sections with this title are identical, add the first one
-        finalSections.add(currentSection); // Add the one at index i
-        processedIndices.addAll(indices); // Mark all as processed
+    if (foundIdentical) {
+      continue; // Skip identical sections
+    }
+
+    // Check if we've seen a different section with the same title
+    bool foundDifferentWithSameTitle = false;
+    int? conflictingIndex;
+    for (final seenIndex in seenSectionIndices[title]!) {
+      if (!sectionsAreIdentical(currentSection, originalSections[seenIndex])) {
+        foundDifferentWithSameTitle = true;
+        conflictingIndex = seenIndex;
+        break;
+      }
+    }
+
+    if (foundDifferentWithSameTitle && showDialog && conflictingIndex != null) {
+      // Show dialog to user for conflict resolution
+      final action = await _showSectionConflictDialog(
+        context: context,
+        firstSection: originalSections[conflictingIndex],
+        secondSection: currentSection,
+        sectionTitle: title,
+      );
+
+      switch (action) {
+        case SectionDuplicateAction.keepFirst:
+          continue;
+        case SectionDuplicateAction.keepSecond:
+          _replaceExistingSection(finalSections, title, currentSection);
+          seenSectionIndices[title]!.add(i);
+          continue;
+        case SectionDuplicateAction.keepBoth:
+          break;
+        case SectionDuplicateAction.cancel:
+        default:
+          break;
+      }
+    }
+
+    // Add the section (either new or as part of keep both)
+    seenSectionIndices[title]!.add(i);
+    titleCounters[title] = titleCounters[title]! + 1;
+
+    if (seenSectionIndices[title]!.length == 1) {
+      // First section with this title
+      bool willHaveDuplicates =
+          _willHaveDuplicates(originalSections, i, title, currentSection);
+
+      if (willHaveDuplicates || foundDifferentWithSameTitle) {
+        // Add with number (1)
+        final numberedSection = PreliminarySection(
+          title: "$title (${titleCounters[title]!})",
+          lines: _copyLines(currentSection.lines),
+        );
+        finalSections.add(numberedSection);
       } else {
-        // Different sections with the same title, rename and add all
-        int count = 1;
-        // Iterate through the original indices to maintain order
-        for (final idx in indices) {
-          if (processedIndices.contains(idx)) {
-            continue;
-          } // Should not happen here, but safe check
+        // No duplicates coming, add without number
+        finalSections.add(currentSection);
+      }
+    } else {
+      // This is a duplicate - always add with number
+      final renamedSection = PreliminarySection(
+        title: "$title (${titleCounters[title]!})",
+        lines: _copyLines(currentSection.lines),
+      );
+      finalSections.add(renamedSection);
 
-          final sectionToRename = originalSections[idx];
-          // Find which unique section it matches to assign the correct base for renaming if needed
-          // (Simpler: just rename based on occurrence order)
-          final renamedSection = PreliminarySection(
-            title: "${sectionToRename.title} ($count)",
-            lines: sectionToRename.lines
-                .map((l) => PreliminaryLine(
-                    text: l.text,
-                    isChordLine: l.isChordLine,
-                    wasSplit: l.wasSplit))
-                .toList(), // Deep copy lines
-          );
-          finalSections.add(renamedSection);
-          processedIndices.add(idx);
-          count++;
-        }
+      // If this is the first duplicate (counter = 2), go back and rename the original
+      if (titleCounters[title]! == 2) {
+        _renumberFirstSection(finalSections, title);
       }
     }
   }
+
   return finalSections;
+}
+
+/// Non-interactive version that preserves the original behavior
+List<PreliminarySection> processDuplicateSections(
+    List<PreliminarySection> originalSections) {
+  final List<PreliminarySection> finalSections = [];
+  final Map<String, List<PreliminarySection>> seenSectionsByTitle = {};
+  final Map<String, int> titleCounters = {};
+
+  for (int i = 0; i < originalSections.length; i++) {
+    final currentSection = originalSections[i];
+    final title = currentSection.title;
+
+    seenSectionsByTitle.putIfAbsent(title, () => []);
+    titleCounters.putIfAbsent(title, () => 0);
+
+    bool foundIdentical = false;
+    for (final seenSection in seenSectionsByTitle[title]!) {
+      if (sectionsAreIdentical(currentSection, seenSection)) {
+        foundIdentical = true;
+        break;
+      }
+    }
+
+    if (foundIdentical) {
+      continue;
+    }
+
+    seenSectionsByTitle[title]!.add(currentSection);
+    titleCounters[title] = titleCounters[title]! + 1;
+
+    if (seenSectionsByTitle[title]!.length == 1) {
+      bool willHaveDuplicates =
+          _willHaveDuplicates(originalSections, i, title, currentSection);
+
+      if (willHaveDuplicates) {
+        final numberedSection = PreliminarySection(
+          title: "$title (${titleCounters[title]!})",
+          lines: _copyLines(currentSection.lines),
+        );
+        finalSections.add(numberedSection);
+      } else {
+        finalSections.add(currentSection);
+      }
+    } else {
+      final renamedSection = PreliminarySection(
+        title: "$title (${titleCounters[title]!})",
+        lines: _copyLines(currentSection.lines),
+      );
+      finalSections.add(renamedSection);
+
+      if (titleCounters[title]! == 2) {
+        _renumberFirstSection(finalSections, title);
+      }
+    }
+  }
+
+  return finalSections;
+}
+
+// Helper functions
+bool _willHaveDuplicates(List<PreliminarySection> originalSections,
+    int currentIndex, String title, PreliminarySection currentSection) {
+  for (int j = currentIndex + 1; j < originalSections.length; j++) {
+    if (originalSections[j].title == title &&
+        !sectionsAreIdentical(currentSection, originalSections[j])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+List<PreliminaryLine> _copyLines(List<PreliminaryLine> lines) {
+  return lines
+      .map((l) => PreliminaryLine(
+          text: l.text, isChordLine: l.isChordLine, wasSplit: l.wasSplit))
+      .toList();
+}
+
+void _replaceExistingSection(List<PreliminarySection> finalSections,
+    String title, PreliminarySection newSection) {
+  for (int j = 0; j < finalSections.length; j++) {
+    if (finalSections[j].title == title ||
+        finalSections[j].title.startsWith("$title (")) {
+      finalSections[j] = newSection;
+      break;
+    }
+  }
+}
+
+void _renumberFirstSection(
+    List<PreliminarySection> finalSections, String title) {
+  for (int j = 0; j < finalSections.length - 1; j++) {
+    if (finalSections[j].title == title) {
+      finalSections[j] = PreliminarySection(
+        title: "$title (1)",
+        lines: finalSections[j].lines,
+      );
+      break;
+    }
+  }
+}
+
+Future<SectionDuplicateAction?> _showSectionConflictDialog({
+  required BuildContext context,
+  required PreliminarySection firstSection,
+  required PreliminarySection secondSection,
+  required String sectionTitle,
+}) async {
+  try {
+    return await showSectionDuplicateDialog(
+      context: context,
+      firstSection: firstSection,
+      secondSection: secondSection,
+      sectionTitle: sectionTitle,
+    );
+  } catch (e) {
+    // Fallback to automatic behavior if dialog not available
+    return SectionDuplicateAction.keepBoth;
+  }
+}
+
+String cleanChordLineText(String text) {
+  return text
+      // Remove single and double pipes with surrounding whitespace
+      .replaceAll(RegExp(r'\s*\|\s*'), ' ')
+      .replaceAll(RegExp(r'\s*\|\|\s*'), ' ')
+
+      // Remove multiple dashes (keep single dashes as they might be in chord names like "sus4-")
+      .replaceAll(RegExp(r'\s*-{2,}\s*'), ' ')
+
+      // Remove multiple colons
+      .replaceAll(RegExp(r'\s*:{2,}\s*'), ' ')
+
+      // Remove isolated forward slashes (not part of slash chords like C/G)
+      .replaceAll(RegExp(r'\s+/\s+'), ' ')
+
+      // Remove parentheses that are not part of chord notation
+      .replaceAll(RegExp(r'\s*\(\s*\)\s*'), ' ')
+
+      // Remove dots that are standalone
+      .replaceAll(RegExp(r'\s+\.\s+'), ' ')
+
+      // Normalize multiple spaces to single space
+      .replaceAll(RegExp(r'\s+'), ' ')
+
+      // Clean up leading/trailing whitespace
+      .trim();
 }

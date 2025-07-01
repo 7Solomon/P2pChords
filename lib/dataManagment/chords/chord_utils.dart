@@ -10,10 +10,10 @@ class ChordUtils {
   static final RegExp _chordPattern = RegExp(r'^([A-Ga-g][#b]?)' // Root note
       r'(m|maj|min|aug|dim|sus|add|\+|°|ø|-)?' // Quality/type
       r'(\d+)?' // Number/extension (7, 9, etc.)
-      r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' // Additional modifiers/parenthetical
-      r'(\/[A-Ga-g][#b]?)?' // Optional bass note
-      r'(\*)?$' // Optional trailing asterisk for repeated chords
+      r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))*' // Additional modifiers (allow multiple)
+      r'(\*)?$' // Optional trailing asterisk
       );
+  static final RegExp _bassNotePattern = RegExp(r'^[A-Ga-g][#b]?$');
 
   // Enhanced Nashville pattern to recognize various parts of a Nashville chord
   static final RegExp _nashvillePattern = RegExp(r'^(\d+)' // Number
@@ -22,6 +22,16 @@ class ChordUtils {
       r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' // Additional modifiers/parenthetical
       r'(\/\d+)?' // Optional bass note
       r'$');
+
+  /// Single unified pattern for both chords and Nashville numbers
+  static final RegExp _unifiedPattern = RegExp(
+      r'^([A-Ga-g][#b]?|\d+)' + // Root: letter+accidental OR number
+          r'(m|maj|min|aug|dim|sus|add|\+|°|ø|-)?' + // Quality/type
+          r'(\d+)?' + // Extension (7, 9, etc.)
+          r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' + // Additional modifiers
+          r'(\/(?:[A-Ga-g][#b]?|\d+))?' + // Bass: slash + (letter+accidental OR number)
+          r'(\*)?$' // Optional asterisk
+      );
 
   /// Initialize the chord mappings from assets
   static Future<void> initialize(BuildContext context) async {
@@ -58,49 +68,39 @@ class ChordUtils {
       return components;
     }
 
+    String mainChord = chord;
+
     // Handle slash chords
     if (chord.contains('/')) {
       List<String> parts = chord.split('/');
-      chord = parts[0];
+      mainChord = parts[0].trim();
       if (parts.length > 1) {
-        components['bass'] = '/' + parts[1];
+        String bassNote = parts[1].trim();
+        // Validate bass note
+        if (_bassNotePattern.hasMatch(bassNote)) {
+          components['bass'] = '/' + bassNote;
+        }
       }
     }
 
-    // Try to match the chord pattern
-    final match = _chordPattern.firstMatch(chord);
+    // Now parse the main chord part (without bass)
+    final match = _chordPattern.firstMatch(mainChord);
     if (match != null) {
       components['root'] = match.group(1) ?? '';
-
-      // Handle quality modifiers
-      String? quality = match.group(2);
-      if (quality != null && quality.isNotEmpty) {
-        components['quality'] = quality;
-      }
-
-      // Handle extensions
-      String? extension = match.group(3);
-      if (extension != null && extension.isNotEmpty) {
-        components['extension'] = extension;
-      }
-
-      // Handle additional modifiers
-      String? modifier = match.group(4);
-      if (modifier != null && modifier.isNotEmpty) {
-        components['modifier'] = modifier;
-      }
+      components['quality'] = match.group(2) ?? '';
+      components['extension'] = match.group(3) ?? '';
+      components['modifier'] = match.group(4) ?? '';
     } else {
-      // If the pattern doesn't match, try to extract just the root
-      final rootMatch = RegExp(r'^([A-Ga-g][#b]?)').firstMatch(chord);
+      // Fallback: try to extract just the root
+      final rootMatch = RegExp(r'^([A-Ga-g][#b]?)').firstMatch(mainChord);
       if (rootMatch != null) {
         components['root'] = rootMatch.group(1)!;
-        // Treat remaining characters as modifiers
-        if (chord.length > components['root']!.length) {
-          components['modifier'] = chord.substring(components['root']!.length);
+        if (mainChord.length > components['root']!.length) {
+          components['modifier'] =
+              mainChord.substring(components['root']!.length);
         }
       } else {
-        // If still no match, treat the whole string as the root
-        components['root'] = chord;
+        components['root'] = mainChord;
       }
     }
 
@@ -128,7 +128,7 @@ class ChordUtils {
       List<String> parts = nashville.split('/');
       nashville = parts[0];
       if (parts.length > 1) {
-        components['bass'] = '/' + parts[1];
+        components['bass'] = '/${parts[1]}';
       }
     }
 
@@ -253,7 +253,6 @@ class ChordUtils {
       if (bassNote != null) {
         chord += '/' + bassNote;
       } else {
-        // If direct mapping fails, try to interpret as a chord
         chord += components['bass']!;
       }
     }
@@ -349,7 +348,7 @@ class ChordUtils {
     if (components['bass']?.isNotEmpty == true) {
       String bassNote = components['bass']!.substring(1); // Remove the slash
       String bassNashville = _getNashvilleNumberForRoot(bassNote, key);
-      nashville += '/' + bassNashville;
+      nashville += '/$bassNashville';
     }
 
     return nashville;
@@ -387,7 +386,34 @@ class ChordUtils {
     if (trimmedToken == "N.C.") {
       return true;
     }
+
+    // Handle slash chords separately
+    if (trimmedToken.contains('/')) {
+      List<String> parts = trimmedToken.split('/');
+      if (parts.length == 2) {
+        String mainChord = parts[0].trim();
+        String bassNote = parts[1].trim();
+
+        return _chordPattern.hasMatch(mainChord) &&
+            _bassNotePattern.hasMatch(bassNote);
+      }
+    }
+
     return _chordPattern.hasMatch(trimmedToken);
+  }
+
+  static List<String> extractChordsFromLine(String line) {
+    List<String> chords = [];
+
+    final tokens = line.split(RegExp(r'\s+'));
+
+    for (String token in tokens) {
+      if (isPotentialChordToken(token)) {
+        chords.add(token.trim());
+      }
+    }
+
+    return chords;
   }
 
   /// Check if the ChordUtils has been properly initialized

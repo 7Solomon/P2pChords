@@ -24,24 +24,6 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
   @override
   void initState() {
     super.initState();
-
-    final CurrentSelectionProvider currentSelectionProvider =
-        Provider.of<CurrentSelectionProvider>(context, listen: false);
-    final DataLoadeProvider dataLoaderProvider =
-        Provider.of<DataLoadeProvider>(context, listen: false);
-
-    final List<String> songHashList =
-        dataLoaderProvider.groups[currentSelectionProvider.currentGroup!]!;
-
-    _controller = QSelectOverlay(
-      songs: songHashList,
-      initialSong: currentSelectionProvider.currentSongHash!,
-      onSongSelected: (selectedSongHash) {
-        setState(() {
-          currentSelectionProvider.setCurrentSong(selectedSongHash);
-        });
-      },
-    );
   }
 
   @override
@@ -64,6 +46,19 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             currentSelection.currentGroup!, currentSelection.currentSongHash!);
         final Song? currentSong =
             dataLoader.getSongByHash(currentSelection.currentSongHash!);
+
+        // Initialize Quick Select Overlay
+        final List<String> songHashList =
+            dataLoader.groups[currentSelection.currentGroup!]!;
+        _controller = QSelectOverlay(
+          songs: songHashList,
+          initialSong: currentSelection.currentSongHash!,
+          onSongSelected: (selectedSongHash) {
+            setState(() {
+              currentSelection.setCurrentSong(selectedSongHash);
+            });
+          },
+        );
         // return Empty check
         if (songs.isEmpty) {
           return const Scaffold(

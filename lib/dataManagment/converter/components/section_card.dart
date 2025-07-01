@@ -12,8 +12,9 @@ class SectionCard extends StatefulWidget {
   final Function(int, int) onToggleLineType;
   final Function(int, int) onRemoveLine;
   final Function(int) onAddLine;
-  final Function(int, int)
-      onMoveLine; // Assuming direction is handled within callback
+  final Function(int, int) onMoveLine;
+  final Function(int) onMoveSectionUp;
+  final Function(int) onMoveSectionDown;
   final Function(int, int) onSplitChordLyricPair;
   final Function(int, int) onCombineLines;
   final String songKey;
@@ -29,6 +30,8 @@ class SectionCard extends StatefulWidget {
     required this.onRemoveLine,
     required this.onAddLine,
     required this.onMoveLine,
+    required this.onMoveSectionUp,
+    required this.onMoveSectionDown,
     required this.onSplitChordLyricPair,
     required this.onCombineLines,
     required this.songKey,
@@ -74,6 +77,17 @@ class _SectionCardState extends State<SectionCard> {
                     });
                   },
                   tooltip: _isExpanded ? 'Collapse section' : 'Expand section',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_upward),
+                  onPressed: () => widget.onMoveSectionUp(widget.sectionIndex),
+                  tooltip: 'Move section up',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_downward),
+                  onPressed: () =>
+                      widget.onMoveSectionDown(widget.sectionIndex),
+                  tooltip: 'Move section down',
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),

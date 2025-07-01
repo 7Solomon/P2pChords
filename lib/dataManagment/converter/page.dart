@@ -42,6 +42,11 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     keyController = TextEditingController(text: '');
     converter = SongConverter();
 
+    // Initialize data asynchronously
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
     //  GEt the first conversion
     PreliminarySongData initialPreliminaryData =
         converter.convertTextToSongInteractive(
@@ -50,9 +55,12 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
       authors: widget.initialAuthors,
     );
 
-    // Process sections to handle duplicates
-    final processedSections =
-        processDuplicateSections(initialPreliminaryData.sections);
+    // Process sections to handle duplicates with interactive dialog
+    final processedSections = await processDuplicateSectionsInteractive(
+      initialPreliminaryData.sections,
+      context: context,
+      showDialog: true,
+    );
 
     // update
     preliminaryData = PreliminarySongData(
@@ -72,7 +80,9 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
       authorControllers.add(TextEditingController());
     }
 
-    isLoading = false;
+    setState(() {
+      isLoading = false;
+    });
   }
 
   // Add this method to handle key changes
@@ -92,7 +102,14 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
         section.lines[chordLineIndex].isChordLine =
             true; // Ensure type is correct
         section.lines[chordLineIndex].wasSplit = true; // Set the flag
+
+        // Clean the chord line text if it contains special characters
+        String currentText = section.lines[chordLineIndex].text;
+        if (converter.isChordLine(currentText)) {
+          section.lines[chordLineIndex].text = cleanChordLineText(currentText);
+        }
       }
+
       if (chordLineIndex + 1 < section.lines.length) {
         section.lines[chordLineIndex + 1].isChordLine =
             false; // Ensure type is correct
@@ -162,6 +179,12 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     setState(() {
       preliminaryData.sections[sectionIndex].lines[lineIndex].isChordLine =
           !preliminaryData.sections[sectionIndex].lines[lineIndex].isChordLine;
+      if (preliminaryData.sections[sectionIndex].lines[lineIndex].isChordLine) {
+        String currentText =
+            preliminaryData.sections[sectionIndex].lines[lineIndex].text;
+        preliminaryData.sections[sectionIndex].lines[lineIndex].text =
+            cleanChordLineText(currentText);
+      }
     });
   }
 
@@ -197,6 +220,24 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
             preliminaryData.sections[sectionIndex].lines.removeAt(lineIndex);
         preliminaryData.sections[sectionIndex].lines
             .insert(lineIndex + 1, line);
+      });
+    }
+  }
+
+  void _moveSectionUp(int sectionIndex) {
+    if (sectionIndex > 0) {
+      setState(() {
+        final section = preliminaryData.sections.removeAt(sectionIndex);
+        preliminaryData.sections.insert(sectionIndex - 1, section);
+      });
+    }
+  }
+
+  void _moveSectionDown(int sectionIndex) {
+    if (sectionIndex < preliminaryData.sections.length - 1) {
+      setState(() {
+        final section = preliminaryData.sections.removeAt(sectionIndex);
+        preliminaryData.sections.insert(sectionIndex + 1, section);
       });
     }
   }
@@ -387,6 +428,8 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
                 onToggleLineType: _toggleLineType,
                 onRemoveLine: _removeLine,
                 onAddLine: _addLineToSection,
+                onMoveSectionUp: _moveSectionUp,
+                onMoveSectionDown: _moveSectionDown,
                 onMoveLine: _moveLine,
                 onSplitChordLyricPair: _splitChordLyricPair,
                 onCombineLines: _combineLines,

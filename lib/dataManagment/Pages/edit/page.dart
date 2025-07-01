@@ -176,7 +176,6 @@ class _SongEditPageState extends State<SongEditPage> {
     });
   }
 
-  // --- NEW: Callback to combine lines ---
   void _combineLines(int sectionIndex, int chordLineIndex) {
     setState(() {
       final section = preliminaryEditData.sections[sectionIndex];
@@ -235,7 +234,7 @@ class _SongEditPageState extends State<SongEditPage> {
     setState(() {
       final line = preliminaryEditData.sections[sectionIndex].lines[lineIndex];
       line.isChordLine = !line.isChordLine;
-      // If toggled, it's definitely acting as a single line
+
       line.wasSplit = true;
     });
   }
@@ -297,10 +296,6 @@ class _SongEditPageState extends State<SongEditPage> {
   }
 
   void _moveLine(int sectionIndex, int lineIndex) {
-    // This needs careful implementation depending on whether it's a single line or a pair
-    // For simplicity, let's assume moving single lines for now.
-    // Moving pairs requires identifying the pair and moving both.
-    // Let's implement moving a single line down.
     if (lineIndex <
         preliminaryEditData.sections[sectionIndex].lines.length - 1) {
       if (preliminaryEditData
@@ -322,6 +317,24 @@ class _SongEditPageState extends State<SongEditPage> {
             .removeAt(lineIndex);
         preliminaryEditData.sections[sectionIndex].lines
             .insert(lineIndex + 1, line);
+      });
+    }
+  }
+
+  void _moveSectionUp(int sectionIndex) {
+    if (sectionIndex > 0) {
+      setState(() {
+        final section = preliminaryEditData.sections.removeAt(sectionIndex);
+        preliminaryEditData.sections.insert(sectionIndex - 1, section);
+      });
+    }
+  }
+
+  void _moveSectionDown(int sectionIndex) {
+    if (sectionIndex < preliminaryEditData.sections.length - 1) {
+      setState(() {
+        final section = preliminaryEditData.sections.removeAt(sectionIndex);
+        preliminaryEditData.sections.insert(sectionIndex + 1, section);
       });
     }
   }
@@ -585,14 +598,6 @@ class _SongEditPageState extends State<SongEditPage> {
         ),
       ]),
 
-      // Remove other buttons or adapt them
-      // SpeedDialChild(
-      //   child: const Icon(Icons.code),
-      //   backgroundColor: UIStyle.primary,
-      //   foregroundColor: Colors.white,
-      //   label: 'Show Raw JSON', // TODO: Adapt if needed
-      //   onTap: () {/* Show preliminaryEditData JSON */},
-      // ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(UIStyle.spacing),
@@ -710,7 +715,9 @@ class _SongEditPageState extends State<SongEditPage> {
                       onToggleLineType: _toggleLineType,
                       onRemoveLine: _removeLine,
                       onAddLine: _addLineToSection,
-                      onMoveLine: _moveLine, // Note: Basic implementation
+                      onMoveLine: _moveLine,
+                      onMoveSectionUp: _moveSectionUp,
+                      onMoveSectionDown: _moveSectionDown,
                       onSplitChordLyricPair: _splitChordLyricPair,
                       onCombineLines: _combineLines,
                     );

@@ -1,11 +1,7 @@
-// Add this after your existing widgets
-
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/converter/functions.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
 
-/// Widget for validating and previewing the key input
 class KeyInputPreview extends StatefulWidget {
   final TextEditingController keyController;
   final PreliminarySongData songData;
@@ -70,17 +66,14 @@ class _KeyInputPreviewState extends State<KeyInputPreview> {
     for (var section in widget.songData.sections) {
       for (var line in section.lines) {
         if (line.isChordLine) {
-          // Find all chords in the line
-          final chordMatches =
-              RegExp(r'([A-G][#b]?\w*(?:\*)?|N\.C\.)').allMatches(line.text);
+          // Use ChordUtils to find and parse all chords in the line
+          final chords = ChordUtils.extractChordsFromLine(line.text);
 
-          for (var match in chordMatches) {
+          for (String chordText in chords) {
             totalChords++;
 
-            // Try to parse as Nashville
+            // Try to convert to Nashville - if successful, it's valid
             try {
-              final chordText = match.group(0)!;
-              // If this doesn't throw an error, it's a valid chord
               ChordUtils.chordToNashville(chordText, keyValue);
               validChords++;
             } catch (e) {
