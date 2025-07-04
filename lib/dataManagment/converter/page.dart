@@ -47,6 +47,7 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
   }
 
   Future<void> _initializeData() async {
+    print('GET DATA');
     //  GEt the first conversion
     PreliminarySongData initialPreliminaryData =
         converter.convertTextToSongInteractive(

@@ -103,8 +103,14 @@ Future<bool> exportSong(Song song) async {
   String songHash = song.hash;
   try {
     Directory? downloadsDirectory = await getDownloadsDirectory();
+    String authorName;
+    if (song.header.authors.isNotEmpty) {
+      authorName = song.header.authors[0];
+    } else {
+      authorName = 'unknown';
+    }
     String filePath =
-        '${downloadsDirectory!.path}/${songHash}_p2pController.json';
+        '${downloadsDirectory!.path}/${song.header.name}_$authorName.json';
 
     // Convert the Map to a JSON string
     String jsonString = jsonEncode(song.toMap());

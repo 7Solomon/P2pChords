@@ -1,6 +1,8 @@
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/half_legal_stuff/server_selection_dialog.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'functions.dart';
 import 'song_list_view.dart';
 
@@ -12,80 +14,37 @@ class ServerImportPage extends StatefulWidget {
 }
 
 class _ServerImportPageState extends State<ServerImportPage> {
-  final TextEditingController _serverUrlController = TextEditingController();
   bool _isLoading = false;
   String _statusMessage = '';
   bool _hasError = false;
   List<Song>? _importedSongs;
 
-  // Keys for shared preferences
-  static const String _serverUrlKey = 'saved_song_server_url';
-
   @override
   void initState() {
     super.initState();
-    _loadSavedServerUrl();
   }
 
   @override
   void dispose() {
-    _serverUrlController.dispose();
     super.dispose();
   }
 
-  // Load previously saved server URL from device storage
-  Future<void> _loadSavedServerUrl() async {
-    try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final String? savedServerUrl = prefs.getString(_serverUrlKey);
-
-      if (savedServerUrl != null && savedServerUrl.isNotEmpty) {
-        setState(() {
-          _serverUrlController.text = savedServerUrl;
-        });
-      }
-    } catch (e) {
-      print('Error loading saved server URL: $e');
-    }
-  }
-
-  // Save server URL to device storage
-  Future<void> _saveServerUrl(String serverUrl) async {
-    try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_serverUrlKey, serverUrl);
-    } catch (e) {
-      print('Error saving server URL: $e');
-      setState(() {
-        _statusMessage = 'Failed to save server URL locally: $e';
-        _hasError = true;
-      });
-    }
-  }
-
-  // Import song data from custom server
   Future<void> _importSongData() async {
-    final String serverUrl = _serverUrlController.text.trim();
+    final serverUrl = await showServerSelectionDialog(context);
 
-    if (serverUrl.isEmpty) {
-      setState(() {
-        _statusMessage = 'Please enter the server URL';
-        _hasError = true;
-      });
+    if (serverUrl == null || serverUrl.isEmpty) {
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Connecting to server and searching for song files...';
+      _statusMessage = 'Verbinde mit Server und suche nach Song-Dateien...';
       _hasError = false;
+      _importedSongs = null; // Clear previous results
     });
 
     try {
-      // Save the server URL for future use
-      await _saveServerUrl(serverUrl);
-
-      // Fetch the song data from all files in the server
+      // 2. Fetch the song data using the URL from the dialog
       final List<Song>? songs = await fetchSongDataFromServer(
         serverUrl: serverUrl,
       );
@@ -97,10 +56,10 @@ class _ServerImportPageState extends State<ServerImportPage> {
         if (songs != null && songs.isNotEmpty) {
           _importedSongs = songs;
           _statusMessage =
-              'Successfully imported ${songs.length} songs from server';
+              'Erfolgreich ${songs.length} Songs vom Server importiert';
           _hasError = false;
         } else {
-          _statusMessage = 'Failed to import song data from server';
+          _statusMessage = 'Keine Songs gefunden oder Import fehlgeschlagen.';
           _hasError = true;
         }
       });
@@ -109,7 +68,7 @@ class _ServerImportPageState extends State<ServerImportPage> {
 
       setState(() {
         _isLoading = false;
-        _statusMessage = 'Error: $e';
+        _statusMessage = 'Fehler: $e';
         _hasError = true;
       });
     }
@@ -135,7 +94,7 @@ class _ServerImportPageState extends State<ServerImportPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Instructions
+          // Instructions Card can stay the same
           const Card(
             child: Padding(
               padding: EdgeInsets.all(16.0),
@@ -148,12 +107,12 @@ class _ServerImportPageState extends State<ServerImportPage> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Hier URL zu einem Server eingeben, der JSON-Dateien mit Songdaten bereitstellt.',
+                    'Klicken Sie auf "Vom Server importieren", um eine Verbindung herzustellen. Sie können einen gespeicherten Server auswählen oder eine neue Adresse eingeben.',
                     style: TextStyle(fontSize: 14),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Der server muss einen /list endpunt haben, der eine Liste von JSON-Dateien zurückgibt.',
+                    'Hinweis: Der Server muss einen /list Endpunkt haben, der eine Liste von JSON-Dateien zurückgibt.',
                     style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                   ),
                 ],
@@ -161,55 +120,24 @@ class _ServerImportPageState extends State<ServerImportPage> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const Spacer(), // Use a spacer to push the button to the center/bottom
 
-          // Server URL input
-          TextField(
-            controller: _serverUrlController,
-            decoration: InputDecoration(
-              labelText: 'Server URL',
-              hintText: 'e.g., https://myserver.com:PORT',
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  _serverUrlController.clear();
-                },
-              ),
-            ),
-            autocorrect: false,
-            enableSuggestions: false,
-            keyboardType: TextInputType.url,
-          ),
-
-          const SizedBox(height: 16),
-
-          // Import button
-          ElevatedButton(
+          // Import button is now the main action
+          ElevatedButton.icon(
+            icon: const Icon(Icons.cloud_download),
+            label: const Text('Vom Server importieren'),
             onPressed: _isLoading ? null : _importSongData,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
+              textStyle: const TextStyle(fontSize: 16),
             ),
-            child: _isLoading
-                ? const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 12),
-                      Text('Importieren...'),
-                    ],
-                  )
-                : const Text('Importiere Songs von Server'),
           ),
 
           const SizedBox(height: 24),
 
-          // Status message
-          if (_statusMessage.isNotEmpty)
+          // Status message section can stay the same
+          if (_isLoading) const Center(child: CircularProgressIndicator()),
+          if (!_isLoading && _statusMessage.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -228,6 +156,8 @@ class _ServerImportPageState extends State<ServerImportPage> {
                 ),
               ),
             ),
+
+          const Spacer(),
         ],
       ),
     );

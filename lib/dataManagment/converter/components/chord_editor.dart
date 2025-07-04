@@ -286,18 +286,18 @@ class _ChordEditorState extends State<ChordEditor> {
           ),
 
           // Character Position Indicators (Only show if lyrics are provided)
-          //if (!isStandalone && widget.lyricsLength != null)
-          //  for (int i = 0; i <= widget.lyricsLength!; i++)
-          //    Positioned(
-          //      // Use the appropriate position function for the current mode
-          //      left: currentGetX(i),
-          //      top: widget.editorHeight * 0.6,
-          //      bottom: 0,
-          //      child: Container(
-          //        width: 1,
-          //        color: indicatorColor,
-          //      ),
-          //    ),
+          if (!isStandalone && widget.lyricsLength != null)
+            for (int i = 0; i <= widget.lyricsLength!; i++)
+              Positioned(
+                // Use the appropriate position function for the current mode
+                left: currentGetX(i),
+                top: widget.editorHeight * 0.6,
+                bottom: 0,
+                child: Container(
+                  width: 1,
+                  color: indicatorColor,
+                ),
+              ),
 
           // Display Chords
           ..._chords.asMap().entries.map((entry) {

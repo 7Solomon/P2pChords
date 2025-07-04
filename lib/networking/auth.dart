@@ -1,12 +1,65 @@
 import 'dart:convert';
 import 'package:P2pChords/networking/services/notification_service.dart';
-import 'package:crypto/crypto.dart';
+import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class ApiTokenManager {
   final _storage = const FlutterSecureStorage();
-  static const tokenMap = {'serverApiToken': 'server_api_token'};
+  // Note: 'serverIp' is removed from here as we now handle a list separately.
+  static const tokenMap = {
+    'serverApiToken': 'server_api_token',
+  };
+  static const _serverIpListKey = 'server_ip_list';
+
+  // --- Static Accessor for single tokens ---
+  static Future<String?> getStoredValue(String key) async {
+    final String? tokenKey = tokenMap[key];
+    if (tokenKey == null) return null;
+    return await const FlutterSecureStorage().read(key: tokenKey);
+  }
+
+  // --- Methods for managing the list of Server IPs ---
+
+  /// Fetches the saved list of server IPs.
+  Future<List<String>> getSavedServerIps() async {
+    final rawList = await _storage.read(key: _serverIpListKey);
+    if (rawList == null) {
+      return [];
+    }
+    try {
+      final List<dynamic> decoded = jsonDecode(rawList);
+      return decoded.cast<String>();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Saves a list of server IPs.
+  Future<void> saveServerIps(List<String> ips) async {
+    final rawList = jsonEncode(ips);
+    await _storage.write(key: _serverIpListKey, value: rawList);
+  }
+
+  /// Adds a new IP to the saved list if it doesn't already exist.
+  Future<void> addServerIp(String newIp) async {
+    final currentIps = await getSavedServerIps();
+    if (newIp.trim().isEmpty || currentIps.contains(newIp.trim())) return;
+    currentIps.add(newIp.trim());
+    await saveServerIps(currentIps);
+  }
+
+  /// Removes a specific IP from the saved list.
+  Future<void> removeServerIp(String ipToRemove) async {
+    final currentIps = await getSavedServerIps();
+    currentIps.remove(ipToRemove);
+    await saveServerIps(currentIps);
+  }
+
+  // --- Generic Token Methods ---
 
   Future<void> saveToken(String key, String token) async {
     final String? tokenKey = tokenMap[key];
@@ -58,37 +111,40 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
   bool _isLoading = false;
 
   List<String> _tokenKeys = [];
+  List<String> _savedIps = [];
+  final _newIpController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _tokenKeys = ApiTokenManager.tokenMap.keys.toList();
-    // Initialize controllers and load tokens for each key
+    // Initialize controllers for tokens
     for (var key in _tokenKeys) {
       _tokenControllers[key] = TextEditingController();
-      _currentTokenDisplays[key] = 'Loading...'; // Initial display
+      _currentTokenDisplays[key] = 'Loading...';
     }
-    _loadAllTokens();
+    _loadAllData();
   }
 
-  Future<void> _loadAllTokens() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadAllData() async {
+    setState(() => _isLoading = true);
+
+    // Load tokens
     for (var key in _tokenKeys) {
       final token = await _tokenManager.getToken(key);
       if (mounted) {
         setState(() {
-          _tokenControllers[key]?.text = token ?? '';
           _currentTokenDisplays[key] =
-              token?.isNotEmpty == true ? token : 'Not set';
+              token?.isNotEmpty == true ? token : 'Nicht festgelegt';
         });
       }
     }
+
+    // Load IPs
+    _savedIps = await _tokenManager.getSavedServerIps();
+
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -110,7 +166,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Token for "$key" saved successfully!')),
+        SnackBar(content: Text('Wert für "$key" erfolgreich gespeichert!')),
       );
     }
   }
@@ -127,8 +183,193 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Token for "$key" cleared!')),
+        SnackBar(content: Text('Wert für "$key" gelöscht!')),
       );
+    }
+  }
+
+  Future<void> _addNewIp() async {
+    if (_newIpController.text.trim().isEmpty) return;
+    setState(() => _isLoading = true);
+    await _tokenManager.addServerIp(_newIpController.text);
+    _newIpController.clear();
+    await _loadAllData(); // Reload to show the new IP
+  }
+
+  Future<void> _removeIp(String ip) async {
+    setState(() => _isLoading = true);
+    await _tokenManager.removeServerIp(ip);
+    await _loadAllData(); // Reload to reflect the deletion
+  }
+
+  Future<void> _showExportDialog() async {
+    final Map<String, bool> selectedItems = {
+      for (var key in _tokenKeys) key: true,
+      'serverIps': true, // Add server IPs to the export options
+    };
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Daten exportieren'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded,
+                              color: Colors.orange.shade800),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Warnung: Der Export legt sensible Daten in einer unverschlüsselten JSON-Datei ab. Teilen Sie diese Datei nicht.',
+                              style: TextStyle(color: Colors.orange.shade900),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Wählen Sie die zu exportierenden Daten aus:'),
+                    ...selectedItems.keys.map((key) {
+                      return CheckboxListTile(
+                        title: Text(key == 'serverIps' ? 'Server IPs' : key),
+                        value: selectedItems[key],
+                        onChanged: (bool? value) {
+                          setDialogState(() {
+                            selectedItems[key] = value ?? false;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Abbrechen'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _exportData(selectedItems);
+                  },
+                  child: const Text('Exportieren'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _exportData(Map<String, bool> selectedItems) async {
+    setState(() => _isLoading = true);
+    try {
+      final Map<String, dynamic> dataToExport =
+          {}; // Changed to dynamic for list
+      // Export tokens
+      for (var key in _tokenKeys) {
+        if (selectedItems[key] == true) {
+          final value = await _tokenManager.getToken(key);
+          if (value != null) {
+            dataToExport[key] = value;
+          }
+        }
+      }
+
+      // Export server IPs
+      if (selectedItems['serverIps'] == true) {
+        final ips = await _tokenManager.getSavedServerIps();
+        if (ips.isNotEmpty) {
+          dataToExport[ApiTokenManager._serverIpListKey] = ips;
+        }
+      }
+
+      if (dataToExport.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Keine Daten zum Exportieren ausgewählt.')),
+        );
+        return;
+      }
+
+      final String jsonString = jsonEncode(dataToExport);
+      final String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Bitte Speicherort auswählen:',
+        fileName: 'p2pchords_settings.json',
+      );
+
+      if (outputFile != null) {
+        final file = File(outputFile);
+        await file.writeAsString(jsonString);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Daten erfolgreich exportiert!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export fehlgeschlagen: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _importData() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final jsonString = await file.readAsString();
+        final Map<String, dynamic> data = jsonDecode(jsonString);
+
+        int importCount = 0;
+        // Import tokens
+        for (var key in data.keys) {
+          if (ApiTokenManager.tokenMap.containsKey(key)) {
+            await _tokenManager.saveToken(key, data[key].toString());
+            importCount++;
+          }
+        }
+
+        // Import server IPs
+        if (data.containsKey(ApiTokenManager._serverIpListKey)) {
+          final List<dynamic> ips = data[ApiTokenManager._serverIpListKey];
+          await _tokenManager.saveServerIps(ips.cast<String>());
+          importCount++;
+        }
+
+        await _loadAllData(); // Refresh the UI with all imported values
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$importCount Werte erfolgreich importiert!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import fehlgeschlagen: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -137,12 +378,79 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
     for (var controller in _tokenControllers.values) {
       controller.dispose();
     }
+    _newIpController.dispose();
     super.dispose();
+  }
+
+  Widget _buildServerIpEditor() {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Gespeicherte Server IPs',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (_savedIps.isEmpty)
+              const Text('Keine Server IPs gespeichert.')
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _savedIps.length,
+                itemBuilder: (context, index) {
+                  final ip = _savedIps[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(ip),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () => _removeIp(ip),
+                    ),
+                  );
+                },
+              ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _newIpController,
+                    decoration: const InputDecoration(
+                      labelText: 'Neue Server IP hinzufügen',
+                      border: OutlineInputBorder(),
+                    ),
+                    enabled: !_isLoading,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed: _isLoading ? null : _addNewIp,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                  tooltip: 'Hinzufügen',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildTokenEditor(String tokenKey) {
     final controller = _tokenControllers[tokenKey];
     final currentDisplay = _currentTokenDisplays[tokenKey];
+    final isSensitive = tokenKey.toLowerCase().contains('token');
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -152,7 +460,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              '$tokenKey', // Display the key name
+              tokenKey, // Display the key name
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
@@ -175,7 +483,8 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
                       currentDisplay ?? 'nicht verfügbar',
                       style: TextStyle(
                         fontFamily: currentDisplay == 'nicht verfügbar' ||
-                                currentDisplay == 'Loading...'
+                                currentDisplay == 'Loading...' ||
+                                !isSensitive
                             ? null
                             : 'monospace',
                         color: currentDisplay == 'nicht verfügbar' ||
@@ -191,11 +500,11 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
             TextFormField(
               controller: controller,
               decoration: InputDecoration(
-                labelText: 'Gib einen eien Token für $tokenKey',
-                hintText: 'hier token einfügen',
+                labelText: 'Neuen Wert für "$tokenKey" eingeben',
+                hintText: 'Wert hier einfügen',
                 border: const OutlineInputBorder(),
               ),
-              obscureText: true,
+              obscureText: isSensitive,
               enabled: !_isLoading,
             ),
             const SizedBox(height: 16),
@@ -238,37 +547,46 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('API Token Einstellungen'),
+        title: const Text('API Einstellungen'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.only(right: 16.0),
-              child: Center(
-                  child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(color: Colors.white))),
-            )
+      ),
+      floatingActionButton: CSpeedDial(
+        theme: Theme.of(context),
+        children: [
+          SpeedDialChild(
+              child: const Icon(Icons.download),
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              label: 'Exportiere Daten',
+              onTap: () {
+                _showExportDialog();
+              }),
+          SpeedDialChild(
+              child: const Icon(Icons.upload),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              label: 'Importiere Daten',
+              onTap: () {
+                _importData();
+              }),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(8.0), // Adjusted padding
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           children: <Widget>[
             Expanded(
-              child: ListView.builder(
-                itemCount: _tokenKeys.length,
-                itemBuilder: (context, index) {
-                  final key = _tokenKeys[index];
-                  return _buildTokenEditor(key);
-                },
+              child: ListView(
+                children: [
+                  _buildServerIpEditor(), // Add the IP editor to the list
+                  ..._tokenKeys.map((key) => _buildTokenEditor(key)).toList(),
+                ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Note: ist eigentlich sicher gespeichert, aber toi toi toi',
+                'Note: Sensible Daten wie Tokens werden sicher im verschlüsselten Speicher des Geräts abgelegt.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontStyle: FontStyle.italic,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,

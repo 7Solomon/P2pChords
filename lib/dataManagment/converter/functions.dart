@@ -186,7 +186,7 @@ class SongConverter {
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-
+      print('Section: $currentSectionTitle');
       // Check if this is a bracketed section header (e.g., [Verse 1])
       final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
       // Check if this is an unbracketed section header (e.g., VERSE 1)
@@ -303,7 +303,7 @@ class SongConverter {
     for (final chordText in chordTokens) {
       // Find the position of this chord in the original line
       int chordPosition = originalChordLine.indexOf(chordText, searchStart);
-
+      print("Chord: $chordText, Position: $chordPosition");
       if (chordPosition != -1) {
         try {
           // Convert chord to Nashville notation
