@@ -1,6 +1,7 @@
 import 'package:P2pChords/dataManagment/Pages/edit/page.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/groupManagement/floating_buttons.dart';
 import 'package:P2pChords/groupManagement/functions.dart';
@@ -22,6 +23,7 @@ class Songoverviewpage extends StatelessWidget {
     final currentData = context.watch<CurrentSelectionProvider>();
     final dataProvider = context.watch<DataLoadeProvider>();
     final musicSyncProvider = context.watch<ConnectionProvider>();
+    final sheetUiProvider = context.watch<SheetUiProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -42,6 +44,14 @@ class Songoverviewpage extends StatelessWidget {
                 final name = song.header.name;
                 final hash = song.hash;
 
+                // SET KEY MAP OF CURRENT SONG TO its ORIGINAL KEY
+                if (!sheetUiProvider.currentKeyMap.containsKey(song.hash)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    sheetUiProvider.setCurrentSongKeyInMap(
+                        song.hash, song.header.key);
+                  });
+                }
+
                 return CDissmissible.deleteAndAction(
                   key: Key(hash),
                   deleteConfirmation: () =>
@@ -59,11 +69,7 @@ class Songoverviewpage extends StatelessWidget {
                     return true;
                   },
                   confirmActionDismiss: () {
-                    exportSong(song).then((value) {
-                      SnackService().showInfo(
-                        'Song exportiert!',
-                      );
-                    });
+                    exportSong(context, song);
                     return Future.value(false);
                   },
                   child: CListTile(

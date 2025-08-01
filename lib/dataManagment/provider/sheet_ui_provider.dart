@@ -8,7 +8,8 @@ class SheetUiProvider extends ChangeNotifier {
     _loadFromPrefs();
   }
 
-  String _currentKey = 'C';
+  //String _currentKey = 'C';
+  Map<String, String> _currentKeyMap = {};
   UiVariables _uiVariables = UiVariables();
 
   void setFontSize(double size) {
@@ -22,8 +23,13 @@ class SheetUiProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCurrentKey(String key) {
-    _currentKey = key;
+  //void setCurrentKey(String key) {
+  //  _currentKeyMap[key] = key;
+  //  notifyListeners();
+  //}
+
+  void setCurrentSongKeyInMap(String songHash, String key) {
+    _currentKeyMap[songHash] = key;
     notifyListeners();
   }
 
@@ -33,17 +39,23 @@ class SheetUiProvider extends ChangeNotifier {
   }
 
   UiVariables get uiVariables => _uiVariables;
-  String get currentKey => _currentKey;
+  //String get currentKey => _currentKey;
+  Map<String, String> get currentKeyMap => _currentKeyMap;
+  String getCurrentKeyForSong(String songHash) {
+    return _currentKeyMap[songHash] ?? 'C';
+  }
 
   fromJson(Map<String, dynamic> json) {
-    _currentKey = json['currentKey'];
+    //_currentKey = json['currentKey'];
+    _currentKeyMap = Map<String, String>.from(json['currentKeyMap'] ?? {});
     _uiVariables = UiVariables.fromJson(json['uiVariables']);
     notifyListeners();
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'currentKey': _currentKey,
+      //'currentKey': _currentKe
+      'currentKeyMap': _currentKeyMap,
       'uiVariables': _uiVariables.toJson(),
     };
   }
@@ -72,7 +84,8 @@ class SheetUiProvider extends ChangeNotifier {
         } catch (e) {
           debugPrint('Error parsing SheetUiProvider JSON: $e');
           // Reset to default values and save those back to preferences
-          _currentKey = 'C';
+          //_currentKey = 'C';
+          _currentKeyMap = {};
           _uiVariables = UiVariables();
           saveToPrefs();
         }

@@ -1,5 +1,5 @@
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/half_legal_stuff/server_selection_dialog.dart';
+import 'package:P2pChords/dataManagment/data_base/server_selection_dialog.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';

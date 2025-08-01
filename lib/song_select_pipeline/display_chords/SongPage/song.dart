@@ -97,9 +97,10 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
           ),
           endDrawer: SongDrawer(
             song: currentSong,
-            currentKey: sheetUiProvider.currentKey,
+            currentKey: sheetUiProvider.getCurrentKeyForSong(currentSong.hash),
             onKeyChanged: (newKey) {
-              sheetUiProvider.setCurrentKey(newKey);
+              print('Key changed to: $newKey');
+              sheetUiProvider.setCurrentSongKeyInMap(currentSong.hash, newKey);
             },
           ),
           // Quick select overlay
@@ -112,7 +113,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                 songs: songs,
                 songIndex: songIndex,
                 sectionIndex: currentSelection.currentSectionIndex!,
-                currentKey: sheetUiProvider.currentKey,
+                currentKey:
+                    sheetUiProvider.getCurrentKeyForSong(currentSong.hash),
                 onSectionChanged: (index) {
                   currentSelection.setCurrentSectionIndex(index);
                   if (connectionProvider.userState == UserState.server) {

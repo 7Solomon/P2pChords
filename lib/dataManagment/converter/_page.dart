@@ -1,3 +1,5 @@
+
+/*
 import 'dart:convert';
 
 import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
@@ -48,13 +50,17 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
 
   Future<void> _initializeData() async {
     print('GET DATA');
-    //  GEt the first conversion
+    //  Get the first conversion with real-time positioning
     PreliminarySongData initialPreliminaryData =
         converter.convertTextToSongInteractive(
       widget.rawText,
       widget.initialTitle,
       authors: widget.initialAuthors,
+      key: '', // Start with empty key
     );
+
+    print(
+        "INITIAL CONVERSION COMPLETE: ${initialPreliminaryData.sections.length} sections");
 
     // Process sections to handle duplicates with interactive dialog
     final processedSections = await processDuplicateSectionsInteractive(
@@ -91,7 +97,25 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     if (newKey.trim().isEmpty) {
       return;
     }
-    setState(() {});
+
+    print("KEY CHANGED: Reconverting with key '$newKey'");
+
+    // Trigger real-time reconversion with the new key
+    setState(() {
+      PreliminarySongData reconvertedData =
+          converter.convertTextToSongInteractive(
+        preliminaryData.originalText,
+        titleController.text,
+        authors: authorControllers
+            .map((controller) => controller.text)
+            .where((text) => text.isNotEmpty)
+            .toList(),
+        key: newKey,
+      );
+
+      // Update the preliminary data with new positioning
+      preliminaryData = reconvertedData;
+    });
   }
 
   void _splitChordLyricPair(int sectionIndex, int chordLineIndex) {
@@ -456,3 +480,4 @@ class _InteractiveConverterPageState extends State<InteractiveConverterPage> {
     );
   }
 }
+*/

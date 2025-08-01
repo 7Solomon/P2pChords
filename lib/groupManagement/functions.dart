@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/networking/auth.dart';
 import 'package:P2pChords/utils/notification_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -98,8 +99,7 @@ Future<bool> exportGroupsData(SongData songsData) async {
   }
 }
 
-Future<bool> exportSong(Song song) async {
-  // In exportGroupsData function
+Future<bool> downloadSong(Song song) async {
   String songHash = song.hash;
   try {
     Directory? downloadsDirectory = await getDownloadsDirectory();
@@ -123,6 +123,61 @@ Future<bool> exportSong(Song song) async {
   } catch (e) {
     return false;
   }
+}
+
+Future<bool> sendToServer(Song song) async {
+  SnackService().showWarning(
+    'Sende den Song "${song.header.name}" auf den Server... ABER IST NICHT IMPLEMENTeRIT DU KEK',
+  );
+  return false;
+  //final _tokenManager = ApiTokenManager();
+  //String? token = await _tokenManager.getToken();
+}
+
+Future<void> exportSong(BuildContext context, Song song) async {
+  // In exportGroupsData function
+  showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Exportiere den Song'),
+          content: const Text('Was willst du mit dem Song machen?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Downloaden'),
+              onPressed: () async {
+                bool success = await downloadSong(song);
+                if (success) {
+                  SnackService().showSuccess(
+                    'Song "${song.header.name}" exportiert!',
+                  );
+                } else {
+                  SnackService().showError(
+                    'Fehler beim Exportieren des Songs.',
+                  );
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Auf einen Server senden'),
+              onPressed: () async {
+                bool success = await sendToServer(song);
+                if (success) {
+                  SnackService().showSuccess(
+                    'Song "${song.header.name}" auf den Server gesendet!',
+                  );
+                } else {
+                  SnackService().showError(
+                    'Fehler beim Senden des Songs auf den Server.',
+                  );
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      });
 }
 
 Future<void> showDeleteConfirmationDialog(

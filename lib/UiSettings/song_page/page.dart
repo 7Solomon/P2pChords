@@ -187,7 +187,8 @@ class _UisettingsPageState extends State<UisettingsPage> {
                       currentSelection.currentGroup!,
                       currentSelection.currentSongHash!),
                   sectionIndex: currentSelection.currentSectionIndex!,
-                  currentKey: sheetUiProvider.currentKey,
+                  currentKey: sheetUiProvider
+                      .getCurrentKeyForSong(currentSelection.currentSongHash!),
                   uiVariables: sheetUiProvider.uiVariables,
                   onSectionChanged: (index) {
                     currentSelection.setCurrentSectionIndex(index);

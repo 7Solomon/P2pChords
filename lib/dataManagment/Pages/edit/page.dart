@@ -25,10 +25,25 @@ class SongEditPage extends StatefulWidget {
     super.key,
     required this.song,
     this.group,
-  });
+  })  : rawText = null,
+        initialTitle = null,
+        initialAuthors = null;
 
-  final Song song;
+  const SongEditPage.fromRawText({
+    super.key,
+    required this.rawText,
+    required this.initialTitle,
+    this.initialAuthors = const [],
+    this.group,
+  }) : song = null;
+
+  final Song? song;
   final String? group;
+
+  // Properties for raw text conversion
+  final String? rawText;
+  final String? initialTitle;
+  final List<String>? initialAuthors;
 
   @override
   _SongEditPageState createState() => _SongEditPageState();
@@ -53,9 +68,19 @@ class _SongEditPageState extends State<SongEditPage> {
   void initState() {
     super.initState();
     converter = SongConverter();
-    _originalBpm = widget.song.header.bpm;
-    _originalTimeSignature = widget.song.header.timeSignature;
-    _convertSongToPreliminaryData(widget.song);
+
+    // Handle both existing song editing and raw text conversion
+    if (widget.song != null) {
+      // Editing existing song
+      _originalBpm = widget.song!.header.bpm;
+      _originalTimeSignature = widget.song!.header.timeSignature;
+      _convertSongToPreliminaryData(widget.song!);
+    } else {
+      // Creating new song from raw text
+      _originalBpm = null;
+      _originalTimeSignature = null;
+      _convertRawTextToPreliminaryData();
+    }
   }
 
   // Helper to reconstruct the chord line text from Chord objects
@@ -132,6 +157,49 @@ class _SongEditPageState extends State<SongEditPage> {
     authorControllers = preliminaryEditData.authors
         .map((author) => TextEditingController(text: author))
         .toList();
+    if (authorControllers.isEmpty) {
+      authorControllers.add(TextEditingController());
+    }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  // New method to handle raw text conversion (similar to InteractiveConverterPage)
+  Future<void> _convertRawTextToPreliminaryData() async {
+    // Get the first conversion with real-time positioning
+    PreliminarySongData initialPreliminaryData =
+        converter.convertTextToSongInteractive(
+      widget.rawText!,
+      widget.initialTitle!,
+      authors: widget.initialAuthors ?? [],
+      key: '', // Start with empty key
+    );
+
+    // Process sections to handle duplicates with interactive dialog
+    final processedSections = await processDuplicateSectionsInteractive(
+      initialPreliminaryData.sections,
+      context: context,
+      showDialog: true,
+    );
+
+    // Update preliminary data
+    preliminaryEditData = PreliminarySongData(
+      originalText: initialPreliminaryData.originalText,
+      sections: processedSections,
+      title: initialPreliminaryData.title,
+      authors: initialPreliminaryData.authors,
+      key: initialPreliminaryData.key,
+    );
+
+    // Initialize controllers
+    titleController = TextEditingController(text: preliminaryEditData.title);
+    keyController = TextEditingController(text: preliminaryEditData.key);
+    authorControllers = preliminaryEditData.authors
+        .map((author) => TextEditingController(text: author))
+        .toList();
+
     if (authorControllers.isEmpty) {
       authorControllers.add(TextEditingController());
     }
@@ -411,13 +479,17 @@ class _SongEditPageState extends State<SongEditPage> {
 
     // Preserve original hash if editing, otherwise generate based on the *final* song content.
     // The hash from finalizeSong is based on originalText which is empty/irrelevant here.
-    String finalHash =
-        widget.song.hash != sha256.convert(utf8.encode('empty')).toString()
-            ? widget.song
-                .hash // Keep original hash if it wasn't the default empty one
-            : sha256
-                .convert(utf8.encode(intermediateSong.toMap().toString()))
-                .toString(); // Generate new hash otherwise
+    String finalHash;
+    if (widget.song != null &&
+        widget.song!.hash != sha256.convert(utf8.encode('empty')).toString()) {
+      // Keep original hash if editing an existing song
+      finalHash = widget.song!.hash;
+    } else {
+      // Generate new hash for new songs
+      finalHash = sha256
+          .convert(utf8.encode(intermediateSong.toMap().toString()))
+          .toString();
+    }
 
     // Create the final Song object with the correct hash and preserved metadata
     final finalUpdatedSong = Song(
@@ -436,11 +508,16 @@ class _SongEditPageState extends State<SongEditPage> {
 
     bool result = true; // Assume success if no changes needed saving
 
-    if (dataLoadeProvider.songs.containsKey(widget.song.hash) &&
-        widget.song.hash != finalUpdatedSong.hash) {
-      // Remove the old version only if the hash has changed
-      await dataLoadeProvider.removeSong(widget.song.hash);
+    // Handle hash changes for existing songs only
+    if (widget.song != null) {
+      final originalHash = widget.song!.hash;
+      if (dataLoadeProvider.songs.containsKey(originalHash) &&
+          originalHash != finalUpdatedSong.hash) {
+        // Remove the old version only if the hash has changed
+        await dataLoadeProvider.removeSong(originalHash);
+      }
     }
+
     // Add the new/updated song
     result = await dataLoadeProvider.addSong(finalUpdatedSong,
         groupName: widget.group);

@@ -38,7 +38,7 @@ class _ChordLyricPairState extends State<ChordLyricPair> {
   final TextPainter _lyricTextPainter =
       TextPainter(textDirection: TextDirection.ltr);
   final TextStyle _lyricStyle =
-      const TextStyle(fontSize: 16, height: 1.0, fontFamily: 'Roboto Mono');
+      const TextStyle(fontSize: 14, height: 1.0, fontFamily: 'Roboto Mono');
   static const double _textFieldHorizontalPadding = 12.0;
 
   // Create a ScrollController

@@ -1,6 +1,8 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
+import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -21,8 +23,12 @@ class LineBuildFunction {
 
   UiVariables get uiVariables =>
       Provider.of<SheetUiProvider>(context, listen: false).uiVariables;
-  String get currentKey =>
-      Provider.of<SheetUiProvider>(context, listen: false).currentKey;
+  String? get currentSongHash =>
+      Provider.of<CurrentSelectionProvider>(context, listen: false)
+          .currentSongHash;
+  String? get currentKey => Provider.of<SheetUiProvider>(context, listen: false)
+      .getCurrentKeyForSong(currentSongHash ?? 'KÖNNTE FEHLER SEIN');
+
   // Helper to create TextPainter with consistent style
   TextPainter _createTextPainter(String text, TextStyle style) {
     return TextPainter(
@@ -141,8 +147,18 @@ class LineBuildFunction {
                 ...segment.chords.map((chord) {
                   // Calculate position relative to the start of the segment
                   final int relativePos = chord.position - segment.startIndex;
+
+                  // DEBUG: Print positioning info
+                  print("DISPLAY DEBUG - Chord: ${chord.value}, "
+                      "AbsolutePos: ${chord.position}, "
+                      "SegmentStart: ${segment.startIndex}, "
+                      "RelativePos: $relativePos, "
+                      "SegmentLength: ${segment.text.length}");
+
                   if (relativePos < 0 || relativePos > segment.text.length) {
                     // Chord is outside this segment's text range
+                    print(
+                        "WARNING: Chord ${chord.value} outside segment range");
                     return const Positioned(
                         child: SizedBox.shrink()); // Render nothing
                   }
@@ -154,6 +170,9 @@ class LineBuildFunction {
                         ui.Rect.zero, // Caret prototype is zero
                       )
                       .dx;
+
+                  print(
+                      "DISPLAY DEBUG - Chord: ${chord.value}, XOffset: $xOffset");
 
                   // Translate chord if needed
                   final String displayChord = translateChord(chord);
@@ -178,7 +197,8 @@ class LineBuildFunction {
 
   // --- Helper function to translate chord (if needed) ---
   String translateChord(Chord chord) {
-    String chordName = ChordUtils.nashvilleToChord(chord.value, currentKey);
+    String chordName =
+        ChordUtils.nashvilleToChord(chord.value, currentKey ?? 'C');
     return chordName;
   }
 

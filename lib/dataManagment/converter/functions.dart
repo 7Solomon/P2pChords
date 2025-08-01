@@ -153,19 +153,28 @@ class SongConverter {
   }
 
   /// Interactive version that returns preliminary data for review
+  /// Now performs real-time conversion with proper chord positioning
   PreliminarySongData convertTextToSongInteractive(String text, String title,
-      {List<String> authors = const []}) {
+      {List<String> authors = const [], String key = ""}) {
     // Set VARS
-    title = title;
+    this.title = title;
+    this.key = key;
 
-    // Do a preliminary parse to get sections
-    final preliminarySections = parseTextForReview(text);
+    print("REAL-TIME CONVERSION: Starting with key '$key'");
+
+    // Parse the text into final sections with proper chord positioning
+    final finalSections = parseSections(text, key);
+
+    // Convert final sections back to preliminary format for editing
+    final preliminarySections =
+        convertFinalSectionsToPreliminary(finalSections, key);
 
     return PreliminarySongData(
       originalText: text,
       sections: preliminarySections,
       title: title,
       authors: authors,
+      key: key,
     );
   }
 
@@ -289,38 +298,183 @@ class SongConverter {
     );
   }
 
-  /// Extract chords considering both original positions and cleaned text
+  /// Converts final SongSection objects back to PreliminarySection format
+  /// This allows the interactive editor to work with properly positioned chords
+  List<PreliminarySection> convertFinalSectionsToPreliminary(
+      List<SongSection> finalSections, String key) {
+    List<PreliminarySection> preliminarySections = [];
+
+    for (var section in finalSections) {
+      List<PreliminaryLine> preliminaryLines = [];
+
+      for (var lineData in section.lines) {
+        if (lineData.chords.isNotEmpty) {
+          // Reconstruct chord line from positioned chords
+          String chordLine = reconstructChordLineFromChords(
+              lineData.chords, lineData.lyrics.length, key);
+
+          // Add chord line
+          preliminaryLines.add(PreliminaryLine(
+            text: chordLine,
+            isChordLine: true,
+            wasSplit: false,
+          ));
+        }
+
+        // Add lyric line
+        preliminaryLines.add(PreliminaryLine(
+          text: lineData.lyrics,
+          isChordLine: false,
+          wasSplit: lineData.chords.isNotEmpty
+              ? false
+              : false, // Only wasSplit if part of a pair
+        ));
+      }
+
+      preliminarySections.add(PreliminarySection(
+        title: section.title,
+        lines: preliminaryLines,
+      ));
+    }
+
+    return preliminarySections;
+  }
+
+  /// Reconstructs a chord line text from positioned chord objects
+  String reconstructChordLineFromChords(
+      List<Chord> chords, int lyricLength, String key) {
+    if (chords.isEmpty) return "";
+
+    // Sort chords by position
+    chords.sort((a, b) => a.position.compareTo(b.position));
+
+    StringBuffer buffer = StringBuffer();
+    int currentPos = 0;
+
+    for (var chord in chords) {
+      // Add spaces to reach the chord position
+      if (chord.position > currentPos) {
+        buffer.write(' ' * (chord.position - currentPos));
+      }
+
+      // Convert Nashville back to standard chord notation for display
+      String standardChord = ChordUtils.nashvilleToChord(chord.value, key);
+      buffer.write(standardChord);
+      currentPos = chord.position + standardChord.length;
+    }
+
+    print("RECONSTRUCTED CHORD LINE: '${buffer.toString()}'");
+    return buffer.toString();
+  }
+
+  /// Extract chords using character width mapping approach
+  /// This preserves the visual positioning from the raw scraped data
   List<Chord> extractChordsWithCleaning(String originalChordLine,
       String cleanedChordLine, String lyricLine, String key) {
     List<Chord> chords = [];
 
-    // Get chord tokens from the cleaned line
-    final chordTokens = extractChordTokensFromLine(cleanedChordLine);
+    // DEBUG: Print the lines for comparison
+    print("ORIGINAL: '$originalChordLine'");
+    print("CLEANED:  '$cleanedChordLine'");
+    print("LYRICS:   '$lyricLine'");
 
-    // For each chord token, find its position in the original line
-    int searchStart = 0;
+    // Use regex to find chord positions in the ORIGINAL line (preserving spacing)
+    final chordMatches = RegExp(r'(\S+)').allMatches(originalChordLine);
+    print(
+        "CHORD MATCHES: ${chordMatches.map((m) => '${m.group(0)}@${m.start}').join(', ')}");
 
-    for (final chordText in chordTokens) {
-      // Find the position of this chord in the original line
-      int chordPosition = originalChordLine.indexOf(chordText, searchStart);
-      print("Chord: $chordText, Position: $chordPosition");
-      if (chordPosition != -1) {
-        try {
-          // Convert chord to Nashville notation
-          String nashvilleValue = ChordUtils.chordToNashville(chordText, key);
+    for (var match in chordMatches) {
+      final chordText = match.group(0)!;
+      final chordLinePosition = match.start; // Position in chord line
 
-          // Add chord with original position
-          chords.add(Chord(
-            position: chordPosition,
-            value: nashvilleValue,
-          ));
+      // Map chord line position to lyric line position using character width logic
+      final mappedPosition = _mapChordPositionToLyrics(
+          chordLinePosition, originalChordLine, lyricLine);
 
-          // Update search start to avoid finding the same chord again
-          searchStart = chordPosition + chordText.length;
-        } catch (e) {
-          // Handle invalid chord conversion
-          continue; // Skip invalid chords
+      print(
+          "MAPPING: Chord '$chordText' from chord-pos $chordLinePosition to lyric-pos $mappedPosition");
+
+      try {
+        // Validate that this is actually a chord
+        if (!ChordUtils.isPotentialChordToken(chordText)) {
+          print("SKIPPING: '$chordText' - not a valid chord token");
+          continue;
         }
+
+        // Convert chord to Nashville notation
+        String nashvilleValue = ChordUtils.chordToNashville(chordText, key);
+
+        // Add chord with mapped position
+        chords.add(Chord(position: mappedPosition, value: nashvilleValue));
+        print("ADDED: Chord $chordText at mapped position $mappedPosition");
+      } catch (e) {
+        print("ERROR converting chord '$chordText': $e");
+        continue; // Skip invalid chords
+      }
+    }
+
+    print(
+        "FINAL CHORDS: ${chords.map((c) => '${c.value}@${c.position}').join(', ')}");
+    return chords;
+  }
+
+  /// Maps a position in the chord line to the corresponding position in the lyric line
+  /// This assumes monospace font and preserves the visual alignment intent
+  int _mapChordPositionToLyrics(
+      int chordPosition, String chordLine, String lyricLine) {
+    // Improved algorithm: Consider that chords should align with syllables/words
+    // and account for proportional spacing
+
+    // If the chord line is longer than the lyric line, scale proportionally
+    if (chordLine.length > lyricLine.length && lyricLine.length > 0) {
+      final ratio = lyricLine.length / chordLine.length;
+      final scaledPosition = (chordPosition * ratio).round();
+      final mappedPosition = scaledPosition.clamp(0, lyricLine.length);
+
+      print(
+          "CHAR MAPPING (scaled): chord-pos $chordPosition -> lyric-pos $mappedPosition (ratio: ${ratio.toStringAsFixed(2)}, lyric-len: ${lyricLine.length})");
+
+      return mappedPosition;
+    }
+
+    // For equal or shorter chord lines, use direct mapping with bounds checking
+    final mappedPosition = chordPosition.clamp(0, lyricLine.length);
+
+    print(
+        "CHAR MAPPING (direct): chord-pos $chordPosition -> lyric-pos $mappedPosition (lyric-len: ${lyricLine.length})");
+
+    return mappedPosition;
+  }
+
+  /// Alternative method: Calculate positions from cleaned line instead
+  List<Chord> extractChordsFromCleanedLine(
+      String cleanedChordLine, String lyricLine, String key) {
+    List<Chord> chords = [];
+
+    final chordMatches = RegExp(r'(\S+)').allMatches(cleanedChordLine);
+
+    for (var match in chordMatches) {
+      final chordText = match.group(0)!;
+      final position = match.start; // Position in cleaned line
+
+      try {
+        // Validate chord token
+        if (!ChordUtils.isPotentialChordToken(chordText)) continue;
+
+        String nashvilleValue = ChordUtils.chordToNashville(chordText, key);
+
+        // Clamp position to lyric length
+        final clampedPosition = position.clamp(0, lyricLine.length);
+
+        chords.add(Chord(
+          position: clampedPosition,
+          value: nashvilleValue,
+        ));
+
+        print("CLEAN METHOD - Chord: $chordText at position $clampedPosition");
+      } catch (e) {
+        print("ERROR converting chord '$chordText': $e");
+        continue;
       }
     }
 
