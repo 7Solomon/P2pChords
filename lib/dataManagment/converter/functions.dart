@@ -102,10 +102,8 @@ class SongConverter {
       } else if (line.isNotEmpty) {
         currentSectionTitle ??= "Untitled Section";
 
-        // Clean chord lines before processing
-        String processedLine =
-            isChordLine(line) ? cleanChordLineText(line) : line;
-        currentSectionLines.add(processedLine);
+        // Don't clean chord lines here - preserve original spacing for position extraction
+        currentSectionLines.add(line);
       }
     }
 
@@ -160,7 +158,7 @@ class SongConverter {
     this.title = title;
     this.key = key;
 
-    print("REAL-TIME CONVERSION: Starting with key '$key'");
+    //print("REAL-TIME CONVERSION: Starting with key '$key'");
 
     // Parse the text into final sections with proper chord positioning
     final finalSections = parseSections(text, key);
@@ -195,7 +193,7 @@ class SongConverter {
 
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      print('Section: $currentSectionTitle');
+      //print('Section: $currentSectionTitle');
       // Check if this is a bracketed section header (e.g., [Verse 1])
       final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
       // Check if this is an unbracketed section header (e.g., VERSE 1)
@@ -230,14 +228,11 @@ class SongConverter {
         // Detect if this is a chord line
         bool isChordLineDetected = isChordLine(line);
 
-        // Clean the text if it's a chord line
-        String processedText =
-            isChordLineDetected ? cleanChordLineText(line) : line;
-
-        // Add the line to the current section with cleaned text for chord lines
+        // Preserve original text including spacing for chord lines
+        // Add the line to the current section with original text
         currentSectionLines.add(
           PreliminaryLine(
-            text: processedText,
+            text: line,  // Use original line, not cleaned
             isChordLine: isChordLineDetected,
           ),
         );
@@ -363,7 +358,7 @@ class SongConverter {
       currentPos = chord.position + standardChord.length;
     }
 
-    print("RECONSTRUCTED CHORD LINE: '${buffer.toString()}'");
+    //print("RECONSTRUCTED CHORD LINE: '${buffer.toString()}'");
     return buffer.toString();
   }
 
@@ -374,14 +369,14 @@ class SongConverter {
     List<Chord> chords = [];
 
     // DEBUG: Print the lines for comparison
-    print("ORIGINAL: '$originalChordLine'");
-    print("CLEANED:  '$cleanedChordLine'");
-    print("LYRICS:   '$lyricLine'");
+    //print("ORIGINAL: '$originalChordLine'");
+    //print("CLEANED:  '$cleanedChordLine'");
+    //print("LYRICS:   '$lyricLine'");
 
     // Use regex to find chord positions in the ORIGINAL line (preserving spacing)
     final chordMatches = RegExp(r'(\S+)').allMatches(originalChordLine);
-    print(
-        "CHORD MATCHES: ${chordMatches.map((m) => '${m.group(0)}@${m.start}').join(', ')}");
+    //print(
+    //    "CHORD MATCHES: ${chordMatches.map((m) => '${m.group(0)}@${m.start}').join(', ')}");
 
     for (var match in chordMatches) {
       final chordText = match.group(0)!;
@@ -391,13 +386,13 @@ class SongConverter {
       final mappedPosition = _mapChordPositionToLyrics(
           chordLinePosition, originalChordLine, lyricLine);
 
-      print(
-          "MAPPING: Chord '$chordText' from chord-pos $chordLinePosition to lyric-pos $mappedPosition");
+      //print(
+      //    "MAPPING: Chord '$chordText' from chord-pos $chordLinePosition to lyric-pos $mappedPosition");
 
       try {
         // Validate that this is actually a chord
         if (!ChordUtils.isPotentialChordToken(chordText)) {
-          print("SKIPPING: '$chordText' - not a valid chord token");
+          //print("SKIPPING: '$chordText' - not a valid chord token");
           continue;
         }
 
@@ -406,42 +401,28 @@ class SongConverter {
 
         // Add chord with mapped position
         chords.add(Chord(position: mappedPosition, value: nashvilleValue));
-        print("ADDED: Chord $chordText at mapped position $mappedPosition");
+        //print("ADDED: Chord $chordText at mapped position $mappedPosition");
       } catch (e) {
-        print("ERROR converting chord '$chordText': $e");
+        //print("ERROR converting chord '$chordText': $e");
         continue; // Skip invalid chords
       }
     }
 
-    print(
-        "FINAL CHORDS: ${chords.map((c) => '${c.value}@${c.position}').join(', ')}");
+    //print(
+    //    "FINAL CHORDS: ${chords.map((c) => '${c.value}@${c.position}').join(', ')}");
     return chords;
   }
 
   /// Maps a position in the chord line to the corresponding position in the lyric line
-  /// This assumes monospace font and preserves the visual alignment intent
+  /// This preserves the visual alignment as intended in the original chord chart
   int _mapChordPositionToLyrics(
       int chordPosition, String chordLine, String lyricLine) {
-    // Improved algorithm: Consider that chords should align with syllables/words
-    // and account for proportional spacing
-
-    // If the chord line is longer than the lyric line, scale proportionally
-    if (chordLine.length > lyricLine.length && lyricLine.length > 0) {
-      final ratio = lyricLine.length / chordLine.length;
-      final scaledPosition = (chordPosition * ratio).round();
-      final mappedPosition = scaledPosition.clamp(0, lyricLine.length);
-
-      print(
-          "CHAR MAPPING (scaled): chord-pos $chordPosition -> lyric-pos $mappedPosition (ratio: ${ratio.toStringAsFixed(2)}, lyric-len: ${lyricLine.length})");
-
-      return mappedPosition;
-    }
-
-    // For equal or shorter chord lines, use direct mapping with bounds checking
+    // The chord position represents the intended visual alignment
+    // We should preserve this position directly, only clamping to prevent overflow
     final mappedPosition = chordPosition.clamp(0, lyricLine.length);
 
-    print(
-        "CHAR MAPPING (direct): chord-pos $chordPosition -> lyric-pos $mappedPosition (lyric-len: ${lyricLine.length})");
+    //print(
+    //    "CHAR MAPPING: chord-pos $chordPosition -> lyric-pos $mappedPosition (chord-len: ${chordLine.length}, lyric-len: ${lyricLine.length})");
 
     return mappedPosition;
   }
@@ -471,9 +452,9 @@ class SongConverter {
           value: nashvilleValue,
         ));
 
-        print("CLEAN METHOD - Chord: $chordText at position $clampedPosition");
+        //print("CLEAN METHOD - Chord: $chordText at position $clampedPosition");
       } catch (e) {
-        print("ERROR converting chord '$chordText': $e");
+        //print("ERROR converting chord '$chordText': $e");
         continue;
       }
     }

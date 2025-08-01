@@ -83,70 +83,67 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alle Gruppen'),
-        //actions: [
-        //  IconButton(
-        //    icon: const Icon(Icons.refresh),
-        //    onPressed: _dataProvider.refreshData,
-        //  ),
-        //],
       ),
       floatingActionButton: buildFloatingActionButtonForGroups(context),
-      body: _dataProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _dataProvider.groups.isEmpty
-              ? const Center(child: Text('Keine Gruppen vorhanden'))
-              : ListView.builder(
-                  itemCount: _dataProvider.groups.length,
-                  itemBuilder: (context, index) {
-                    String groupName =
-                        _dataProvider.groups.keys.elementAt(index);
-                    SongData songData = _dataProvider.getSongData(groupName);
+      body: Consumer<DataLoadeProvider>(
+        builder: (context, dataProvider, child) {
+          return dataProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : dataProvider.groups.isEmpty
+                  ? const Center(child: Text('Keine Gruppen vorhanden'))
+                  : ListView.builder(
+                      itemCount: dataProvider.groups.length,
+                      itemBuilder: (context, index) {
+                        String groupName = dataProvider.groups.keys.elementAt(index);
+                        SongData songData = dataProvider.getSongData(groupName);
 
-                    return CDissmissible.deleteAndAction(
-                      key: Key(groupName),
-                      deleteIcon: Icons.delete,
-                      actionIcon: Icons.download,
-                      deleteConfirmation: () =>
-                          CDissmissible.showDeleteConfirmationDialog(context),
-                      confirmActionDismiss: () async {
-                        await exportGroupsData(songData);
+                        return CDissmissible.deleteAndAction(
+                          key: Key(groupName),
+                          deleteIcon: Icons.delete,
+                          actionIcon: Icons.download,
+                          deleteConfirmation: () =>
+                              CDissmissible.showDeleteConfirmationDialog(context),
+                          confirmActionDismiss: () async {
+                            await exportGroupsData(songData);
+                          },
+                          confirmDeleteDismiss: () async {
+                            await dataProvider.removeGroup(groupName);
+                            // No need for setState() here
+                          },
+                          child: CListTile(
+                            title: groupName,
+                            context: context,
+                            subtitle: 'Klicke um die Songs der Gruppe anzusehen',
+                            icon: Icons.file_copy,
+                            onTap: () async {
+                              _currentSelectionProvider.setCurrentGroup(groupName);
+                              if (connectionProvider.userState !=
+                                  UserState.client) {
+                                if (connectionProvider.userState ==
+                                    UserState.server) {
+                                  await sendSongDataToAllClients(
+                                      connectionProvider, songData);
+                                }
+                                if (mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const Songoverviewpage(),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                SnackService().showWarning(
+                                    'Du kannst keine Gruppen auswählen, wenn du ein Client bist');
+                              }
+                            },
+                          ),
+                        );
                       },
-                      confirmDeleteDismiss: () async {
-                        await _dataProvider.removeGroup(groupName);
-                        setState(() {});
-                      },
-                      child: CListTile(
-                        title: groupName,
-                        context: context,
-                        subtitle: 'Klicke um die Songs der Gruppe anzusehen',
-                        icon: Icons.file_copy,
-                        onTap: () async {
-                          _currentSelectionProvider.setCurrentGroup(groupName);
-                          if (connectionProvider.userState !=
-                              UserState.client) {
-                            if (connectionProvider.userState ==
-                                UserState.server) {
-                              await sendSongDataToAllClients(
-                                  connectionProvider, songData);
-                            }
-                            if (mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const Songoverviewpage(),
-                                ),
-                              );
-                            }
-                          } else {
-                            SnackService().showWarning(
-                                'Du kannst keine Gruppen auswählen, wenn du ein Client bist');
-                          }
-                        },
-                      ),
                     );
-                  },
-                ),
+        },
+      ),
     );
   }
 }

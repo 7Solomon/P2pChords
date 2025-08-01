@@ -26,7 +26,10 @@ Widget buildFloatingActionButtonForGroups(BuildContext context) {
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
             label: 'Neue Gruppe',
-            onTap: () => createNewGroupDialog(context),
+            onTap: () => {
+              createNewGroupDialog(context)
+                
+            },
           ),
           SpeedDialChild(
             child: const Icon(Icons.download),

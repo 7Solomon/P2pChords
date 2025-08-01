@@ -149,16 +149,16 @@ class LineBuildFunction {
                   final int relativePos = chord.position - segment.startIndex;
 
                   // DEBUG: Print positioning info
-                  print("DISPLAY DEBUG - Chord: ${chord.value}, "
-                      "AbsolutePos: ${chord.position}, "
-                      "SegmentStart: ${segment.startIndex}, "
-                      "RelativePos: $relativePos, "
-                      "SegmentLength: ${segment.text.length}");
+                  //print("DISPLAY DEBUG - Chord: ${chord.value}, "
+                  //    "AbsolutePos: ${chord.position}, "
+                  //    "SegmentStart: ${segment.startIndex}, "
+                  //    "RelativePos: $relativePos, "
+                  //    "SegmentLength: ${segment.text.length}");
 
                   if (relativePos < 0 || relativePos > segment.text.length) {
                     // Chord is outside this segment's text range
-                    print(
-                        "WARNING: Chord ${chord.value} outside segment range");
+                    //print(
+                    //    "WARNING: Chord ${chord.value} outside segment range");
                     return const Positioned(
                         child: SizedBox.shrink()); // Render nothing
                   }
@@ -171,8 +171,8 @@ class LineBuildFunction {
                       )
                       .dx;
 
-                  print(
-                      "DISPLAY DEBUG - Chord: ${chord.value}, XOffset: $xOffset");
+                  //print(
+                  //    "DISPLAY DEBUG - Chord: ${chord.value}, XOffset: $xOffset");
 
                   // Translate chord if needed
                   final String displayChord = translateChord(chord);
