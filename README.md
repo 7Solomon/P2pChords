@@ -31,10 +31,68 @@ P2pChords ist eine Flutter App zur Visualisierung und der synchronisierten Nutzu
 - Implementiert JSON-basierte Datenstrukturen für die Speicherung von Songs und Einstellungen im Form von Class'en
 - Enthält ein umfassendes Nashville-zu-Akkord mapping System für verschiedene Tonarten
 
-## Installation
+## Download und Installation
 
-```
-flutter pub get
+### Schritt 1: NuGet herunterladen und installieren
+
+1. **NuGet CLI herunterladen**:
+   - Besuchen Sie [nuget.org/downloads](https://www.nuget.org/downloads)
+   - Laden Sie die neueste Version von `nuget.exe` herunter
+
+2. **NuGet zum PATH hinzufügen**:
+   ```cmd
+   # Erstellen Sie einen Ordner für nuget
+      mkdir C:\tools
+   
+   # Kopieren Sie nuget.exe in den tools ordner Ordner
+   # Dann fügen Sie den Pfad "C:\tools" zur PATH-Umgebungsvariable hinzu
+   ```
+   
+   **Alternative über Systemeinstellungen**:
+   - Öffnen Sie "Systemumgebungsvariablen bearbeiten"
+   - Klicken Sie auf "Umgebungsvariablen"
+   - Wählen Sie "Path" unter "Systemvariablen" und klicken Sie "Bearbeiten"
+   - Klicken Sie "Neu" und fügen Sie `C:\Tools\NuGet` hinzu
+   - Bestätigen Sie mit "OK"
+
+3. **Installation überprüfen**:
+   ```cmd
+   nuget help
+   ```
+
+### Schritt 2: Flutter SDK installieren
+
+   **Neueste Flutter Version herunterladen**:
+   - Am besten einfach durch die VsCode Extension
+
+### Schritt 3: Projekt herunterladen und konfigurieren
+
+1. **Repository klonen**:
+   ```cmd
+   git clone [REPOSITORY_URL]
+   cd P2pChords
+   ```
+
+2. **Wichtige Datei umbenennen**:
+   ```cmd
+   # Navigieren Sie zum Ordner lib/dataManagement/local_manager und benennen Sie die Datei config_system_stub.dart um
+   zu config_system.dart
+   ```
+
+3. **Dependencies installieren**:
+   ```cmd
+   flutter pub get
+   ```
+
+4. **Projekt testen**:
+   ```cmd
+   flutter doctor -v
+   flutter run -d windows
+   ```
+
+### Schritt 4: Erste Ausführung
+
+```cmd
 flutter run
 ```
 
@@ -57,9 +115,12 @@ flutter run
    - Schriftgröße, Zeilenabstand und weitere Anzeigeoptionen individuell einstellen
    - Visuelle Anpassungen vornehmen für optimale Lesbarkeit
 
-## Voraussetzungen
-- Flutter SDK
-- Unterstützte Plattformen: Android, iOS (nicht ausführlich getested), Windows
+## Fehlerbehebung
+
+### Unterstützte Plattformen
+- Windows (primär getestet)
+- Android 
+- iOS (nicht ausführlich getestet)
 
 ## Lizenz
 JoE Lizenz
