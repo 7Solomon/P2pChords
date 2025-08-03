@@ -20,6 +20,7 @@ class ChordSheetPage extends StatefulWidget {
 class _ChordSheetPageState extends State<ChordSheetPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late QSelectOverlay _controller;
+  bool isLive = false;
 
   @override
   void initState() {
@@ -95,11 +96,39 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
               )
             ],
           ),
+
+          floatingActionButton: connectionProvider.userState == UserState.server
+              ? FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      isLive = !isLive;
+                    });
+                  },
+                  tooltip: isLive ? 'Live Modus aus' : 'Live Modus an',
+                  child: isLive
+                      ? Container(
+                          width: 16,
+                          height: 16,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      : Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300, // Colors.transparent
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                )
+              : null,
           endDrawer: SongDrawer(
             song: currentSong,
             currentKey: sheetUiProvider.getCurrentKeyForSong(currentSong.hash),
             onKeyChanged: (newKey) {
-              print('Key changed to: $newKey');
+              //print('Key changed to: $newKey');
               sheetUiProvider.setCurrentSongKeyInMap(currentSong.hash, newKey);
             },
           ),
@@ -117,7 +146,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     sheetUiProvider.getCurrentKeyForSong(currentSong.hash),
                 onSectionChanged: (index) {
                   currentSelection.setCurrentSectionIndex(index);
-                  if (connectionProvider.userState == UserState.server) {
+                  if (connectionProvider.userState == UserState.server &&
+                      isLive) {
                     connectionProvider.dataSyncService
                         .sendUpdateToAllClients(currentSelection.toJson());
                   }
