@@ -8,14 +8,14 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet/sec
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ResponsiveSongLayout extends StatelessWidget {
+class ResponsiveLayout extends StatelessWidget {
   final List<Song> songs;
   final int currentSectionIndex;
   final int currentSongIndex;
   //final UiVariables uiVariables;
   final Widget Function(LineData) buildLine;
 
-  const ResponsiveSongLayout({
+  const ResponsiveLayout({
     super.key,
     required this.songs,
     required this.currentSectionIndex,
@@ -30,28 +30,43 @@ class ResponsiveSongLayout extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Create a key for the current section for scrolling
         // Collect sections to display
         final sectionsToDisplay = _collectSections(uiVariables);
-
-        // DEBUGGING
-        //for (int i = 0; i < sectionsToDisplay.length; i++) {
-        //  print('Section ${i + 1}: ${sectionsToDisplay[i].section.title}');
-        //}
 
         // Safety check
         if (sectionsToDisplay.isEmpty) {
           return const Center(child: Text("No sections to display"));
         }
 
+        // Horizontal layout
+
+        //return Padding(
+        //    padding: const EdgeInsets.all(16.0),
+        //    child: CGridViewBuild(
+        //      currentSectionIndex: currentSectionIndex,
+        //      currentSongIndex: currentSongIndex,
+        //      sectionsToDisplay: sectionsToDisplay,
+        //      buildLine: buildLine,
+        //    ));
+
         return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: CGridViewBuild(
-              currentSectionIndex: currentSectionIndex,
-              currentSongIndex: currentSongIndex,
-              sectionsToDisplay: sectionsToDisplay,
-              buildLine: buildLine,
-            ));
+          padding: const EdgeInsets.all(16.0),
+          child: GridView.builder(
+            scrollDirection: Axis.horizontal,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16.0,
+              crossAxisSpacing: 16.0,
+              childAspectRatio: 1 / 1.2,
+            ),
+            itemCount: sectionsToDisplay.length,
+            itemBuilder: (context, index) {
+              return sectionsToDisplay[index];
+            },
+          ),
+        );
       },
     );
   }
@@ -60,11 +75,6 @@ class ResponsiveSongLayout extends StatelessWidget {
     final List<SectionTile> sectionTiles = [];
     final int maxSections = uiVariables.sectionCount.value;
 
-    //print('----');
-    //print('maxSections: $maxSections');
-    //print('currentSongIndex: ($currentSongIndex/${songs.length - 1})');
-    //print(
-    //    'currentSectionIndex: ($currentSectionIndex/${songs[currentSongIndex].sections.length - 1})');
     // Safety checks
     if (songs.isEmpty ||
         currentSongIndex < 0 ||

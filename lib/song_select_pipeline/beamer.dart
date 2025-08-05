@@ -6,10 +6,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-class BeamerPage extends StatelessWidget {
+class BeamerPage extends StatefulWidget {
+  // Changed to StatefulWidget
   const BeamerPage({
     super.key,
   });
+
+  @override
+  State<BeamerPage> createState() => _BeamerPageState();
+}
+
+class _BeamerPageState extends State<BeamerPage> {
+  @override
+  void initState() {
+    super.initState();
+    _enterFullScreen();
+  }
+
+  @override
+  void dispose() {
+    _exitFullScreen();
+    super.dispose();
+  }
+
+  Future<void> _enterFullScreen() async {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive,
+        overlays: []);
+  }
+
+  Future<void> _exitFullScreen() async {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
 
   _handleBodyTap(BuildContext context) {
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
@@ -32,7 +59,6 @@ class BeamerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Set system UI to be transparent against black background
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       systemNavigationBarColor: Colors.black,
