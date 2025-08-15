@@ -78,7 +78,7 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
         : serverUrl;
 
     // Assuming the server provides a file list endpoint
-    final listEndpoint = '$baseUrl/files';
+    final listEndpoint = '$baseUrl/api/files';
 
     final String? authToken = await tokenManager.getToken('serverApiToken');
     Map<String, String> headers = {};
@@ -136,7 +136,7 @@ Future<Song?> fetchSongFromServer({
     }
 
     final response = await http
-        .get(Uri.parse('$baseUrl/$fileUrl'), headers: headers)
+        .get(Uri.parse('$baseUrl/api/song_data/$fileUrl'), headers: headers)
         .timeout(Duration(seconds: timeoutSeconds));
 
     if (response.statusCode == 200) {

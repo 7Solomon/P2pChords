@@ -12,7 +12,7 @@ class LineItem extends StatefulWidget {
   final Function(int, int) onToggleLineType;
   final Function(int, int) onRemoveLine;
   final Function(int, int) onMoveLine;
-  // Keep combine callback
+  final Function(int, int) onCleanLine;
   final Function(int, int)? onCombineLines;
 
   const LineItem({
@@ -24,6 +24,7 @@ class LineItem extends StatefulWidget {
     required this.onToggleLineType,
     required this.onRemoveLine,
     required this.onMoveLine,
+    required this.onCleanLine,
     this.onCombineLines,
   });
 
@@ -82,6 +83,7 @@ class _LineItemState extends State<LineItem> {
   @override
   Widget build(BuildContext context) {
     final isChordLine = widget.line.isChordLine;
+    final isAmbiguousChordLine = widget.line.chordLineCertainty < 0.33;
     // Use orange for chords, green for lyrics
     final Color borderColor =
         isChordLine ? Colors.amber.shade200 : Colors.green.shade200;
@@ -172,15 +174,16 @@ class _LineItemState extends State<LineItem> {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
-                //IconButton(
-                //  icon: const Icon(Icons.arrow_downward, color: Colors.black54),
-                //  tooltip: 'Move Line Down',
-                //  onPressed: () =>
-                //      widget.onMoveLine(widget.sectionIndex, widget.lineIndex),
-                //  iconSize: 20,
-                //  padding: EdgeInsets.zero,
-                //  constraints: const BoxConstraints(),
-                //),
+                if (isAmbiguousChordLine)
+                  IconButton(
+                    icon: const Icon(Icons.change_circle, color: Colors.black54),
+                    tooltip: 'Clean',
+                    onPressed: () =>
+                        widget.onCleanLine(widget.sectionIndex, widget.lineIndex),
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   tooltip: 'Delete Line',

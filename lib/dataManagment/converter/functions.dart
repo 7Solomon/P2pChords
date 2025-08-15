@@ -36,11 +36,13 @@ class PreliminaryLine {
   String text;
   bool isChordLine;
   bool wasSplit;
+  double chordLineCertainty; // Certainty score from 0.0 to 1.0
 
   PreliminaryLine({
     required this.text,
     required this.isChordLine,
     this.wasSplit = false,
+    this.chordLineCertainty = 0.0, // Default to 0
   });
 }
 
@@ -182,14 +184,16 @@ class SongConverter {
         currentSectionTitle ??= "Untitled Section";
 
         // Detect if this is a chord line
-        bool isChordLineDetected = isChordLine(line);
+        final certainty = getChordLineCertainty(line);
+        bool isChordLineDetected = certainty > 0.5; // Threshold for being a chord line
 
         // Preserve original text including spacing for chord lines
         // Add the line to the current section with original text
         currentSectionLines.add(
           PreliminaryLine(
-            text: line,  // Use original line, not cleaned
+            text: line, // Use original line, not cleaned
             isChordLine: isChordLineDetected,
+            chordLineCertainty: certainty,
           ),
         );
       }
@@ -422,9 +426,10 @@ class SongConverter {
     for (int i = 0; i < lines.length; i++) {
       if (lines[i].trim().isEmpty) continue;
 
-      if (isChordLine(lines[i]) &&
+      final certainty = getChordLineCertainty(lines[i]);
+      if (certainty > 0.5 &&
           i + 1 < lines.length &&
-          !isChordLine(lines[i + 1])) {
+          getChordLineCertainty(lines[i + 1]) < 0.5) {
         // This is a chord line and the next is a lyric line
         String originalChordLine = lines[i];
         String cleanedChordLine = cleanChordLineText(originalChordLine);
@@ -501,48 +506,42 @@ class SongConverter {
     return lyricLines;
   }
 
-  /// Checks if a line is likely a chord line
-  bool isChordLine(String line) {
+  /// Checks if a line is likely a chord line by calculating a certainty score.
+  /// Returns a double between 0.0 (definitely not a chord line) and 1.0 (definitely a chord line).
+  double getChordLineCertainty(String line) {
     final trimmedLine = line.trim();
     if (trimmedLine.isEmpty) {
-      return false;
+      return 0.0;
     }
 
-    // Split the line into potential tokens
     final allTokens = trimmedLine.split(RegExp(r'\s+'));
 
-    // Filter out special characters and keep only potential chord tokens
-    final chordTokens = allTokens.where((token) {
+    final contentTokens = allTokens.where((token) {
       final cleanToken = token.trim();
-      // Skip empty tokens and common special characters used in chord charts
       if (cleanToken.isEmpty ||
-          cleanToken == '|' ||
-          cleanToken == '||' ||
-          cleanToken == '/' ||
-          cleanToken == '-' ||
-          cleanToken == ':' ||
-          cleanToken == '.' ||
-          cleanToken == '(' ||
-          cleanToken == ')' ||
           RegExp(r'^[|\-/:().]+$').hasMatch(cleanToken)) {
         return false;
       }
       return true;
     }).toList();
 
-    // If no valid tokens after filtering, it's not a chord line
-    if (chordTokens.isEmpty) {
-      return false;
+    if (contentTokens.isEmpty) {
+      return 0.0;
     }
 
-    // Check if all remaining tokens are potential chords
-    for (final token in chordTokens) {
-      if (!ChordUtils.isPotentialChordToken(token)) {
-        return false;
-      }
+    int chordCount = 0;
+
+    for (final token in contentTokens) {
+      if (ChordUtils.isPotentialChordToken(token)) {
+        chordCount++;
+      } 
     }
 
-    return true; // All non-special tokens are chords
+    if (chordCount == 0) {
+      return 0.0;
+    }
+
+    return chordCount / contentTokens.length.toDouble();
   }
 
   /// Enhanced method to extract only chord tokens from a line, filtering out special characters

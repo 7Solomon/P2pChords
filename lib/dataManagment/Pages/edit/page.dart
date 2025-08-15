@@ -10,14 +10,10 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
-
-// Import converter components and functions
 import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
 import 'package:P2pChords/dataManagment/converter/key_validator.dart';
-import 'package:P2pChords/dataManagment/converter/components/line_item.dart'; // Ensure LineItem is imported if needed directly
 
-// Import ChordUtils for nashvilleToChord
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 
 class SongEditPage extends StatefulWidget {
@@ -346,7 +342,6 @@ class _SongEditPageState extends State<SongEditPage> {
   }
 
   void _updateSectionTitle(int sectionIndex, String newTitle) {
-    // Direct update, PreliminarySection doesn't use controller, so setState needed.
     setState(() {
       preliminaryEditData.sections[sectionIndex].title = newTitle;
     });
@@ -416,6 +411,19 @@ class _SongEditPageState extends State<SongEditPage> {
         authorControllers[index].clear();
       });
     }
+  }
+
+  void _cleanLine(int sectionIndex, int lineIndex) {
+    setState(() {
+      final line = preliminaryEditData.sections[sectionIndex].lines[lineIndex];
+      final tokens = line.text.split(RegExp(r'\s+'));
+      final chordTokens = tokens
+          .where((token) => ChordUtils.isPotentialChordToken(token))
+          .toList();
+      line.text = chordTokens.join(' ');
+      line.isChordLine = true;
+      line.chordLineCertainty = 1.0;
+    });
   }
 
   Future<bool> _saveChanges({bool popOnSuccess = true}) async {
@@ -764,6 +772,7 @@ class _SongEditPageState extends State<SongEditPage> {
                       onMoveSectionDown: _moveSectionDown,
                       onSplitChordLyricPair: _splitChordLyricPair,
                       onCombineLines: _combineLines,
+                      onCleanLine: _cleanLine,
                     );
                   }),
 

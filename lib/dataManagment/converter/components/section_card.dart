@@ -17,6 +17,7 @@ class SectionCard extends StatefulWidget {
   final Function(int) onMoveSectionDown;
   final Function(int, int) onSplitChordLyricPair;
   final Function(int, int) onCombineLines;
+  final Function(int, int) onCleanLine;
   final String songKey;
 
   const SectionCard({
@@ -34,6 +35,7 @@ class SectionCard extends StatefulWidget {
     required this.onMoveSectionDown,
     required this.onSplitChordLyricPair,
     required this.onCombineLines,
+    required this.onCleanLine,
     required this.songKey,
   });
 
@@ -42,7 +44,28 @@ class SectionCard extends StatefulWidget {
 }
 
 class _SectionCardState extends State<SectionCard> {
+  late final TextEditingController _titleController;
   bool _isExpanded = true; // State variable for expansion
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.section.title);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant SectionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.section.title != _titleController.text) {
+      _titleController.text = widget.section.title;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +81,7 @@ class _SectionCardState extends State<SectionCard> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller:
-                        TextEditingController(text: widget.section.title),
+                    controller: _titleController,
                     onChanged: (value) =>
                         widget.onUpdateSectionTitle(widget.sectionIndex, value),
                     decoration: const InputDecoration(
@@ -175,7 +197,7 @@ class _SectionCardState extends State<SectionCard> {
           onToggleLineType: widget.onToggleLineType,
           onRemoveLine: widget.onRemoveLine,
           onMoveLine: widget.onMoveLine,
-
+          onCleanLine: widget.onCleanLine,
           onCombineLines: canCombine
               ? widget.onCombineLines
               : null, // Pass only if combinable
