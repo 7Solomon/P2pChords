@@ -1,4 +1,5 @@
 import 'package:P2pChords/UiSettings/song_page/page.dart';
+import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/styling/Tiles.dart';
 import 'package:flutter/material.dart';
@@ -20,26 +21,36 @@ class SongDrawer extends StatefulWidget {
 }
 
 class _SongDrawerState extends State<SongDrawer> {
-  late String _selectedKey;
-  final List<String> keys = [
-    'C',
-    'C#',
-    'D',
-    'D#',
-    'E',
-    'F',
-    'F#',
-    'G',
-    'G#',
-    'A',
-    'A#',
-    'B',
+  late String _selectedKeyRoot;
+  late bool _isMinor;
+
+  final List<String> keyRoots = const [
+    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
   ];
 
   @override
   void initState() {
     super.initState();
-    _selectedKey = widget.currentKey;
+    _parseCurrentKey();
+  }
+
+  @override
+  void didUpdateWidget(covariant SongDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentKey != oldWidget.currentKey) {
+      _parseCurrentKey();
+    }
+  }
+
+  void _parseCurrentKey() {
+    final keyInfo = ChordUtils.parseKey(widget.currentKey);
+    _selectedKeyRoot = keyInfo['root']!;
+    _isMinor = keyInfo['scale'] == 'minor';
+  }
+
+  void _onKeyUpdated() {
+    final newKey = _isMinor ? '${_selectedKeyRoot}m' : _selectedKeyRoot;
+    widget.onKeyChanged(newKey);
   }
 
   @override
@@ -155,8 +166,13 @@ class _SongDrawerState extends State<SongDrawer> {
   }
 
   Widget _buildKeySelector(BuildContext context) {
-    final originalKey = widget.song.header.key;
-    final isTransposed = _selectedKey != originalKey;
+    final originalKeyInfo = ChordUtils.parseKey(widget.song.header.key);
+    final originalKeyText = originalKeyInfo['scale'] == 'minor'
+        ? "${originalKeyInfo['root']}m"
+        : originalKeyInfo['root'];
+
+    final currentKeyText = _isMinor ? '${_selectedKeyRoot}m' : _selectedKeyRoot;
+    final isTransposed = currentKeyText != originalKeyText;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -189,39 +205,52 @@ class _SongDrawerState extends State<SongDrawer> {
                   Row(
                     children: [
                       DropdownButton<String>(
-                        value: _selectedKey,
-                        underline: Container(
-                          height: 2,
-                          color: isTransposed
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey.shade300,
-                        ),
+                        value: _selectedKeyRoot,
+                        underline: Container(),
                         onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedKey = newValue!;
-                          });
-                          widget.onKeyChanged(newValue!);
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedKeyRoot = newValue;
+                            });
+                            _onKeyUpdated();
+                          }
                         },
-                        items: keys.map<DropdownMenuItem<String>>((String key) {
+                        items: keyRoots.map<DropdownMenuItem<String>>((String key) {
                           return DropdownMenuItem<String>(
                             value: key,
-                            child: Text(key),
+                            child: Text(key, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                           );
                         }).toList(),
                       ),
-                      if (isTransposed) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '(Original: $originalKey)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).primaryColor,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
+                      const SizedBox(width: 16),
+                      ToggleButtons(
+                        isSelected: [!_isMinor, _isMinor],
+                        onPressed: (index) {
+                          setState(() {
+                            _isMinor = index == 1;
+                          });
+                          _onKeyUpdated();
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        children: const [
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Text('Dur')), // Major
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Text('Moll')), // minor
+                        ],
+                      ),
                     ],
                   ),
+                  if (isTransposed)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        '(Original: $originalKeyText)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).primaryColor,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ],

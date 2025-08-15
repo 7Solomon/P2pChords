@@ -92,12 +92,7 @@ class _UisettingsPageState extends State<UisettingsPage> {
         Provider.of<CurrentSelectionProvider>(context, listen: false);
 
     _initFuture = Future.microtask(() {
-      if (mounted) {
-        ChordUtils.initialize(context);
-      } else {
-        return false;
-      }
-
+      
       if (dataLoader.songs.isNotEmpty) {
         String songHash = dataLoader.songs.values.first.hash;
         String? group = dataLoader.getGroupOfSong(songHash);

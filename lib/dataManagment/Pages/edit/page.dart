@@ -50,17 +50,16 @@ class SongEditPage extends StatefulWidget {
 }
 
 class _SongEditPageState extends State<SongEditPage> {
-  // State variables for converter approach
   late PreliminarySongData preliminaryEditData;
-  late TextEditingController titleController; // Renamed from _nameController
-  late TextEditingController keyController; // Renamed from _keyController
-  late List<TextEditingController>
-      authorControllers; // Renamed from _authorControllers
+  late TextEditingController titleController; 
+  late TextEditingController keyController;
+  late List<TextEditingController> authorControllers;
   late SongConverter converter;
   bool isLoading = true;
-  bool _isSaving = false; // Flag to prevent multiple saves
+  bool _isSaving = false;
 
-  // Keep original BPM and Time Signature to preserve them on save
+
+  // VARS
   int? _originalBpm;
   String? _originalTimeSignature;
 
@@ -69,14 +68,13 @@ class _SongEditPageState extends State<SongEditPage> {
     super.initState();
     converter = SongConverter();
 
-    // Handle both existing song editing and raw text conversion
     if (widget.song != null) {
-      // Editing existing song
+      // EDIT
       _originalBpm = widget.song!.header.bpm;
       _originalTimeSignature = widget.song!.header.timeSignature;
       _convertSongToPreliminaryData(widget.song!);
     } else {
-      // Creating new song from raw text
+      // CREATE
       _originalBpm = null;
       _originalTimeSignature = null;
       _convertRawTextToPreliminaryData();
@@ -118,8 +116,6 @@ class _SongEditPageState extends State<SongEditPage> {
     for (var songSection in song.sections) {
       List<PreliminaryLine> prelimLines = [];
       for (var lineData in songSection.lines) {
-        // Create the chord line text using standard chords converted from Nashville
-        // Pass the song's key here
         String chordLineText = _reconstructChordLine(
             lineData.chords, lineData.lyrics.length, song.header.key);
 
@@ -144,7 +140,7 @@ class _SongEditPageState extends State<SongEditPage> {
 
     // Initialize state variables
     preliminaryEditData = PreliminarySongData(
-      originalText: '', // Not directly applicable when editing structured Song
+      originalText: '',
       sections: sections,
       title: song.header.name,
       authors: song.header.authors,
@@ -153,7 +149,7 @@ class _SongEditPageState extends State<SongEditPage> {
 
     titleController = TextEditingController(text: preliminaryEditData.title);
     keyController = TextEditingController(text: preliminaryEditData.key);
-    // Use new name for consistency
+    // Use new name for consistency, ka why
     authorControllers = preliminaryEditData.authors
         .map((author) => TextEditingController(text: author))
         .toList();
@@ -166,18 +162,16 @@ class _SongEditPageState extends State<SongEditPage> {
     });
   }
 
-  // New method to handle raw text conversion (similar to InteractiveConverterPage)
   Future<void> _convertRawTextToPreliminaryData() async {
-    // Get the first conversion with real-time positioning
+    
     PreliminarySongData initialPreliminaryData =
         converter.convertTextToSongInteractive(
       widget.rawText!,
       widget.initialTitle!,
       authors: widget.initialAuthors ?? [],
-      key: '', // Start with empty key
+      key: '',
     );
 
-    // Process sections to handle duplicates with interactive dialog
     final processedSections = await processDuplicateSectionsInteractive(
       initialPreliminaryData.sections,
       context: context,
@@ -220,10 +214,7 @@ class _SongEditPageState extends State<SongEditPage> {
     super.dispose();
   }
 
-  // --- Callbacks for SectionCard (similar to InteractiveConverterPage) ---
-
   void _onKeyChanged(String newKey) {
-    // Trigger rebuild to update chord previews if key changes
     if (mounted) {
       setState(() {});
     }
@@ -263,7 +254,6 @@ class _SongEditPageState extends State<SongEditPage> {
   }
 
   void _addNewSection() {
-    // Use simple add for now, can add dialog later if needed
     setState(() {
       preliminaryEditData.sections.add(
         PreliminarySection(
@@ -340,7 +330,6 @@ class _SongEditPageState extends State<SongEditPage> {
   void _removeLine(int sectionIndex, int lineIndex) {
     setState(() {
       preliminaryEditData.sections[sectionIndex].lines.removeAt(lineIndex);
-      // Optional: If section becomes empty, add a default pair?
       if (preliminaryEditData.sections[sectionIndex].lines.isEmpty) {
         _addLineToSection(sectionIndex); // Add a default pair back
       }
@@ -414,7 +403,7 @@ class _SongEditPageState extends State<SongEditPage> {
   }
 
   void _removeAuthorField(int index) {
-    // Prevent removing the last field if you want at least one
+    // Prevent removing the last field so always one
     if (authorControllers.length > 1) {
       setState(() {
         // Dispose the controller before removing
@@ -429,8 +418,6 @@ class _SongEditPageState extends State<SongEditPage> {
     }
   }
 
-  // --- Save Changes ---
-  // Returns true if save was successful or not needed, false if validation failed
   Future<bool> _saveChanges({bool popOnSuccess = true}) async {
     if (_isSaving) return false; // Prevent concurrent saves
     setState(() {
@@ -465,20 +452,15 @@ class _SongEditPageState extends State<SongEditPage> {
 
     // Create a temporary updated PreliminarySongData instance for finalization
     final currentPreliminaryData = PreliminarySongData(
-        originalText: preliminaryEditData
-            .originalText, // Keep original if needed, or empty
-        sections: preliminaryEditData.sections, // Use the current state
+        originalText: preliminaryEditData.originalText,
+        sections: preliminaryEditData.sections,
         title: title,
         authors: authors,
         key: key);
 
-    // Convert PreliminarySongData back to a Song object using the converter
-    // The finalizeSong method uses extractChords which correctly converts
-    // standard chords back to Nashville based on the provided key.
     Song intermediateSong = converter.finalizeSong(currentPreliminaryData, key);
 
-    // Preserve original hash if editing, otherwise generate based on the *final* song content.
-    // The hash from finalizeSong is based on originalText which is empty/irrelevant here.
+    // Hash gen
     String finalHash;
     if (widget.song != null &&
         widget.song!.hash != sha256.convert(utf8.encode('empty')).toString()) {
@@ -491,34 +473,30 @@ class _SongEditPageState extends State<SongEditPage> {
           .toString();
     }
 
-    // Create the final Song object with the correct hash and preserved metadata
     final finalUpdatedSong = Song(
       hash: finalHash,
       header: SongHeader(
-        // Reconstruct header including potentially missing fields
-        name: intermediateSong.header.name, // Use name from finalized data
-        key: intermediateSong.header.key, // Use key from finalized data
-        authors:
-            intermediateSong.header.authors, // Use authors from finalized data
-        bpm: _originalBpm, // Preserve original BPM
-        timeSignature: _originalTimeSignature, // Preserve original TimeSig
+        name: intermediateSong.header.name,
+        key: intermediateSong.header.key,
+        authors: intermediateSong.header.authors,
+        bpm: _originalBpm,
+        timeSignature: _originalTimeSignature,
       ),
-      sections: intermediateSong.sections, // Use sections from finalized data
+      sections: intermediateSong.sections,
     );
 
-    bool result = true; // Assume success if no changes needed saving
+    bool result = true;
 
     // Handle hash changes for existing songs only
     if (widget.song != null) {
       final originalHash = widget.song!.hash;
       if (dataLoadeProvider.songs.containsKey(originalHash) &&
           originalHash != finalUpdatedSong.hash) {
-        // Remove the old version only if the hash has changed
+        // Removes the old version only if the hash has changed
         await dataLoadeProvider.removeSong(originalHash);
       }
     }
 
-    // Add the new/updated song
     result = await dataLoadeProvider.addSong(finalUpdatedSong,
         groupName: widget.group);
 
@@ -527,23 +505,20 @@ class _SongEditPageState extends State<SongEditPage> {
     });
 
     if (result) {
-      // Only show success if something was actually saved
       SnackService()
           .showSuccess('Gespeichert: ${finalUpdatedSong.header.name}');
 
       if (popOnSuccess && mounted) {
         Navigator.of(context).pop();
       }
-      return true; // Indicate success
+      return true;
     } else {
       SnackService().showError('Fehler beim Speichern!');
-      return false; // Indicate failure
+      return false; 
     }
   }
 
-  // --- Load Song from File (Example Integration) ---
   Future<void> _loadSongFromFile() async {
-    // 1. Ask user if they want to save current changes
     final shouldProceed = await showDialog<bool>(
       context: context,
       barrierDismissible: false, // User must choose an action
@@ -556,13 +531,13 @@ class _SongEditPageState extends State<SongEditPage> {
             TextButton(
               child: const Text('Abbrechen'),
               onPressed: () {
-                Navigator.of(context).pop(false); // Don't proceed
+                Navigator.of(context).pop(false);
               },
             ),
             TextButton(
               child: const Text('Verwerfen'),
               onPressed: () {
-                Navigator.of(context).pop(true); // Proceed without saving
+                Navigator.of(context).pop(true);
               },
             ),
             ElevatedButton(
@@ -570,15 +545,11 @@ class _SongEditPageState extends State<SongEditPage> {
               onPressed: () async {
                 // Attempt to save changes
                 bool saveSuccess =
-                    await _saveChanges(popOnSuccess: false); // Don't pop here
+                    await _saveChanges(popOnSuccess: false);
                 if (saveSuccess && mounted) {
-                  Navigator.of(context)
-                      .pop(true); // Proceed after successful save
+                  Navigator.of(context).pop(true);
                 } else if (!saveSuccess && mounted) {
-                  // Save failed (e.g., validation error), stay on page
-                  // Optionally show another message or just let the _saveChanges handle it
-                  Navigator.of(context)
-                      .pop(false); // Do not proceed if save fails
+                  Navigator.of(context).pop(false);
                 }
               },
             ),
@@ -586,8 +557,7 @@ class _SongEditPageState extends State<SongEditPage> {
         );
       },
     );
-
-    // 2. If user didn't cancel, proceed to pick file
+    
     if (shouldProceed == true && mounted) {
       final Song? loadedSong = await FilePickerUtil.pickSongFile(context);
 
@@ -681,7 +651,6 @@ class _SongEditPageState extends State<SongEditPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Song Header Section - Simplified for Converter approach
               Card(
                 elevation: 2,
                 margin: const EdgeInsets.only(bottom: UIStyle.largeSpacing),
@@ -709,11 +678,9 @@ class _SongEditPageState extends State<SongEditPage> {
                       ),
                       const SizedBox(height: UIStyle.spacing),
 
-                      // Authors Section
                       const Text('Authoren', style: UIStyle.subheading),
                       const SizedBox(height: UIStyle.smallSpacing),
 
-                      // Use new authorControllers list
                       ...authorControllers.asMap().entries.map((entry) {
                         final index = entry.key;
                         final controller = entry.value;

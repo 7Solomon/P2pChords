@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
-/// Utility class for chord operations and Nashville number system conversions
+export 'package:P2pChords/dataManagment/chords/comp_based_chord_utils.dart';
+
+/*
 class ChordUtils {
   static Map<String, Map<String, String>>? _nashvilleMappings;
   static bool _initialized = false;
@@ -22,16 +24,6 @@ class ChordUtils {
       r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' // Additional modifiers/parenthetical
       r'(\/\d+)?' // Optional bass note
       r'$');
-
-  /// Single unified pattern for both chords and Nashville numbers
-  static final RegExp _unifiedPattern = RegExp(
-      r'^([A-Ga-g][#b]?|\d+)' + // Root: letter+accidental OR number
-          r'(m|maj|min|aug|dim|sus|add|\+|°|ø|-)?' + // Quality/type
-          r'(\d+)?' + // Extension (7, 9, etc.)
-          r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' + // Additional modifiers
-          r'(\/(?:[A-Ga-g][#b]?|\d+))?' + // Bass: slash + (letter+accidental OR number)
-          r'(\*)?$' // Optional asterisk
-      );
 
   /// Initialize the chord mappings from assets
   static Future<void> initialize(BuildContext context) async {
@@ -421,3 +413,4 @@ class ChordUtils {
     return _initialized && _nashvilleMappings != null;
   }
 }
+*/

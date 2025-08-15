@@ -145,15 +145,16 @@ class _KeyInputPreviewState extends State<KeyInputPreview> {
       return;
     }
 
-    // Validate key format (A-G with optional # or b)
-    final validKeyFormat = RegExp(r'^[A-G][#b]?$').hasMatch(keyValue);
+     // Validate key format (A-G with optional # or b, and optional 'm' for minor)
+    final validKeyFormat = RegExp(r'^[A-G][#b]?m?$').hasMatch(keyValue);
+
 
     if (!validKeyFormat) {
       setState(() {
         isValidKey = false;
         validChordCount = 0;
         totalChordCount = totalChords;
-        errorMessage = 'Invalid key format. Use A-G with optional # or b';
+        errorMessage = 'Invalid format. Use C, C#m, Bb, etc.';
       });
       return;
     }

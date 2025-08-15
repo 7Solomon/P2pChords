@@ -54,27 +54,33 @@ class LineBuildFunction {
       );
     }
 
-    // Handle chord-only lines (optional, could also use buildChordLyricLine)
+    // Handle chord-only lines by reusing the buildChordLyricLine logic
     if (line.lyrics.isEmpty) {
-      // Simple text representation for chord-only lines might suffice
-      // Or adapt the Stack approach if complex positioning is needed
-      final chordLine = line.chords
-          .map((chord) => ' ' * chord.position + chord.value) // Basic spacing
-          .join()
-          .trimRight(); // Avoid trailing spaces
+      if (line.chords.isEmpty) return const SizedBox.shrink();
+
+      // Sort chords by position to build the line correctly
+      final sortedChords = List<Chord>.from(line.chords)
+        ..sort((a, b) => a.position.compareTo(b.position));
+
+      // This ensures correct spacing for variable-length chord names.
+      final buffer = StringBuffer();
+      int currentPos = 0;
+      for (final chord in sortedChords) {
+        final chordText = translateChord(chord);
+        if (chord.position > currentPos) {
+          buffer.write(' ' * (chord.position - currentPos));
+        }
+        buffer.write(chordText);
+        currentPos = chord.position + chordText.length;
+      }
+
+      final dummyLyrics = buffer.toString();
+      final dummyLineData = LineData(lyrics: dummyLyrics, chords: line.chords);
+
+      // Call the standard builder but disable lyric rendering
       return Padding(
         padding: EdgeInsets.only(bottom: uiVariables.lineSpacing.value),
-        child: Text(
-          chordLine,
-          style: TextStyle(
-            fontSize: uiVariables.fontSize.value - 2, // Chord font size
-            color: Colors.red.shade700, // Chord color
-            fontFamily: 'Roboto Mono', // Ensure consistent font
-            height: 1.0, // Adjust line height if needed
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.clip,
-        ),
+        child: buildChordLyricLine(dummyLineData, renderLyrics: false),
       );
     }
 
@@ -85,11 +91,10 @@ class LineBuildFunction {
     );
   }
 
-  // --- NEW buildChordLyricLine using Stack and TextPainter ---
-  Widget buildChordLyricLine(LineData line) {
+  Widget buildChordLyricLine(LineData line, {bool renderLyrics = true}) {
     final lyricStyle = TextStyle(
       fontSize: uiVariables.fontSize.value,
-      fontFamily: 'Roboto Mono', // IMPORTANT: Use the same font
+      fontFamily: 'Roboto Mono', 
       height: 1.3, // Match lyric Text height
     );
     final chordStyle = TextStyle(
@@ -115,12 +120,10 @@ class LineBuildFunction {
               maxWidth: constraints.maxWidth); // Layout with constraint
 
           // Calculate the height needed for lyrics + chords above
-          // Estimate chord height (adjust multiplier as needed)
           final chordHeightEstimate =
               (chordStyle.fontSize ?? 14) * (chordStyle.height ?? 1.2);
-          final lyricHeight = painter.height;
-          final totalSegmentHeight =
-              lyricHeight + chordHeightEstimate + 4; // Add some spacing
+          final lyricHeight = renderLyrics ? painter.height : 0;
+          final totalSegmentHeight = lyricHeight + chordHeightEstimate + 4;
 
           return SizedBox(
             width: constraints.maxWidth, // Constrain width
@@ -130,18 +133,19 @@ class LineBuildFunction {
                   Clip.none, // Allow positioned chords to be slightly outside
               children: [
                 // 1. Lyric Text (at the bottom of the Stack space)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0, // Align lyrics to the bottom
-                  height: lyricHeight, // Explicit height
-                  child: Text(
-                    segment.text,
-                    style: lyricStyle,
-                    maxLines: 1, // Should already be handled by splitIntoLines
-                    overflow: TextOverflow.clip,
+                if (renderLyrics)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0, // Align lyrics to the bottom
+                    height: painter.height, // Explicit height
+                    child: Text(
+                      segment.text,
+                      style: lyricStyle,
+                      maxLines: 1, // Should already be handled by splitIntoLines
+                      overflow: TextOverflow.clip,
+                    ),
                   ),
-                ),
 
                 // 2. Positioned Chords (above the lyrics)
                 ...segment.chords.map((chord) {

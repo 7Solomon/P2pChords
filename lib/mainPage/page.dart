@@ -16,7 +16,6 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  Future<void>? _initializationFuture;
 
   @override
   void initState() {
@@ -26,57 +25,10 @@ class _MainPageState extends State<MainPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _initializationFuture ??= ChordUtils.initialize(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _initializationFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Lade...',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // If there was an error during initialization
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Hoppla!',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${snapshot.error}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Initialization complete, show main UI
         return Consumer3<ConnectionProvider, CurrentSelectionProvider,
             DataLoadeProvider>(
           builder:
@@ -113,7 +65,5 @@ class _MainPageState extends State<MainPage> {
             );
           },
         );
-      },
-    );
   }
 }

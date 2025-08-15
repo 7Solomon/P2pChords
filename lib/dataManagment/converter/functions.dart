@@ -5,7 +5,6 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/converter/components/section_duplicate_dialog.dart';
 import 'package:crypto/crypto.dart';
 
-// Class to represent the preliminary parsing state
 class PreliminarySongData {
   final String originalText;
   final List<PreliminarySection> sections;
@@ -22,7 +21,6 @@ class PreliminarySongData {
   });
 }
 
-// Class to represent a section before final processing
 class PreliminarySection {
   String title;
   List<PreliminaryLine> lines;
@@ -52,14 +50,30 @@ class SongConverter {
   String key = "";
   String title = "";
 
-  // getter
 
   SongConverter createSongConverter() {
     return SongConverter();
   }
+  // MAIN
+  PreliminarySongData convertTextToSongInteractive(String text, String title,
+      {List<String> authors = const [], String key = ""}) {
+    this.title = title;
+    this.key = key;
 
-  /// Parses text into final SongSection objects for direct conversion
-  List<SongSection> parseSections(String text, String key) {
+    final List<SongSection> finalSections = parseSections(text, key);
+    final List<PreliminarySection> preliminarySections =
+        convertFinalSectionsToPreliminary(finalSections, key);
+
+    return PreliminarySongData(
+      originalText: text,
+      sections: preliminarySections,
+      title: title,
+      authors: authors,
+      key: key,
+    );
+  }
+
+    List<SongSection> parseSections(String text, String key) {
     final List<SongSection> sections = [];
     String? currentSectionTitle;
     List<String> currentSectionLines = [];
@@ -101,8 +115,6 @@ class SongConverter {
         }
       } else if (line.isNotEmpty) {
         currentSectionTitle ??= "Untitled Section";
-
-        // Don't clean chord lines here - preserve original spacing for position extraction
         currentSectionLines.add(line);
       }
     }
@@ -118,62 +130,6 @@ class SongConverter {
     }
 
     return sections;
-  }
-
-  /// Converts plain text with chords and lyrics to a Song object
-  Song convertTextToSong(String text, String setKey, String setTitle,
-      {List<String> authors = const []}) {
-    // Set VARS
-    key = setKey;
-    title = setTitle;
-
-    // Parse the text into sections, passing the key
-    final sections = parseSections(text, key); // Pass key here
-
-    // Create a hash for the song
-    final hash = sha256
-        .convert(utf8.encode(text))
-        .toString(); // Maybe use a better hash function
-
-    // Create song header
-    final header = SongHeader(
-      name: title,
-      key: key,
-      authors: authors,
-    );
-
-    // Create the song object
-    return Song(
-      hash: hash,
-      header: header,
-      sections: sections,
-    );
-  }
-
-  /// Interactive version that returns preliminary data for review
-  /// Now performs real-time conversion with proper chord positioning
-  PreliminarySongData convertTextToSongInteractive(String text, String title,
-      {List<String> authors = const [], String key = ""}) {
-    // Set VARS
-    this.title = title;
-    this.key = key;
-
-    //print("REAL-TIME CONVERSION: Starting with key '$key'");
-
-    // Parse the text into final sections with proper chord positioning
-    final finalSections = parseSections(text, key);
-
-    // Convert final sections back to preliminary format for editing
-    final preliminarySections =
-        convertFinalSectionsToPreliminary(finalSections, key);
-
-    return PreliminarySongData(
-      originalText: text,
-      sections: preliminarySections,
-      title: title,
-      authors: authors,
-      key: key,
-    );
   }
 
   /// Parses text into preliminary sections for interactive review
@@ -299,16 +255,14 @@ class SongConverter {
       List<SongSection> finalSections, String key) {
     List<PreliminarySection> preliminarySections = [];
 
-    for (var section in finalSections) {
+    for (SongSection section in finalSections) {
       List<PreliminaryLine> preliminaryLines = [];
 
-      for (var lineData in section.lines) {
+      for (LineData lineData in section.lines) {
         if (lineData.chords.isNotEmpty) {
-          // Reconstruct chord line from positioned chords
           String chordLine = reconstructChordLineFromChords(
               lineData.chords, lineData.lyrics.length, key);
 
-          // Add chord line
           preliminaryLines.add(PreliminaryLine(
             text: chordLine,
             isChordLine: true,
@@ -358,7 +312,6 @@ class SongConverter {
       currentPos = chord.position + standardChord.length;
     }
 
-    //print("RECONSTRUCTED CHORD LINE: '${buffer.toString()}'");
     return buffer.toString();
   }
 
@@ -509,27 +462,32 @@ class SongConverter {
     List<LineData> lyricLines = [];
 
     for (int i = 0; i < lines.length; i++) {
-      if (lines[i].isChordLine &&
-          i + 1 < lines.length &&
-          !lines[i + 1].isChordLine) {
-        // This is a chord line followed by a lyric line
+      if (lines[i].isChordLine) {
+        // This is a chord line
         final chordLine = lines[i].text;
-        final lyricLine = lines[i + 1].text;
 
-        // Extract chords with their positions - Already correctly passing key
-        final chords = extractChords(chordLine, lyricLine, key);
-
-        // Create LineData object
-        lyricLines.add(
-          LineData(
-            lyrics: lyricLine,
-            chords: chords,
-          ),
-        );
-
-        // Skip the lyric line as we've processed it
-        i++;
-      } else if (!lines[i].isChordLine) {
+        if (i + 1 < lines.length && !lines[i + 1].isChordLine) {
+          // It's followed by a lyric line
+          final lyricLine = lines[i + 1].text;
+          final chords = extractChords(chordLine, lyricLine, key);
+          lyricLines.add(
+            LineData(
+              lyrics: lyricLine,
+              chords: chords,
+            ),
+          );
+          i++; // Skip the lyric line
+        } else {
+          // It's a chord-only line (instrumental)
+          final chords = extractChords(chordLine, chordLine, key);
+          lyricLines.add(
+            LineData(
+              lyrics: '', // No lyrics
+              chords: chords,
+            ),
+          );
+        }
+      } else {
         // This is just a lyric line without chords
         lyricLines.add(
           LineData(

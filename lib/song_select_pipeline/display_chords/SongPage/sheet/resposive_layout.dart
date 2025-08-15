@@ -40,14 +40,14 @@ class ResponsiveLayout extends StatelessWidget {
 
         // Horizontal layout
 
-        //return Padding(
-        //    padding: const EdgeInsets.all(16.0),
-        //    child: CGridViewBuild(
-        //      currentSectionIndex: currentSectionIndex,
-        //      currentSongIndex: currentSongIndex,
-        //      sectionsToDisplay: sectionsToDisplay,
-        //      buildLine: buildLine,
-        //    ));
+        return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: CGridViewBuild(
+              currentSectionIndex: currentSectionIndex,
+              currentSongIndex: currentSongIndex,
+              sectionsToDisplay: sectionsToDisplay,
+              buildLine: buildLine,
+            ));
 
         return Padding(
           padding: const EdgeInsets.all(16.0),
