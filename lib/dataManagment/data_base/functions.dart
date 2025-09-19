@@ -69,16 +69,21 @@ Future<List<Song>?> fetchSongDataFromServer({
 Future<List<Map<String, dynamic>>?> getFilesFromServer({
   required String serverUrl,
   required ApiTokenManager tokenManager,
-  int timeoutSeconds = 10,
+  int timeoutSeconds = 30,
 }) async {
   try {
+        String correctedUrl = serverUrl;
+    if (!correctedUrl.startsWith('http://') && !correctedUrl.startsWith('https://')) {
+      correctedUrl = 'http://$correctedUrl';
+    }
+
     // Remove trailing slash if present
-    final baseUrl = serverUrl.endsWith('/')
-        ? serverUrl.substring(0, serverUrl.length - 1)
-        : serverUrl;
+    final baseUrl = correctedUrl.endsWith('/')
+        ? correctedUrl.substring(0, correctedUrl.length - 1)
+        : correctedUrl;
 
     // Assuming the server provides a file list endpoint
-    final listEndpoint = '$baseUrl/api/files';
+    final listEndpoint = '$baseUrl/api/song_data/files';
 
     final String? authToken = await tokenManager.getToken('serverApiToken');
     Map<String, String> headers = {};
@@ -86,6 +91,7 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
     if (authToken != null && authToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $authToken';
     } else {
+      print('No authorization token found');
       NotificationService()
           .showError('Du hast keinen Token gespeichert. Bitte erstelle einen.');
     }
@@ -93,18 +99,23 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
     final response = await http
         .get(Uri.parse(listEndpoint), headers: headers)
         .timeout(Duration(seconds: timeoutSeconds));
+    print('Response status code: ${response.statusCode}');
+
     if (response.statusCode == 200) {
       try {
         final List<dynamic> files = json.decode(response.body)['files'];
+        print('Fetched files: ${files.map((f) => f['filename']).toList()}');
         return files.cast<Map<String, dynamic>>();
       } catch (e) {
         return null;
       }
     } else {
+      print('Failed to fetch files. Status code: ${response.statusCode}');
       NotificationService().showError('Status code: ${response.statusCode}');
       return null;
     }
   } catch (e) {
+    print('Error in getFilesFromServer: $e');
     NotificationService().showError('Error: $e');
     return null;
   }
