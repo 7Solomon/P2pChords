@@ -56,17 +56,28 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
+            if (keystorePropertiesFile.exists()) {
+                if (keystoreProperties['storeFile']) {
+                    storeFile file(keystoreProperties['storeFile'])
+                }
+                if (keystoreProperties['storePassword']) {
+                    storePassword keystoreProperties['storePassword']
+                }
+                if (keystoreProperties['keyAlias']) {
+                    keyAlias keystoreProperties['keyAlias']
+                }
+                if (keystoreProperties['keyPassword']) {
+                    keyPassword keystoreProperties['keyPassword']
+                }
+            }
         }
     }
 
     buildTypes {
         release {
-
-            signingConfig = signingConfigs.release
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
