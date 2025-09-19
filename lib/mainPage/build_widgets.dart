@@ -1,7 +1,3 @@
-import 'dart:io';
-
-import 'package:P2pChords/UiSettings/beamer/page.dart';
-import 'package:P2pChords/UiSettings/song_page/page.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/song_select_pipeline/beamer.dart';
@@ -12,10 +8,8 @@ import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
-//import 'package:P2pChords/groupManagement/Pages/groups.dart';
 
-import 'package:P2pChords/dataManagment/local_manager/config_system_stub.dart'
-    if (dart.library.io) 'package:P2pChords/dataManagment/local_manager/config_system.dart';
+import 'package:P2pChords/dataManagment/local_manager/config_system.dart';
 
 Widget buildConnectionStatusChip(
     BuildContext context, ConnectionProvider provider) {

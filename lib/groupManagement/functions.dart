@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
-import 'package:P2pChords/networking/auth.dart';
 import 'package:P2pChords/utils/notification_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -100,7 +99,7 @@ Future<bool> exportGroupsData(SongData songsData) async {
 }
 
 Future<bool> downloadSong(Song song) async {
-  String songHash = song.hash;
+  //String songHash = song.hash;
   try {
     Directory? downloadsDirectory = await getDownloadsDirectory();
     String authorName;

@@ -60,11 +60,13 @@ jobs:
         with:
           name: windows-setup
           path: dist
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Create/Update GitHub Release
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          files: |
+          allowUpdates: true
+          removeArtifacts: true
+          artifacts: |
             dist/app-release.apk
             dist/P2pChordsSetup.exe

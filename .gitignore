@@ -44,7 +44,7 @@ app.*.map.json
 
 
 /lib/dataManagment/half_legal_stuff/
-/lib/dataManagment/local_manager/config_system.dart
+/lib/dataManagment/local_manager/config_system.local.dart
 
 # For keystore stuff
 *.jks
