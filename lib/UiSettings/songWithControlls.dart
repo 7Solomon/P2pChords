@@ -1,6 +1,5 @@
 import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/UiSettings/footer.dart';
-import 'package:P2pChords/UiSettings/ui_styles.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,7 @@ class SongSheetWithControls extends StatefulWidget {
   final Function(int) onSectionChanged;
   final Function(int) onSongChanged;
   final Function(UiVariables) onUiVariablesChanged;
-  UiVariables uiVariables;
+  final UiVariables uiVariables;
 
   SongSheetWithControls(
       {super.key,

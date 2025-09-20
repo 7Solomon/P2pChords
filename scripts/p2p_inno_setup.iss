@@ -1,7 +1,7 @@
 #define MyAppName "P2pChords"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "YourName"
-#define MyAppExeName "P2pChords.exe"
+#define MyAppExeName "test_controller.exe"
 
 [Setup]
 AppId={{fbfa1f97-ce15-4701-a05a-0815aae5bbe9}}
