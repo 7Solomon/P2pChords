@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
 
-import 'package:P2pChords/dataManagment/local_manager/config_system.local.dart';
+import 'package:P2pChords/dataManagment/local_manager/config_system.dart';
 
 Widget buildConnectionStatusChip(
     BuildContext context, ConnectionProvider provider) {
