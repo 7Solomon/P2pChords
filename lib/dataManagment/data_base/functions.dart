@@ -90,6 +90,7 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
 
     if (authToken != null && authToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $authToken';
+      print('Using auth token: $authToken');  
     } else {
       print('No authorization token found');
       NotificationService()

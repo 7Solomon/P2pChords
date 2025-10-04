@@ -53,7 +53,7 @@ class Songoverviewpage extends StatelessWidget {
                 }
 
                 return CDissmissible.deleteAndAction(
-                  key: Key(hash),
+                  key: ValueKey('${currentData.currentGroup}_$hash'),
                   deleteConfirmation: () =>
                       CDissmissible.showDeleteConfirmationDialog(context),
                   confirmDeleteDismiss: () async {
@@ -65,7 +65,12 @@ class Songoverviewpage extends StatelessWidget {
                     }
                     await dataProvider.removeSongFromGroup(
                         currentData.currentGroup!, hash);
-                    (hash);
+                    
+                    // Clear current song if it was the deleted one
+                    if (currentData.currentSongHash == hash) {
+                      currentData.setCurrentSong(null);
+                    }
+                    
                     return true;
                   },
                   confirmActionDismiss: () {

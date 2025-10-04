@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class BoundedValue<T extends num> {
   T _value;
   final T min;
@@ -42,8 +44,16 @@ class BoundedValue<T extends num> {
   }
 }
 
+enum SheetLayoutMode {
+  horizontalGrid,    // sections flow left-to-right, top-to-bottom
+  verticalStack,     // sections stack vertically (most intuitive for tap navigation)
+  singleSection,     // only show current section (fullscreen)
+  multiColumn,       // multiple columns, flowing downward (formerly twoColumn)
+}
+
 class UiVariables {
   final Map<String, BoundedValue> _variables = {};
+  final ValueNotifier<SheetLayoutMode> layoutMode;
 
   // Variable definitions with default values and ranges
   static final Map<String, Map<String, dynamic>> _variableDefinitions = {
@@ -52,35 +62,36 @@ class UiVariables {
     'rowSpacing': {'default': 8.0, 'min': 0.0, 'max': 20.0, 'type': double},
     'columnSpacing': {'default': 8.0, 'min': 0.0, 'max': 20.0, 'type': double},
     'columnWidth': {
-      'default': 200.0,
-      'min': 100.0,
-      'max': 400.0,
+      'default': 350.0,
+      'min': 200.0,
+      'max': 600.0,
       'type': double
     },
     'rowHeight': {'default': 50.0, 'min': 20.0, 'max': 100.0, 'type': double},
     'sectionCount': {'default': 4, 'min': 1, 'max': 10, 'type': int},
+    'columnCount': {'default': 2, 'min': 1, 'max': 4, 'type': int}, // New!
   };
 
   UiVariables({
     Map<String, dynamic>? initialValues,
-  }) {
+    SheetLayoutMode initialLayoutMode = SheetLayoutMode.verticalStack,
+  })  : layoutMode = ValueNotifier<SheetLayoutMode>(initialLayoutMode) {
     // Initialize all variables with default values
     _variableDefinitions.forEach((key, definition) {
-      final value = initialValues?[key] ?? definition['default'];
-      final min = initialValues?['min$key'] ?? definition['min'];
-      final max = initialValues?['max$key'] ?? definition['max'];
+      final defaultValue = initialValues?[key] ?? definition['default'];
+      final type = definition['type'];
 
-      if (definition['type'] == int) {
-        _variables[key] = BoundedValue<int>(
-          value: value,
-          min: min,
-          max: max,
-        );
-      } else {
+      if (type == double) {
         _variables[key] = BoundedValue<double>(
-          value: value.toDouble(),
-          min: min.toDouble(),
-          max: max.toDouble(),
+          value: (defaultValue as num).toDouble(),
+          min: (definition['min'] as num).toDouble(),
+          max: (definition['max'] as num).toDouble(),
+        );
+      } else if (type == int) {
+        _variables[key] = BoundedValue<int>(
+          value: (defaultValue as num).toInt(),
+          min: (definition['min'] as num).toInt(),
+          max: (definition['max'] as num).toInt(),
         );
       }
     });
@@ -101,6 +112,8 @@ class UiVariables {
       _variables['rowHeight'] as BoundedValue<double>;
   BoundedValue<int> get sectionCount =>
       _variables['sectionCount'] as BoundedValue<int>;
+  BoundedValue<int> get columnCount => // New!
+      _variables['columnCount'] as BoundedValue<int>;
 
   // Get a property by name - for dynamic access
   BoundedValue getProperty(String propertyName) {

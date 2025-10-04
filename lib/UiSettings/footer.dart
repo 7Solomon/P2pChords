@@ -58,7 +58,7 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     width: showControls ? 320 : 0,
-                    height: showControls ? 400 : 0,
+                    height: showControls ? 450 : 0, // Increased height for 4 tabs
                     decoration: UiStyles.floatingPanelDecoration,
                     padding:
                         showControls ? UiStyles.smallPadding : EdgeInsets.zero,
@@ -174,6 +174,14 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
         'formatDecimals': 0,
         'type': 'double',
       },
+      {
+        'tab': 2,
+        'label': 'Anzahl Spalten',
+        'property': 'columnCount',
+        'step': 1.0,
+        'formatDecimals': 0,
+        'type': 'int',
+      },
     ];
 
     // Create tab contents based on configurations
@@ -215,7 +223,7 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 4, 
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -267,21 +275,14 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
           ),
           const TabBar(
             tabs: [
-              Tab(
-                icon: Icon(Icons.text_fields),
-                text: 'Text',
-              ),
-              Tab(
-                icon: Icon(Icons.space_bar),
-                text: 'Spacing',
-              ),
-              Tab(
-                icon: Icon(Icons.view_column),
-                text: 'Layout',
-              ),
+              Tab(icon: Icon(Icons.text_fields), text: 'Text'),
+              Tab(icon: Icon(Icons.space_bar), text: 'Spacing'),
+              Tab(icon: Icon(Icons.view_column), text: 'Layout'),
+              Tab(icon: Icon(Icons.view_agenda), text: 'Mode'), // New tab
             ],
             labelColor: UiStyles.primaryColor,
             unselectedLabelColor: Colors.grey,
+            isScrollable: true, // Make tabs scrollable if needed
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -302,10 +303,138 @@ class _SongControlsFooterState extends State<SongControlsFooter> {
                   padding: EdgeInsets.zero,
                   children: buildTabContent(2),
                 ),
+                // Mode Tab - New!
+                _buildModeTab(),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // New widget for layout mode selection
+  Widget _buildModeTab() {
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+          child: Text(
+            'Layout Modus',
+            style: UiStyles.labelStyle.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        ValueListenableBuilder<SheetLayoutMode>(
+          valueListenable: widget.uiVariables.layoutMode,
+          builder: (context, currentMode, _) {
+            return Column(
+              children: [
+                _buildModeOption(
+                  mode: SheetLayoutMode.verticalStack,
+                  currentMode: currentMode,
+                  icon: Icons.view_agenda,
+                  title: 'Vertikal Stapeln',
+                  description: 'Sections fließen nach unten (empfohlen)',
+                ),
+                _buildModeOption(
+                  mode: SheetLayoutMode.singleSection,
+                  currentMode: currentMode,
+                  icon: Icons.fullscreen,
+                  title: 'Einzelne Section',
+                  description: 'Nur aktuelle Section anzeigen',
+                ),
+                _buildModeOption(
+                  mode: SheetLayoutMode.multiColumn,
+                  currentMode: currentMode,
+                  icon: Icons.view_week,
+                  title: 'Mehrere Spalten',
+                  description: 'Sections in Raster (siehe Layout-Tab)',
+                ),
+                _buildModeOption(
+                  mode: SheetLayoutMode.horizontalGrid,
+                  currentMode: currentMode,
+                  icon: Icons.grid_view,
+                  title: 'Horizontal Grid',
+                  description: 'Sections fließen horizontal',
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeOption({
+    required SheetLayoutMode mode,
+    required SheetLayoutMode currentMode,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final isSelected = mode == currentMode;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      child: InkWell(
+        onTap: () {
+          widget.uiVariables.layoutMode.value = mode;
+          widget.onUiVariablesChanged(widget.uiVariables);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? UiStyles.primaryColor.withOpacity(0.1)
+                : Colors.transparent,
+            border: Border.all(
+              color: isSelected ? UiStyles.primaryColor : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? UiStyles.primaryColor : Colors.grey,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? UiStyles.primaryColor : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle,
+                  color: UiStyles.primaryColor,
+                  size: 20,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

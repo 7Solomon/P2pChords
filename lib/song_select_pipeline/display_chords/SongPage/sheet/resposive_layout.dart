@@ -12,7 +12,6 @@ class ResponsiveLayout extends StatelessWidget {
   final List<Song> songs;
   final int currentSectionIndex;
   final int currentSongIndex;
-  //final UiVariables uiVariables;
   final Widget Function(LineData) buildLine;
 
   const ResponsiveLayout({
@@ -20,7 +19,6 @@ class ResponsiveLayout extends StatelessWidget {
     required this.songs,
     required this.currentSectionIndex,
     required this.currentSongIndex,
-    //required this.uiVariables,
     required this.buildLine,
   });
 
@@ -30,45 +28,203 @@ class ResponsiveLayout extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Collect sections to display
         final sectionsToDisplay = _collectSections(uiVariables);
 
-        // Safety check
         if (sectionsToDisplay.isEmpty) {
           return const Center(child: Text("No sections to display"));
         }
 
-        // Horizontal layout
-
-        return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: CGridViewBuild(
-              currentSectionIndex: currentSectionIndex,
-              currentSongIndex: currentSongIndex,
-              sectionsToDisplay: sectionsToDisplay,
-              buildLine: buildLine,
-            ));
-
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GridView.builder(
-            scrollDirection: Axis.horizontal,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 16.0,
-              crossAxisSpacing: 16.0,
-              childAspectRatio: 1 / 1.2,
-            ),
-            itemCount: sectionsToDisplay.length,
-            itemBuilder: (context, index) {
-              return sectionsToDisplay[index];
-            },
-          ),
+        // Switch between different layout modes
+        return ValueListenableBuilder<SheetLayoutMode>(
+          valueListenable: uiVariables.layoutMode,
+          builder: (context, mode, _) {
+            switch (mode) {
+              case SheetLayoutMode.verticalStack:
+                return _buildVerticalStackLayout(sectionsToDisplay, uiVariables);
+              
+              case SheetLayoutMode.singleSection:
+                return _buildSingleSectionLayout(sectionsToDisplay, uiVariables);
+              
+              case SheetLayoutMode.multiColumn:
+                return _buildMultiColumnLayout(sectionsToDisplay, uiVariables);
+              
+              case SheetLayoutMode.horizontalGrid:
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: CGridViewBuild(
+                    currentSectionIndex: currentSectionIndex,
+                    currentSongIndex: currentSongIndex,
+                    sectionsToDisplay: sectionsToDisplay,
+                    buildLine: buildLine,
+                  ),
+                );
+            }
+          },
         );
       },
     );
+  }
+
+  // Vertical Stack Layout - sections flow downward with constrained width
+  Widget _buildVerticalStackLayout(List<SectionTile> sections, UiVariables uiVariables) {
+    // Create keys for scrolling
+    final Map<int, GlobalKey> sectionKeys = {};
+    for (int i = 0; i < sections.length; i++) {
+      sectionKeys[i] = GlobalKey();
+    }
+
+    // Find current section index
+    int currentIndex = _findCurrentSectionIndex(sections);
+
+    // Scroll to current section after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (currentIndex >= 0 && 
+          currentIndex < sections.length &&
+          sectionKeys[currentIndex]?.currentContext != null) {
+        Scrollable.ensureVisible(
+          sectionKeys[currentIndex]!.currentContext!,
+          duration: const Duration(milliseconds: 300),
+          alignment: 0.1,
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: max(600.0, uiVariables.columnWidth.value * 2),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: sections.asMap().entries.map((entry) {
+              return Padding(
+                key: sectionKeys[entry.key],
+                padding: EdgeInsets.only(bottom: uiVariables.rowSpacing.value),
+                child: entry.value,
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Single Section Layout - only current section visible
+  Widget _buildSingleSectionLayout(List<SectionTile> sections, UiVariables uiVariables) {
+    final currentSection = sections.firstWhere(
+      (tile) => tile.songIndex == currentSongIndex && 
+                tile.sectionIndex == currentSectionIndex,
+      orElse: () => sections.first,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: max(600.0, uiVariables.columnWidth.value * 2),
+          ),
+          child: currentSection,
+        ),
+      ),
+    );
+  }
+
+  // Multi Column Layout - sections in configurable columns, aligned in rows
+  Widget _buildMultiColumnLayout(List<SectionTile> sections, UiVariables uiVariables) {
+    final columnCount = uiVariables.columnCount.value;
+    
+    // Create keys for scrolling
+    final Map<int, GlobalKey> sectionKeys = {};
+    for (int i = 0; i < sections.length; i++) {
+      sectionKeys[i] = GlobalKey();
+    }
+
+    // Find current section index
+    int currentIndex = _findCurrentSectionIndex(sections);
+
+    // Scroll to current section after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (currentIndex >= 0 && 
+          currentIndex < sections.length &&
+          sectionKeys[currentIndex]?.currentContext != null) {
+        Scrollable.ensureVisible(
+          sectionKeys[currentIndex]!.currentContext!,
+          duration: const Duration(milliseconds: 300),
+          alignment: 0.1,
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+
+    // Build rows - sections flow left to right, then down
+    final rows = <Widget>[];
+    for (int i = 0; i < sections.length; i += columnCount) {
+      final rowSections = <Widget>[];
+      
+      // Get sections for this row
+      for (int j = 0; j < columnCount; j++) {
+        final index = i + j;
+        if (index < sections.length) {
+          rowSections.add(
+            Expanded(
+              child: Padding(
+                key: sectionKeys[index],
+                padding: EdgeInsets.only(
+                  right: j < columnCount - 1 ? uiVariables.columnSpacing.value : 0,
+                ),
+                child: sections[index],
+              ),
+            ),
+          );
+        } else {
+          // Add empty spacer to maintain grid alignment
+          rowSections.add(
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: j < columnCount - 1 ? uiVariables.columnSpacing.value : 0,
+                ),
+                child: const SizedBox.shrink(),
+              ),
+            ),
+          );
+        }
+      }
+
+      // Add row - sections align at top naturally
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: uiVariables.rowSpacing.value),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start, // Align at top
+            children: rowSections,
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      ),
+    );
+  }
+
+  // Helper to find current section in the list
+  int _findCurrentSectionIndex(List<SectionTile> sections) {
+    for (int i = 0; i < sections.length; i++) {
+      if (sections[i].songIndex == currentSongIndex &&
+          sections[i].sectionIndex == currentSectionIndex) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   List<SectionTile> _collectSections(UiVariables uiVariables) {
@@ -90,24 +246,56 @@ class ResponsiveLayout extends StatelessWidget {
       return sectionTiles;
     }
 
-    // Determine the position of current section in the visible window
-    int positionOfCurrent = 0; // Default: current section at top
+    // Get layout mode to adjust collection strategy
+    final layoutMode = uiVariables.layoutMode.value;
 
+    // For single section mode, only return the current section
+    if (layoutMode == SheetLayoutMode.singleSection) {
+      sectionTiles.add(
+        SectionTile(
+          song: currentSong,
+          section: currentSong.sections[currentSectionIndex],
+          songIndex: currentSongIndex,
+          sectionIndex: currentSectionIndex,
+          isFirstSectionOfSong: currentSectionIndex == 0,
+          isLastSectionOfSong: currentSectionIndex == currentSong.sections.length - 1,
+          isCurrentSection: true,
+          isCurrentSong: true,
+          buildLine: buildLine,
+        ),
+      );
+      return sectionTiles;
+    }
+
+    // Calculate total sections
     int totalSections = sectionCountInSongs();
     int totalSectionsBefore = sectionCountTillCurrent();
-    int totalSectionsAfter =
-        sectionCountAfterCurrent(totalSections, totalSectionsBefore);
+    int totalSectionsAfter = sectionCountAfterCurrent(totalSections, totalSectionsBefore);
 
-    // managing the positioning of the current section
-    if (totalSectionsBefore < maxSections - 1) {
-      // Near the beginning
-      positionOfCurrent = totalSectionsBefore;
-    } else if (totalSectionsAfter < maxSections - 1) {
-      // Near the end - position current section to show all remaining
-      positionOfCurrent = maxSections - totalSectionsAfter - 1;
+    // Determine positioning strategy based on layout mode
+    int positionOfCurrent;
+    
+    if (layoutMode == SheetLayoutMode.verticalStack || 
+        layoutMode == SheetLayoutMode.multiColumn) {
+      // For vertical layouts, keep current section near top (better for reading flow)
+      if (totalSectionsBefore < 1) {
+        positionOfCurrent = totalSectionsBefore;
+      } else if (totalSectionsAfter < maxSections - 2) {
+        // Near the end
+        positionOfCurrent = maxSections - totalSectionsAfter - 1;
+      } else {
+        // Middle region - show current at position 1 (one section above visible)
+        positionOfCurrent = 1;
+      }
     } else {
-      // Middle region - ensure we can always see the current section
-      positionOfCurrent = min(1, maxSections - 1);
+      // For horizontal grid, use original logic (current more centered)
+      if (totalSectionsBefore < maxSections - 1) {
+        positionOfCurrent = totalSectionsBefore;
+      } else if (totalSectionsAfter < maxSections - 1) {
+        positionOfCurrent = maxSections - totalSectionsAfter - 1;
+      } else {
+        positionOfCurrent = min(1, maxSections - 1);
+      }
     }
 
     // Start from the current section
@@ -115,14 +303,12 @@ class ResponsiveLayout extends StatelessWidget {
     int sectionIdx = currentSectionIndex;
 
     // Navigate backward to find start position
-    // But make sure we don't go past the beginning
     int stepsBack = min(positionOfCurrent, totalSectionsBefore);
     for (int i = 0; i < stepsBack; i++) {
       sectionIdx--;
       if (sectionIdx < 0) {
         songIdx--;
-        sectionIdx = songs[songIdx].sections.length - 1;
-        // Skip empty songs, importat becasue sonst error
+        // Skip empty songs
         while (songIdx >= 0 && songs[songIdx].sections.isEmpty) {
           songIdx--;
           if (songIdx < 0) break;
@@ -133,15 +319,14 @@ class ResponsiveLayout extends StatelessWidget {
       }
     }
 
-    // If we couldn't go back enough steps, we're at the beginning
-    // Now collect maxSections sections starting from this position
+    // Collect sections
     for (int count = 0; count < maxSections; count++) {
       if (songIdx < 0 || songIdx >= songs.length) break;
 
       // Handle edge case of empty sections
       if (songs[songIdx].sections.isEmpty) {
         songIdx++;
-        count--; // Don't count empty songs
+        count--;
         continue;
       }
 
@@ -157,7 +342,7 @@ class ResponsiveLayout extends StatelessWidget {
         }
         if (songIdx >= songs.length) break;
         count--;
-        continue; // Recheck current loop iteration with new indices
+        continue;
       }
 
       bool isCurrentSection =
@@ -186,7 +371,6 @@ class ResponsiveLayout extends StatelessWidget {
 
   // Util funcs
   int sectionCountInSongs() {
-    // Calculate total sections count in all songs
     int totalSections = 0;
     for (int s = 0; s < songs.length; s++) {
       totalSections += songs[s].sections.length;
@@ -195,7 +379,6 @@ class ResponsiveLayout extends StatelessWidget {
   }
 
   int sectionCountTillCurrent() {
-    // length of all Sections till the current
     int totalSectionsBefore = 0;
     for (int s = 0; s < currentSongIndex; s++) {
       totalSectionsBefore += songs[s].sections.length;

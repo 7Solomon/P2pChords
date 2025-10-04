@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/networking/services/data_sync_service.dart';
@@ -74,31 +76,38 @@ class ConnectionProvider with ChangeNotifier {
     required CurrentSelectionProvider currentSelectionProvider,
   })  : _dataLoader = dataLoader,
         _currentSelectionProvider = currentSelectionProvider {
+    // Only initialize nearby connections on mobile platforms
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      _initializeNearbyConnections();
+    } else {
+      debugPrint('Nearby Connections not supported on this platform');
+    }
     _initializeServiceCallbacks();
     _initializeDataSyncServiceCallbacks();
     _initializeMessageHandlerServiceCallbacks();
   }
 
+  void _initializeNearbyConnections() {
+    nearbyService.userNickName = _deviceName;
+    nearbyService.onConnectionStateChanged = notifyListeners;
+
+    // Callbacks
+    nearbyService.onNotification = (message) {
+      _notificationService.showInfo(message);
+    };
+    nearbyService.onPayloadReceived = (endpointId, payload) {
+      _messageHandlerService.handlePayload(endpointId, payload);
+    };
+
+    nearbyService.initializeDeviceIds(
+      connectedDeviceIds: _connectedDeviceIds,
+      visibleDevices: _visibleDevices,
+      knownDevices: _knownDevices,
+    );
+  }
+
   void _initializeServiceCallbacks() {
-    if (_connectionMode == ConnectionMode.nearby ||
-        _connectionMode == ConnectionMode.hybrid) {
-      nearbyService.userNickName = _deviceName;
-      nearbyService.onConnectionStateChanged = notifyListeners;
-
-      // Callbacks
-      nearbyService.onNotification = (message) {
-        _notificationService.showInfo(message);
-      };
-      nearbyService.onPayloadReceived = (endpointId, payload) {
-        _messageHandlerService.handlePayload(endpointId, payload);
-      };
-
-      nearbyService.initializeDeviceIds(
-        connectedDeviceIds: _connectedDeviceIds,
-        visibleDevices: _visibleDevices,
-        knownDevices: _knownDevices,
-      );
-    }
+    // Remove nearby initialization from here - already done in constructor
     if (_connectionMode == ConnectionMode.webSocket ||
         _connectionMode == ConnectionMode.hybrid) {
       webSocketService.userNickName = _deviceName;
