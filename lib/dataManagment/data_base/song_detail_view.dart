@@ -1,7 +1,5 @@
-import 'package:P2pChords/UiSettings/data_class.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
-import 'package:P2pChords/dataManagment/storageManager.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +22,6 @@ class _SongDetailViewState extends State<SongDetailView> {
   late int _currentSongIndex;
   late int _currentSectionIndex;
   bool _isSaving = false;
-  String _saveMessage = '';
 
   @override
   void initState() {
@@ -47,35 +44,63 @@ class _SongDetailViewState extends State<SongDetailView> {
   }
 
   Future<void> _saveSong(BuildContext context) async {
-    setState(() {
-      _isSaving = true;
-      _saveMessage = 'Saving song...';
-    });
+    setState(() => _isSaving = true);
 
     try {
       final song = widget.songs[_currentSongIndex];
-
       final dataProvider =
           Provider.of<DataLoadeProvider>(context, listen: false);
+      
       dataProvider.addSong(song);
-      setState(() {
-        _isSaving = false;
-        _saveMessage = 'Song "${song.header.name}" Gespeichert!';
-      });
 
-      // Clear the message after a few seconds
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _saveMessage = '';
-          });
-        }
-      });
+      if (!mounted) return;
+
+      // Show success snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${song.header.name} wurde gespeichert',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green[600],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
-      setState(() {
-        _isSaving = false;
-        _saveMessage = 'Error saving song: $e';
-      });
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              const Expanded(child: Text('Fehler beim Speichern')),
+            ],
+          ),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -84,82 +109,55 @@ class _SongDetailViewState extends State<SongDetailView> {
     final currentSong = widget.songs[_currentSongIndex];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(currentSong.header.name),
+        elevation: 0,
+        backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              currentSong.header.name,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              currentSong.header.authors.join(', '),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: _isSaving
-                  ? null
-                  : () {
-                      _saveSong(context);
-                    }),
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download, color: Colors.black87),
+            onPressed: _isSaving ? null : () => _saveSong(context),
+          ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Song display
-          SongSheetDisplay(
-            songs: [currentSong],
-            songIndex: _currentSongIndex,
-            sectionIndex: _currentSectionIndex,
-            currentKey: currentSong.header.key,
-            onSectionChanged: _onSectionChanged,
-            onSongChanged: _onSongChanged,
-          ),
-
-          // Save message
-          if (_saveMessage.isNotEmpty)
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _saveMessage.contains('Error')
-                      ? Colors.red.withOpacity(0.9)
-                      : Colors.green.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _saveMessage.contains('Error')
-                          ? Icons.error
-                          : Icons.check_circle,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _saveMessage,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (_isSaving)
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+      body: SongSheetDisplay(
+        songs: [currentSong],
+        songIndex: 0,
+        sectionIndex: _currentSectionIndex,
+        currentKey: currentSong.header.key,
+        onSectionChanged: _onSectionChanged,
+        onSongChanged: _onSongChanged,
       ),
     );
   }

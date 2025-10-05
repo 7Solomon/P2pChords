@@ -1,30 +1,38 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:P2pChords/networking/auth.dart';
 import 'package:P2pChords/networking/services/notification_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:http_parser/http_parser.dart' as http_parser;
 import '../data_class.dart';
 
 /// Fetches all JSON files from a custom server and merges the song data
-///
-/// Parameters:
-/// - [serverUrl]: The custom server URL
-/// - [timeoutSeconds]: Maximum time to wait for each request
-///
-/// Returns:
-/// - A list of Song objects if successful, or null if an error occurred
 Future<List<Song>?> fetchSongDataFromServer({
   required String serverUrl,
   int timeoutSeconds = 15,
 }) async {
   final tokenManager = ApiTokenManager();
   try {
+    // Normalize the base URL first
+    String normalizedUrl = serverUrl;
+    if (!normalizedUrl.startsWith('http://') &&
+        !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'http://$normalizedUrl';
+    }
+    if (normalizedUrl.endsWith('/')) {
+      normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
+    }
+
     final fileList = await getFilesFromServer(
-        serverUrl: serverUrl, tokenManager: tokenManager);
+        serverUrl: normalizedUrl, tokenManager: tokenManager);
 
     if (fileList == null || fileList.isEmpty) {
       print('No files found on the server or failed to list files');
       return null;
     }
+
     // Only process JSON files
     final jsonFiles = fileList
         .where((file) =>
@@ -38,20 +46,27 @@ Future<List<Song>?> fetchSongDataFromServer({
 
     List<Song> songs = [];
     for (final file in jsonFiles) {
-      final fileName = file['filename'] as String;
+      // Use 'path' for the actual file location, 'filename' for display
+      final filePath = file['path'] as String;
       final name = file['name'] as String;
 
+      print('Fetching song: $name from path: $filePath');
+
       final song = await fetchSongFromServer(
-        baseUrl: serverUrl,
-        fileUrl: fileName,
+        baseUrl: normalizedUrl, // Use normalized URL
+        fileUrl: filePath,
         tokenManager: tokenManager,
-        timeoutSeconds: timeoutSeconds,
       );
+      
       if (song == null) {
+        print('Failed to fetch song: $name');
         continue;
       }
+      
       songs.add(song);
     }
+    
+    print('Successfully fetched ${songs.length} songs');
     return songs;
   } catch (e) {
     print('Error fetching song data from server: $e');
@@ -60,76 +75,56 @@ Future<List<Song>?> fetchSongDataFromServer({
 }
 
 /// Gets files from a custom server using direct HTTP requests
-///
-/// Parameters:
-/// - [serverUrl]: The server URL where files are located
-///
-/// Returns:
-/// - A List of file metadata objects if successful, or null if an error occurred
 Future<List<Map<String, dynamic>>?> getFilesFromServer({
   required String serverUrl,
   required ApiTokenManager tokenManager,
   int timeoutSeconds = 30,
 }) async {
   try {
-        String correctedUrl = serverUrl;
-    if (!correctedUrl.startsWith('http://') && !correctedUrl.startsWith('https://')) {
-      correctedUrl = 'http://$correctedUrl';
-    }
-
-    // Remove trailing slash if present
-    final baseUrl = correctedUrl.endsWith('/')
-        ? correctedUrl.substring(0, correctedUrl.length - 1)
-        : correctedUrl;
-
-    // Assuming the server provides a file list endpoint
-    final listEndpoint = '$baseUrl/api/song_data/files';
+    // serverUrl should already be normalized by caller
+    final listEndpoint = '$serverUrl/api/song_data/files';
 
     final String? authToken = await tokenManager.getToken('serverApiToken');
     Map<String, String> headers = {};
 
     if (authToken != null && authToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $authToken';
-      print('Using auth token: $authToken');  
+      print('Using auth token for file list');
     } else {
       print('No authorization token found');
-      NotificationService()
-          .showError('Du hast keinen Token gespeichert. Bitte erstelle einen.');
+      NotificationService().showError('Kein Authentifizierungstoken gefunden');
     }
+
+    print('Fetching file list from: $listEndpoint');
 
     final response = await http
         .get(Uri.parse(listEndpoint), headers: headers)
         .timeout(Duration(seconds: timeoutSeconds));
+
     print('Response status code: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       try {
-        final List<dynamic> files = json.decode(response.body)['files'];
-        print('Fetched files: ${files.map((f) => f['filename']).toList()}');
+        final jsonData = json.decode(response.body);
+        final files = jsonData['files'] as List;
+        print('Found ${files.length} files');
         return files.cast<Map<String, dynamic>>();
       } catch (e) {
+        print('Error parsing JSON response: $e');
+        NotificationService().showError('Fehler beim Parsen der Antwort');
         return null;
       }
     } else {
       print('Failed to fetch files. Status code: ${response.statusCode}');
-      NotificationService().showError('Status code: ${response.statusCode}');
+      NotificationService().showError('Server-Fehler: ${response.statusCode}');
       return null;
     }
   } catch (e) {
     print('Error in getFilesFromServer: $e');
-    NotificationService().showError('Error: $e');
+    NotificationService().showError('Verbindungsfehler: $e');
     return null;
   }
 }
-
-/// Fetches Song from a JSON file hosted on the custom server.
-///
-/// Parameters:
-/// - [fileUrl]: The URL to the JSON file
-/// - [timeoutSeconds]: Maximum time to wait for the request
-///
-/// Returns:
-/// - A [Song] object if successful, or null if an error occurred
 Future<Song?> fetchSongFromServer({
   required String baseUrl,
   required String fileUrl,
@@ -140,49 +135,221 @@ Future<Song?> fetchSongFromServer({
     // Retrieve the token
     final String? authToken = await tokenManager.getToken('serverApiToken');
     Map<String, String> headers = {};
+    
     if (authToken != null && authToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $authToken';
     } else {
-      NotificationService()
-          .showError('Du hast keinen Token gespeichert. Bitte erstelle einen.');
+      NotificationService().showError('Kein Authentifizierungstoken');
     }
 
+    // Normalize path separators for URL (Windows uses backslashes)
+    final normalizedPath = fileUrl.replaceAll('\\', '/');
+    
+    // Encode each path segment separately to preserve the / separators
+    final pathSegments = normalizedPath.split('/');
+    final encodedSegments = pathSegments.map((segment) => Uri.encodeComponent(segment)).toList();
+    final encodedPath = encodedSegments.join('/');
+    
+    // baseUrl should already include http:// from the caller
+    final fullUrl = '$baseUrl/api/song_data/$encodedPath';
+    
+    print('Fetching song from: $fullUrl');
+
     final response = await http
-        .get(Uri.parse('$baseUrl/api/song_data/$fileUrl'), headers: headers)
+        .get(Uri.parse(fullUrl), headers: headers)
         .timeout(Duration(seconds: timeoutSeconds));
 
+    print('Song fetch response: ${response.statusCode}');
+
     if (response.statusCode == 200) {
-      if (response.body.trim().startsWith('<')) {
-        NotificationService()
-            .showError('Received HTML response instead of JSON.');
-        return null;
-      }
-
-      // Parse the JSON response
-      final Map<String, dynamic> jsonData = json.decode(response.body);
-
-      // Create a Song object from the parsed JSON
+      final jsonData = json.decode(response.body);
       return Song.fromMap(jsonData);
     } else if (response.statusCode == 401 || response.statusCode == 403) {
-      NotificationService().showError(
-          'Authorization error: Status code ${response.statusCode}. Token might be invalid or missing.');
-      // Optionally, you could try to refresh the token or prompt for login here.
+      NotificationService().showError('Zugriff verweigert');
       return null;
     } else {
-      // Handle different HTTP error codes
-      NotificationService().showError(
-          'Failed to load song data. Status code: ${response.statusCode}');
+      NotificationService().showError('Fehler ${response.statusCode}');
       return null;
     }
   } catch (e) {
-    // Handle specific exceptions with more detailed error messages
+    print('Error fetching song: $e');
     if (e is http.ClientException) {
-      NotificationService().showError('Network error: $e');
+      NotificationService().showError('Netzwerkfehler');
     } else if (e is FormatException) {
-      NotificationService().showError('Error parsing JSON data: $e');
+      NotificationService().showError('Ungültiges JSON-Format');
     } else {
-      NotificationService().showError('Error fetching song data: $e');
+      NotificationService().showError('Fehler: $e');
     }
+    return null;
+  }
+}
+
+/// Uploads a song to the server
+Future<bool> uploadSongToServer({
+  required String serverUrl,
+  required Song song,
+  String? subfolder,
+}) async {
+  final tokenManager = ApiTokenManager();
+  
+  try {
+    // Normalize the base URL
+    String normalizedUrl = serverUrl;
+    if (!normalizedUrl.startsWith('http://') &&
+        !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'http://$normalizedUrl';
+    }
+    if (normalizedUrl.endsWith('/')) {
+      normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
+    }
+
+    final uploadEndpoint = '$normalizedUrl/api/song_data';
+
+    // Get admin token (upload requires admin privileges)
+    final String? authToken = await tokenManager.getToken('serverApiToken');
+    if (authToken == null || authToken.isEmpty) {
+      NotificationService().showError('Kein Admin-Token gefunden');
+      print('No admin token found');
+      return false;
+    }
+
+    // Prepare filename
+    String authorName = song.header.authors.isNotEmpty 
+        ? song.header.authors[0] 
+        : 'Unknown';
+    
+    // Clean filename (remove special characters)
+    String cleanName = song.header.name.replaceAll(RegExp(r'[^\w\s-]'), '');
+    String cleanAuthor = authorName.replaceAll(RegExp(r'[^\w\s-]'), '');
+    
+    String filename = '${cleanName}_$cleanAuthor.json';
+    
+    // If subfolder is specified, prepend it to filename
+    if (subfolder != null && subfolder.isNotEmpty) {
+      filename = '$subfolder/$filename';
+    }
+
+    print('Uploading song: ${song.header.name} as $filename');
+
+    // Convert song to JSON
+    final songJson = song.toMap();
+    final jsonString = jsonEncode(songJson);
+
+    // Create multipart request
+    var request = http.MultipartRequest('POST', Uri.parse(uploadEndpoint));
+    
+    // Add authorization header
+    request.headers['Authorization'] = 'Bearer $authToken';
+    
+    // Add the JSON file as a multipart file
+    request.files.add(
+      http.MultipartFile.fromString(
+        'file',
+        jsonString,
+        filename: filename,
+        contentType: http_parser.MediaType('application', 'json'),
+      ),
+    );
+
+    print('Sending upload request to: $uploadEndpoint');
+
+    // Send request with longer timeout
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 60), // Increased timeout
+      onTimeout: () {
+        throw TimeoutException('Server nicht erreichbar - Zeitüberschreitung');
+      },
+    );
+    
+    final response = await http.Response.fromStream(streamedResponse);
+
+    print('Upload response status: ${response.statusCode}');
+    print('Upload response body: ${response.body}'); // Add this for debugging
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      print('Song uploaded successfully');
+      NotificationService().showSuccess(
+        'Song "${song.header.name}" erfolgreich hochgeladen',
+      );
+      return true;
+    } else if (response.statusCode == 401 || response.statusCode == 403) {
+      print('Upload failed: Unauthorized');
+      NotificationService().showError('Keine Berechtigung zum Hochladen');
+      return false;
+    } else {
+      print('Upload failed with status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      NotificationService().showError('Upload fehlgeschlagen: ${response.statusCode}');
+      return false;
+    }
+  } on TimeoutException catch (e) {
+    print('Timeout error: $e');
+    NotificationService().showError('Server nicht erreichbar (Timeout)');
+    return false;
+  } on SocketException catch (e) {
+    print('Socket error: $e');
+    NotificationService().showError('Netzwerkverbindung fehlgeschlagen');
+    return false;
+  } catch (e) {
+    print('Error uploading song to server: $e');
+    if (e is http.ClientException) {
+      NotificationService().showError('Netzwerkfehler beim Hochladen');
+    } else {
+      NotificationService().showError('Fehler beim Hochladen: $e');
+    }
+    return false;
+  }
+}
+
+/// Gets the list of available subfolders on the server (optional helper)
+Future<List<String>?> getServerSubfolders({
+  required String serverUrl,
+}) async {
+  final tokenManager = ApiTokenManager();
+  
+  try {
+    String normalizedUrl = serverUrl;
+    if (!normalizedUrl.startsWith('http://') &&
+        !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'http://$normalizedUrl';
+    }
+    if (normalizedUrl.endsWith('/')) {
+      normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
+    }
+
+    final listEndpoint = '$normalizedUrl/api/song_data/files';
+    final String? authToken = await tokenManager.getToken('serverApiToken');
+    
+    Map<String, String> headers = {};
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    }
+
+    final response = await http.get(
+      Uri.parse(listEndpoint),
+      headers: headers,
+    ).timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      final files = jsonData['files'] as List;
+      
+      // Extract unique folder names
+      final folders = <String>{};
+      for (var file in files) {
+        final path = file['path'] as String;
+        if (path.contains('/')) {
+          final folder = path.split('/').first;
+          folders.add(folder);
+        }
+      }
+      
+      return folders.toList()..sort();
+    }
+    
+    return null;
+  } catch (e) {
+    print('Error fetching subfolders: $e');
     return null;
   }
 }

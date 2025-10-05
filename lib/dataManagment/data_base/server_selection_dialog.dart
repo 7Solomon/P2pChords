@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/auth.dart';
 
-/// Shows a dialog to select a server and returns the chosen URL.
-/// Returns `null` if the dialog is cancelled.
 Future<String?> showServerSelectionDialog(BuildContext context) async {
   return await showDialog<String>(
     context: context,
-    // The builder now just calls the self-contained dialog
     builder: (context) => const ServerSelectionDialog(),
   );
 }
@@ -19,12 +16,10 @@ class ServerSelectionDialog extends StatefulWidget {
 }
 
 class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
-  // 1. Create instances for the form, controller, and token manager
   final _formKey = GlobalKey<FormState>();
   final _ipController = TextEditingController();
   final _tokenManager = ApiTokenManager();
 
-  // 2. State variables for the dialog
   List<String> _savedIps = [];
   String? _selectedIp;
   bool _isLoading = true;
@@ -32,7 +27,6 @@ class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
   @override
   void initState() {
     super.initState();
-    // 3. Load the IPs when the dialog is first created
     _loadIps();
   }
 
@@ -56,14 +50,22 @@ class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
     final finalUrl = _ipController.text.trim();
     if (finalUrl.isEmpty) return;
 
-    // If the final URL is not in the original saved list, ask to save it.
     if (!_savedIps.contains(finalUrl)) {
       final saveConfirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Server speichern?'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.save, color: Colors.blue),
+              SizedBox(width: 12),
+              Text('Server speichern?'),
+            ],
+          ),
           content: Text(
-              'Soll die neue Adresse "$finalUrl" für die zukünftige Verwendung gespeichert werden?'),
+            'Möchtest du "$finalUrl" für die zukünftige Verwendung speichern?',
+            style: const TextStyle(fontSize: 15),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -71,6 +73,11 @@ class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: const Text('Ja, speichern'),
             ),
           ],
@@ -82,7 +89,6 @@ class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
       }
     }
 
-    // Pop the dialog and return the selected URL
     if (mounted) {
       Navigator.of(context).pop(finalUrl);
     }
@@ -90,75 +96,201 @@ class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Server auswählen'),
-      content: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Form(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 400),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.dns,
+                    color: Theme.of(context).primaryColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text(
+                    'Server verbinden',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else
+              Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (_savedIps.isNotEmpty)
-                      DropdownButtonFormField<String>(
-                        value: _selectedIp,
-                        hint: const Text('Gespeicherten Server wählen'),
-                        items: _savedIps.map((ip) {
-                          return DropdownMenuItem(value: ip, child: Text(ip));
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedIp = value;
-                            if (value != null) {
-                              _ipController.text = value;
-                            }
-                          });
-                        },
-                        decoration:
-                            const InputDecoration(border: OutlineInputBorder()),
+                    // Saved servers dropdown
+                    if (_savedIps.isNotEmpty) ...[
+                      const Text(
+                        'Gespeicherte Server',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
-                    if (_savedIps.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Center(child: Text('ODER')),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedIp,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            prefixIcon: Icon(Icons.history),
+                          ),
+                          hint: const Text('Wähle einen Server'),
+                          items: _savedIps.map((ip) {
+                            return DropdownMenuItem(
+                              value: ip,
+                              child: Text(
+                                ip,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedIp = value;
+                              if (value != null) {
+                                _ipController.text = value;
+                              }
+                            });
+                          },
+                        ),
                       ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.grey[300])),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'ODER',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: Colors.grey[300])),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Manual input
+                    const Text(
+                      'Neue Serveradresse',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     TextFormField(
                       controller: _ipController,
-                      decoration: const InputDecoration(
-                        labelText: 'Server-Adresse eingeben oder bearbeiten',
-                        hintText: 'http://192.168.1.100:8080',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: 'http://192.168.1.100:5000',
+                        prefixIcon: const Icon(Icons.link),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                       ),
                       onChanged: (value) {
                         if (_selectedIp != null && value != _selectedIp) {
-                          setState(() {
-                            _selectedIp = null;
-                          });
+                          setState(() => _selectedIp = null);
                         }
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Bitte eine Adresse auswählen oder eingeben.';
+                          return 'Bitte eine Adresse eingeben';
                         }
                         return null;
                       },
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Connect button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _connect,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.cloud_sync),
+                            SizedBox(width: 12),
+                            Text(
+                              'Verbinden',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Abbrechen'),
+          ],
         ),
-        ElevatedButton(
-          onPressed: _isLoading ? null : _connect,
-          child: const Text('Verbinden'),
-        ),
-      ],
+      ),
     );
   }
 }
