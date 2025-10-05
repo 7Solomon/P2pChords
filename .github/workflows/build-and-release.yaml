@@ -28,25 +28,13 @@ jobs:
           mkdir -p android/keystore
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore/keystore_name.jks
       
-      # Create key.properties
+      # Create key.properties with proper variable expansion
       - name: Create key.properties
         run: |
-          cat > android/key.properties << 'EOF'
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=../keystore/keystore_name.jks
-          EOF
-      
-      # Debug: verify files exist
-      - name: Verify keystore setup
-        run: |
-          echo "=== Contents of android/key.properties ==="
-          cat android/key.properties
-          echo "=== Checking if keystore exists ==="
-          ls -la android/keystore/
-          echo "=== Checking file permissions ==="
-          ls -la android/key.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=../keystore/keystore_name.jks" >> android/key.properties
       
       - run: flutter pub get
       - run: flutter build apk --release
