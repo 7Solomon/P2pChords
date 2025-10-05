@@ -25,7 +25,8 @@ jobs:
       # Decode and setup keystore
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore_name.jks
+          mkdir -p android/keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore/keystore_name.jks
       
       # Create key.properties
       - name: Create key.properties
@@ -34,7 +35,7 @@ jobs:
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=app/upload-keystore.jks
+          storeFile=../keystore/keystore_name.jks
           EOF
       
       - run: flutter pub get
