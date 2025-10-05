@@ -31,12 +31,22 @@ jobs:
       # Create key.properties
       - name: Create key.properties
         run: |
-          cat > android/key.properties << EOF
+          cat > android/key.properties << 'EOF'
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=../keystore/keystore_name.jks
           EOF
+      
+      # Debug: verify files exist
+      - name: Verify keystore setup
+        run: |
+          echo "=== Contents of android/key.properties ==="
+          cat android/key.properties
+          echo "=== Checking if keystore exists ==="
+          ls -la android/keystore/
+          echo "=== Checking file permissions ==="
+          ls -la android/key.properties
       
       - run: flutter pub get
       - run: flutter build apk --release
