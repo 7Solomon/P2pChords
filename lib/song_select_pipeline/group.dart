@@ -15,15 +15,22 @@ import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart
 
 import 'package:P2pChords/styling/Tiles.dart';
 
-class Songoverviewpage extends StatelessWidget {
+class Songoverviewpage extends StatefulWidget {
   const Songoverviewpage({super.key});
 
+  @override
+  State<Songoverviewpage> createState() => _SongoverviewpageState();
+}
+
+class _SongoverviewpageState extends State<Songoverviewpage> {
   @override
   Widget build(BuildContext context) {
     final currentData = context.watch<CurrentSelectionProvider>();
     final dataProvider = context.watch<DataLoadeProvider>();
     final musicSyncProvider = context.watch<ConnectionProvider>();
     final sheetUiProvider = context.watch<SheetUiProvider>();
+
+    final songs = dataProvider.getSongsInGroup(currentData.currentGroup!);
 
     return Scaffold(
       appBar: AppBar(
@@ -34,13 +41,20 @@ class Songoverviewpage extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              itemCount: dataProvider
-                  .getSongsInGroup(currentData.currentGroup!)
-                  .length,
+            child: ReorderableListView.builder(
+              itemCount: songs.length,
+              onReorder: (oldIndex, newIndex) async {
+                if (oldIndex < newIndex) {
+                  newIndex -= 1;
+                }
+                await dataProvider.reorderSongInGroup(
+                  currentData.currentGroup!,
+                  oldIndex,
+                  newIndex,
+                );
+              },
               itemBuilder: (context, index) {
-                final song = dataProvider
-                    .getSongsInGroup(currentData.currentGroup!)[index];
+                final song = songs[index];
                 final name = song.header.name;
                 final hash = song.hash;
 
@@ -52,63 +66,71 @@ class Songoverviewpage extends StatelessWidget {
                   });
                 }
 
-                return CDissmissible.deleteAndAction(
-                  key: ValueKey('${currentData.currentGroup}_$hash'),
-                  deleteConfirmation: () =>
-                      CDissmissible.showDeleteConfirmationDialog(context),
-                  confirmDeleteDismiss: () async {
-                    if (currentData.currentGroup == null) {
-                      SnackService().showError(
-                        'Ein Fehler ist passiert, Bitte erst eine Gruppe auswählen!',
-                      );
-                      return false;
-                    }
-                    await dataProvider.removeSongFromGroup(
-                        currentData.currentGroup!, hash);
-                    
-                    // Clear current song if it was the deleted one
-                    if (currentData.currentSongHash == hash) {
-                      currentData.setCurrentSong(null);
-                    }
-                    
-                    return true;
-                  },
-                  confirmActionDismiss: () {
-                    exportSong(context, song);
-                    return Future.value(false);
-                  },
-                  child: CListTile(
-                    title: name,
-                    subtitle: song.header.authors.isNotEmpty
-                        ? song.header.authors[0]
-                        : '',
-                    context: context,
-                    onTap: () {
-                      currentData.setCurrentSong(hash);
-                      currentData.setCurrentSectionIndex(0);
+                return CExpandableListTile(
+                  key: ValueKey(hash),
+                  uniqueKey: hash,
+                  title: name,
+                  subtitle: song.header.authors.isNotEmpty
+                      ? song.header.authors[0]
+                      : '',
+                  icon: Icons.music_note,
+                  onTap: () {
+                    currentData.setCurrentSong(hash);
+                    currentData.setCurrentSectionIndex(0);
 
-                      musicSyncProvider.dataSyncService
-                          .sendUpdateToAllClients(currentData.toJson());
+                    musicSyncProvider.dataSyncService
+                        .sendUpdateToAllClients(currentData.toJson());
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ChordSheetPage(),
-                        ),
-                      );
-                    },
-                    onLongPress: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SongEditPage(
-                            song: song,
-                            group: currentData.currentGroup,
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ChordSheetPage(),
+                      ),
+                    );
+                  },
+                  actions: [
+                    CExpandableAction(
+                      icon: Icons.edit,
+                      tooltip: 'Bearbeiten',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SongEditPage(
+                              song: song,
+                              group: currentData.currentGroup,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+                    CExpandableAction(
+                      icon: Icons.share,
+                      tooltip: 'Exportieren',
+                      onPressed: () {
+                        exportSong(context, song);
+                      },
+                    ),
+                    CExpandableAction(
+                      icon: Icons.delete,
+                      tooltip: 'Löschen',
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                      onPressed: () async {
+                        final confirmed = await CDissmissible
+                            .showDeleteConfirmationDialog(context);
+                        if (confirmed == true) {
+                          await dataProvider.removeSongFromGroup(
+                            currentData.currentGroup!,
+                            hash,
+                          );
+                          if (currentData.currentSongHash == hash) {
+                            currentData.setCurrentSong(null);
+                          }
+                        }
+                      },
+                    ),
+                  ],
                 );
               },
             ),

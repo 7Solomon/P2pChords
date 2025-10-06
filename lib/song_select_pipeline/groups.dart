@@ -94,51 +94,64 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                   : ListView.builder(
                       itemCount: dataProvider.groups.length,
                       itemBuilder: (context, index) {
-                        String groupName = dataProvider.groups.keys.elementAt(index);
+                        String groupName =
+                            dataProvider.groups.keys.elementAt(index);
                         SongData songData = dataProvider.getSongData(groupName);
+                        int songCount = dataProvider.groups[groupName]?.length ?? 0;
 
-                        return CDissmissible.deleteAndAction(
+                        return CExpandableListTile(
                           key: Key(groupName),
-                          deleteIcon: Icons.delete,
-                          actionIcon: Icons.download,
-                          deleteConfirmation: () =>
-                              CDissmissible.showDeleteConfirmationDialog(context),
-                          confirmActionDismiss: () async {
-                            await exportGroupsData(songData);
-                          },
-                          confirmDeleteDismiss: () async {
-                            await dataProvider.removeGroup(groupName);
-                            // No need for setState() here
-                          },
-                          child: CListTile(
-                            title: groupName,
-                            context: context,
-                            subtitle: 'Klicke um die Songs der Gruppe anzusehen',
-                            icon: Icons.file_copy,
-                            onTap: () async {
-                              _currentSelectionProvider.setCurrentGroup(groupName);
-                              if (connectionProvider.userState !=
-                                  UserState.client) {
-                                if (connectionProvider.userState ==
-                                    UserState.server) {
-                                  await sendSongDataToAllClients(
-                                      connectionProvider, songData);
-                                }
-                                if (mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const Songoverviewpage(),
-                                    ),
-                                  );
-                                }
-                              } else {
-                                SnackService().showWarning(
-                                    'Du kannst keine Gruppen auswählen, wenn du ein Client bist');
+                          uniqueKey: groupName,
+                          title: groupName,
+                          subtitle: '$songCount Song${songCount != 1 ? 's' : ''}',
+                          icon: Icons.folder,
+                          onTap: () async {
+                            _currentSelectionProvider.setCurrentGroup(groupName);
+                            if (connectionProvider.userState !=
+                                UserState.client) {
+                              if (connectionProvider.userState ==
+                                  UserState.server) {
+                                await sendSongDataToAllClients(
+                                    connectionProvider, songData);
                               }
-                            },
-                          ),
+                              if (mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const Songoverviewpage(),
+                                  ),
+                                );
+                              }
+                            } else {
+                              SnackService().showWarning(
+                                  'Du kannst keine Gruppen auswählen, wenn du ein Client bist');
+                            }
+                          },
+                          actions: [
+                            CExpandableAction(
+                              icon: Icons.download,
+                              tooltip: 'Exportieren',
+                              onPressed: () async {
+                                await exportGroupsData(songData);
+                              },
+                            ),
+                            CExpandableAction(
+                              icon: Icons.delete,
+                              tooltip: 'Löschen',
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.error,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onError,
+                              onPressed: () async {
+                                final confirmed = await CDissmissible
+                                    .showDeleteConfirmationDialog(context);
+                                if (confirmed == true) {
+                                  await dataProvider.removeGroup(groupName);
+                                }
+                              },
+                            ),
+                          ],
                         );
                       },
                     );

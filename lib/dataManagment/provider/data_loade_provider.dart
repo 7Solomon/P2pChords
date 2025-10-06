@@ -218,4 +218,23 @@ class DataLoadeProvider extends ChangeNotifier {
         {group: songs.map((e) => e.hash).toList()});
     return SongData.fromDataProvider(groups, _songs!);
   }
+
+  Future<void> reorderSongInGroup(String groupName, int oldIndex, int newIndex) async {
+    if (_groups == null || !_groups!.containsKey(groupName)) return;
+    
+    final groupSongs = _groups![groupName]!;
+    if (oldIndex < 0 || oldIndex >= groupSongs.length || 
+        newIndex < 0 || newIndex >= groupSongs.length) {
+      return;
+    }
+    
+    // Reorder in memory
+    final songHash = groupSongs.removeAt(oldIndex);
+    groupSongs.insert(newIndex, songHash);
+    
+    // Save to storage
+    await MultiJsonStorage.updateGroupOrder(groupName, groupSongs);
+    
+    notifyListeners();
+  }
 }

@@ -313,6 +313,22 @@ class MultiJsonStorage {
     prefs.setString('$_keyPrefix:group_map', jsonEncode(groupMap));
   }
 
+  /// Update the order of songs in a group
+  static Future<void> updateGroupOrder(String groupName, List<String> orderedHashes) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Get the current group map
+    Map<String, List<String>> groupMap = await getGroupMap(prefs);
+    
+    // Update the specific group with the new order
+    if (groupMap.containsKey(groupName)) {
+      groupMap[groupName] = orderedHashes;
+      
+      // Save back to SharedPreferences
+      await prefs.setString('$_keyPrefix:group_map', jsonEncode(groupMap));
+    }
+  }
+
   static Future<List<String>> getAllSongHashs(SharedPreferences prefs) async {
     try {
       Set<String> allKeys;

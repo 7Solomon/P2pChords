@@ -78,11 +78,6 @@ class ApiTokenManager {
       return null;
     }
     final token = await _storage.read(key: tokenKey);
-    if (token == null) {
-      NotificationService().showError('Token not found for key: $key');
-      return null;
-    }
-    NotificationService().showSuccess('Token retrieved successfully.');
     return token;
   }
 
@@ -135,7 +130,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
       if (mounted) {
         setState(() {
           _currentTokenDisplays[key] =
-              token?.isNotEmpty == true ? token : 'Nicht festgelegt';
+              (token?.isNotEmpty ?? false) ? token : 'Nicht festgelegt';
         });
       }
     }
