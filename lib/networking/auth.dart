@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:P2pChords/dataManagment/corrupted_storage.dart';
 import 'package:P2pChords/networking/services/notification_service.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,6 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class ApiTokenManager {
   final _storage = const FlutterSecureStorage();
-  // Note: 'serverIp' is removed from here as we now handle a list separately.
   static const tokenMap = {
     'serverApiToken': 'server_api_token',
   };
@@ -26,14 +26,19 @@ class ApiTokenManager {
 
   /// Fetches the saved list of server IPs.
   Future<List<String>> getSavedServerIps() async {
-    final rawList = await _storage.read(key: _serverIpListKey);
-    if (rawList == null) {
-      return [];
-    }
     try {
+      final rawList = await _storage.read(key: _serverIpListKey);
+      if (rawList == null) {
+        return [];
+      }
       final List<dynamic> decoded = jsonDecode(rawList);
       return decoded.cast<String>();
     } catch (e) {
+      // Handle corrupted data - clear and throw custom exception
+      debugPrint('Error reading server IPs (corrupted storage): $e');
+      if (e.toString().contains('padding') || e.toString().contains('decrypt')) {
+        throw StorageCorruptedException('Server IPs corrupted: $e');
+      }
       return [];
     }
   }
@@ -72,13 +77,19 @@ class ApiTokenManager {
   }
 
   Future<String?> getToken(String key) async {
-    final String? tokenKey = tokenMap[key];
-    if (tokenKey == null) {
-      NotificationService().showError('Invalid token key: $key');
+    try {
+      final String? tokenKey = tokenMap[key];
+      if (tokenKey == null) {
+        return null;
+      }
+      return await _storage.read(key: tokenKey);
+    } catch (e) {
+      debugPrint('Error reading token $key (corrupted storage): $e');
+      if (e.toString().contains('padding') || e.toString().contains('decrypt')) {
+        throw StorageCorruptedException('Token $key corrupted: $e');
+      }
       return null;
     }
-    final token = await _storage.read(key: tokenKey);
-    return token;
   }
 
   Future<void> deleteToken(String key) async {
@@ -90,6 +101,24 @@ class ApiTokenManager {
     await _storage.delete(key: tokenKey);
     NotificationService().showSuccess('Token deleted successfully.');
   }
+
+  /// Clear all stored data
+  Future<void> clearAllData() async {
+    try {
+      await _storage.deleteAll();
+    } catch (e) {
+      debugPrint('Error clearing storage: $e');
+    }
+  }
+}
+
+/// Custom exception for corrupted storage
+class StorageCorruptedException implements Exception {
+  final String message;
+  StorageCorruptedException(this.message);
+  
+  @override
+  String toString() => message;
 }
 
 class ApiSettingsPage extends StatefulWidget {
@@ -122,26 +151,120 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
   }
 
   Future<void> _loadAllData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       // Load tokens
       for (var key in _tokenKeys) {
-        final token = await _tokenManager.getToken(key);
-        if (mounted) {
-          setState(() {
-            _currentTokenDisplays[key] =
-                (token?.isNotEmpty ?? false) ? token : 'Nicht festgelegt';
-          });
+        try {
+          final token = await _tokenManager.getToken(key);
+          if (mounted) {
+            setState(() {
+              _currentTokenDisplays[key] =
+                  (token?.isNotEmpty ?? false) ? token : 'Nicht festgelegt';
+            });
+          }
+        } catch (e) {
+          if (e is StorageCorruptedException) {
+            rethrow; // Pass it up to be handled below
+          }
+          debugPrint('Error loading token $key: $e');
+          if (mounted) {
+            setState(() {
+              _currentTokenDisplays[key] = 'Fehler beim Laden';
+            });
+          }
         }
       }
 
       // Load IPs
-      _savedIps = await _tokenManager.getSavedServerIps();
+      try {
+        _savedIps = await _tokenManager.getSavedServerIps();
+      } catch (e) {
+        if (e is StorageCorruptedException) {
+          rethrow; // Pass it up to be handled below
+        }
+        debugPrint('Error loading IPs: $e');
+        _savedIps = [];
+      }
+    } on StorageCorruptedException catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        // Show dialog and navigate to debug page
+        final shouldNavigate = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red),
+                SizedBox(width: 12),
+                Text('Speicher beschädigt'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Der verschlüsselte Speicher ist beschädigt. Dies kann nach OS-Updates oder App-Neuinstallationen passieren.',
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Fehlerdetails: $e',
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Abbrechen'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.bug_report),
+                label: const Text('Debug-Seite öffnen'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldNavigate == true && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const StorageDebugPage(),
+            ),
+          ).then((_) {
+            // Reload after returning from debug page
+            _loadAllData();
+          });
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim Laden der Daten: $e')),
+          SnackBar(
+            content: Text('Fehler beim Laden der Daten: $e'),
+            action: SnackBarAction(
+              label: 'Debug',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const StorageDebugPage(),
+                  ),
+                ).then((_) => _loadAllData());
+              },
+            ),
+          ),
         );
       }
     } finally {

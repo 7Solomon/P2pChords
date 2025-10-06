@@ -1,3 +1,4 @@
+import 'package:P2pChords/dataManagment/corrupted_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/networking/auth.dart';
 
@@ -31,9 +32,79 @@ class _ServerSelectionDialogState extends State<ServerSelectionDialog> {
   }
 
   Future<void> _loadIps() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    _savedIps = await _tokenManager.getSavedServerIps();
-    setState(() => _isLoading = false);
+    
+    try {
+      _savedIps = await _tokenManager.getSavedServerIps();
+    } on StorageCorruptedException catch (e) {
+      debugPrint('Storage corrupted: $e');
+      _savedIps = [];
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        final shouldNavigate = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red),
+                SizedBox(width: 12),
+                Text('Speicher beschädigt'),
+              ],
+            ),
+            content: const Text(
+              'Der verschlüsselte Speicher ist beschädigt. Möchten Sie zur Debug-Seite gehen, um das Problem zu beheben?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Abbrechen'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.bug_report),
+                label: const Text('Debug öffnen'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldNavigate == true && mounted) {
+          // Pop this dialog first
+          Navigator.of(context).pop();
+          
+          // Navigate to debug page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const StorageDebugPage(),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading saved IPs: $e');
+      _savedIps = [];
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fehler beim Laden. Speicher wird zurückgesetzt.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
