@@ -23,6 +23,8 @@ class Songoverviewpage extends StatefulWidget {
 }
 
 class _SongoverviewpageState extends State<Songoverviewpage> {
+  String? _expandedSongHash;
+
   @override
   Widget build(BuildContext context) {
     final currentData = context.watch<CurrentSelectionProvider>();
@@ -57,6 +59,7 @@ class _SongoverviewpageState extends State<Songoverviewpage> {
                 final song = songs[index];
                 final name = song.header.name;
                 final hash = song.hash;
+                final isExpanded = _expandedSongHash == hash;
 
                 // SET KEY MAP OF CURRENT SONG TO its ORIGINAL KEY
                 if (!sheetUiProvider.currentKeyMap.containsKey(song.hash)) {
@@ -74,7 +77,33 @@ class _SongoverviewpageState extends State<Songoverviewpage> {
                       ? song.header.authors[0]
                       : '',
                   icon: Icons.music_note,
+                  isExpanded: isExpanded,
+                  onExpansionChanged: (expanded) {
+                    setState(() {
+                      _expandedSongHash = expanded ? hash : null;
+                    });
+                  },
+                  dragHandleBuilder: (context) {
+                    return ReorderableDragStartListener(
+                      index: index,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.drag_handle,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 28,
+                        ),
+                      ),
+                    );
+                  },
                   onTap: () {
+                    if (isExpanded) {
+                      setState(() {
+                        _expandedSongHash = null;
+                      });
+                      return;
+                    }
+
                     currentData.setCurrentSong(hash);
                     currentData.setCurrentSectionIndex(0);
 

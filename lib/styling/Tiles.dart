@@ -161,6 +161,9 @@ class CExpandableListTile extends StatefulWidget {
   final VoidCallback? onTap;
   final List<CExpandableAction> actions;
   final String uniqueKey;
+  final bool? isExpanded;
+  final ValueChanged<bool>? onExpansionChanged;
+  final Widget Function(BuildContext)? dragHandleBuilder;
 
   const CExpandableListTile({
     Key? key,
@@ -171,6 +174,9 @@ class CExpandableListTile extends StatefulWidget {
     this.iconSize,
     this.onTap,
     this.actions = const [],
+    this.isExpanded,
+    this.onExpansionChanged,
+    this.dragHandleBuilder,
   }) : super(key: key);
 
   @override
@@ -179,9 +185,11 @@ class CExpandableListTile extends StatefulWidget {
 
 class _CExpandableListTileState extends State<CExpandableListTile>
     with SingleTickerProviderStateMixin {
-  bool _isExpanded = false;
+  bool _internalIsExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
+
+  bool get _effectiveIsExpanded => widget.isExpanded ?? _internalIsExpanded;
 
   @override
   void initState() {
@@ -194,6 +202,22 @@ class _CExpandableListTileState extends State<CExpandableListTile>
       parent: _animationController,
       curve: Curves.easeInOut,
     );
+    
+    if (_effectiveIsExpanded) {
+      _animationController.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(CExpandableListTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isExpanded != oldWidget.isExpanded) {
+      if (_effectiveIsExpanded) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    }
   }
 
   @override
@@ -203,14 +227,18 @@ class _CExpandableListTileState extends State<CExpandableListTile>
   }
 
   void _toggleExpanded() {
-    setState(() {
-      _isExpanded = !_isExpanded;
-      if (_isExpanded) {
-        _animationController.forward();
-      } else {
-        _animationController.reverse();
-      }
-    });
+    if (widget.onExpansionChanged != null) {
+      widget.onExpansionChanged!(!_effectiveIsExpanded);
+    } else {
+      setState(() {
+        _internalIsExpanded = !_internalIsExpanded;
+        if (_internalIsExpanded) {
+          _animationController.forward();
+        } else {
+          _animationController.reverse();
+        }
+      });
+    }
   }
 
   @override
@@ -220,7 +248,7 @@ class _CExpandableListTileState extends State<CExpandableListTile>
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      decoration: _isExpanded
+      decoration: _effectiveIsExpanded
           ? BoxDecoration(
               border: Border.all(
                 color: theme.colorScheme.primary,
@@ -229,11 +257,11 @@ class _CExpandableListTileState extends State<CExpandableListTile>
               borderRadius: BorderRadius.circular(12),
             )
           : null,
-      margin: _isExpanded
+      margin: _effectiveIsExpanded
           ? const EdgeInsets.symmetric(vertical: 4, horizontal: 8)
           : EdgeInsets.zero,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(_isExpanded ? 12 : 0),
+        borderRadius: BorderRadius.circular(_effectiveIsExpanded ? 12 : 0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -241,7 +269,7 @@ class _CExpandableListTileState extends State<CExpandableListTile>
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  if (_isExpanded) {
+                  if (_effectiveIsExpanded) {
                     _toggleExpanded();
                   } else {
                     widget.onTap?.call();
@@ -256,7 +284,9 @@ class _CExpandableListTileState extends State<CExpandableListTile>
                   child: Row(
                     children: [
                       // Leading icon or drag handle
-                      if (_isExpanded)
+                      if (_effectiveIsExpanded && widget.dragHandleBuilder != null)
+                        widget.dragHandleBuilder!(context)
+                      else if (_effectiveIsExpanded)
                         Icon(
                           Icons.drag_handle,
                           color: theme.colorScheme.primary,
@@ -293,7 +323,16 @@ class _CExpandableListTileState extends State<CExpandableListTile>
                             ],
                           ],
                         ),
-                      ),                      
+                      ),
+                      // Expand/collapse indicator
+                      AnimatedRotation(
+                        duration: const Duration(milliseconds: 300),
+                        turns: _effectiveIsExpanded ? 0.5 : 0,
+                        child: Icon(
+                          Icons.expand_more,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
                     ],
                   ),
                 ),

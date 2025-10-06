@@ -329,6 +329,16 @@ class MultiJsonStorage {
     }
   }
 
+  static Future<void> saveGroupOrder(List<String> groupNames) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('$_keyPrefix:group_order', groupNames);
+  }
+
+  static Future<List<String>?> getGroupOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('$_keyPrefix:group_order');
+  }
+
   static Future<List<String>> getAllSongHashs(SharedPreferences prefs) async {
     try {
       Set<String> allKeys;

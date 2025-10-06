@@ -237,4 +237,31 @@ class DataLoadeProvider extends ChangeNotifier {
     
     notifyListeners();
   }
+
+  Future<void> reorderGroups(int oldIndex, int newIndex) async {
+    if (_groups == null) return;
+    
+    final groupNames = _groups!.keys.toList();
+    if (oldIndex < 0 || oldIndex >= groupNames.length || 
+        newIndex < 0 || newIndex >= groupNames.length) {
+      return;
+    }
+    
+    // Reorder the keys
+    final groupName = groupNames.removeAt(oldIndex);
+    groupNames.insert(newIndex, groupName);
+    
+    // Rebuild the map in the new order
+    final reorderedGroups = <String, List<String>>{};
+    for (var name in groupNames) {
+      reorderedGroups[name] = _groups![name]!;
+    }
+    
+    _groups = reorderedGroups;
+    
+    // Save the new order to storage
+    await MultiJsonStorage.saveGroupOrder(groupNames);
+    
+    notifyListeners();
+  }
 }
