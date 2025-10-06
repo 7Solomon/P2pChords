@@ -230,14 +230,26 @@ class _ServerUploadDialogState extends State<_ServerUploadDialog> {
     
     setState(() => _isLoadingFolders = true);
     
-    final folders = await db_functions.getServerSubfolders(
-      serverUrl: _selectedServer!,
-    );
-    
-    setState(() {
-      _availableSubfolders = folders;
-      _isLoadingFolders = false;
-    });
+    try {
+      final folders = await db_functions.getServerSubfolders(
+        serverUrl: _selectedServer!,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _availableSubfolders = folders;
+          _isLoadingFolders = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _availableSubfolders = [];
+          _isLoadingFolders = false;
+        });
+        SnackService().showError('Fehler beim Laden der Ordner: $e');
+      }
+    }
   }
 
   @override

@@ -124,22 +124,30 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
   Future<void> _loadAllData() async {
     setState(() => _isLoading = true);
 
-    // Load tokens
-    for (var key in _tokenKeys) {
-      final token = await _tokenManager.getToken(key);
-      if (mounted) {
-        setState(() {
-          _currentTokenDisplays[key] =
-              (token?.isNotEmpty ?? false) ? token : 'Nicht festgelegt';
-        });
+    try {
+      // Load tokens
+      for (var key in _tokenKeys) {
+        final token = await _tokenManager.getToken(key);
+        if (mounted) {
+          setState(() {
+            _currentTokenDisplays[key] =
+                (token?.isNotEmpty ?? false) ? token : 'Nicht festgelegt';
+          });
+        }
       }
-    }
 
-    // Load IPs
-    _savedIps = await _tokenManager.getSavedServerIps();
-
-    if (mounted) {
-      setState(() => _isLoading = false);
+      // Load IPs
+      _savedIps = await _tokenManager.getSavedServerIps();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Laden der Daten: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -151,50 +159,94 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
       await _clearToken(key);
       return;
     }
-    setState(() {
-      _isLoading = true;
-    });
-    await _tokenManager.saveToken(key, controller.text);
-    if (mounted) {
-      setState(() {
-        _currentTokenDisplays[key] = controller.text;
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Wert für "$key" erfolgreich gespeichert!')),
-      );
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      await _tokenManager.saveToken(key, controller.text);
+      if (mounted) {
+        setState(() {
+          _currentTokenDisplays[key] = controller.text;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Wert für "$key" erfolgreich gespeichert!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Speichern: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _clearToken(String key) async {
-    setState(() {
-      _isLoading = true;
-    });
-    await _tokenManager.deleteToken(key);
-    _tokenControllers[key]?.clear();
-    if (mounted) {
-      setState(() {
-        _currentTokenDisplays[key] = 'Not set';
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Wert für "$key" gelöscht!')),
-      );
+    setState(() => _isLoading = true);
+    
+    try {
+      await _tokenManager.deleteToken(key);
+      _tokenControllers[key]?.clear();
+      if (mounted) {
+        setState(() {
+          _currentTokenDisplays[key] = 'Not set';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Wert für "$key" gelöscht!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Löschen: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _addNewIp() async {
     if (_newIpController.text.trim().isEmpty) return;
+    
     setState(() => _isLoading = true);
-    await _tokenManager.addServerIp(_newIpController.text);
-    _newIpController.clear();
-    await _loadAllData(); // Reload to show the new IP
+    
+    try {
+      await _tokenManager.addServerIp(_newIpController.text);
+      _newIpController.clear();
+      await _loadAllData(); // Reload to show the new IP
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Hinzufügen: $e')),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+    // Note: _loadAllData() will set _isLoading = false
   }
 
   Future<void> _removeIp(String ip) async {
     setState(() => _isLoading = true);
-    await _tokenManager.removeServerIp(ip);
-    await _loadAllData(); // Reload to reflect the deletion
+    
+    try {
+      await _tokenManager.removeServerIp(ip);
+      await _loadAllData(); // Reload to reflect the deletion
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Entfernen: $e')),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+    // Note: _loadAllData() will set _isLoading = false
   }
 
   Future<void> _showExportDialog() async {

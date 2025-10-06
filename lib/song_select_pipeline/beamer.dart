@@ -5,9 +5,10 @@ import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:io' show Platform;
+import 'package:window_manager/window_manager.dart';
 
 class BeamerPage extends StatefulWidget {
-  // Changed to StatefulWidget
   const BeamerPage({
     super.key,
   });
@@ -17,6 +18,8 @@ class BeamerPage extends StatefulWidget {
 }
 
 class _BeamerPageState extends State<BeamerPage> {
+  bool _wasFullScreen = false;
+
   @override
   void initState() {
     super.initState();
@@ -30,12 +33,43 @@ class _BeamerPageState extends State<BeamerPage> {
   }
 
   Future<void> _enterFullScreen() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive,
-        overlays: []);
+    // Mobile fullscreen
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersive,
+      overlays: [],
+    );
+
+    // Desktop fullscreen (Windows, Linux, macOS)
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      // Ensure window manager is ready
+      await windowManager.ensureInitialized();
+      
+      _wasFullScreen = await windowManager.isFullScreen();
+      
+      // Hide title bar and set fullscreen
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      await windowManager.setFullScreen(true);
+      
+      // Force focus on the window
+      await windowManager.focus();
+      await windowManager.show();
+    }
   }
 
   Future<void> _exitFullScreen() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    // Mobile
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+    );
+
+    // Desktop - only exit fullscreen if it wasn't already fullscreen
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      if (!_wasFullScreen) {
+        await windowManager.setFullScreen(false);
+        // Restore title bar
+        await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+      }
+    }
   }
 
   _handleBodyTap(BuildContext context) {
@@ -46,8 +80,11 @@ class _BeamerPageState extends State<BeamerPage> {
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'zurück',
-          onPressed: () {
-            if (Navigator.canPop(context)) {
+          onPressed: () async {
+            // Exit fullscreen before popping
+            await _exitFullScreen();
+            
+            if (mounted && Navigator.canPop(context)) {
               Navigator.pop(context);
             }
           },
@@ -70,12 +107,6 @@ class _BeamerPageState extends State<BeamerPage> {
       final dataLoaderProvider = Provider.of<DataLoadeProvider>(context);
       final uiProvider = Provider.of<BeamerUiProvider>(context);
 
-      // Validate selection when widget builds
-      //WidgetsBinding.instance.addPostFrameCallback((_) {
-      //  currentSelectionProvider.validateSelection(context);
-      //});
-
-      // Safe check for selection
       bool selectionIsValid =
           currentSelectionProvider.currentSongHash != null &&
               currentSelectionProvider.currentSectionIndex != null &&
