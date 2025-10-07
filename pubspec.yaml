@@ -60,6 +60,7 @@ dependencies:
   bonsoir: ^5.1.11 
   http_parser: ^4.1.2
   window_manager: ^0.5.1
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:

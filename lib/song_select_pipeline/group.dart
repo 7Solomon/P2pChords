@@ -106,9 +106,7 @@ class _SongoverviewpageState extends State<Songoverviewpage> {
 
                     currentData.setCurrentSong(hash);
                     currentData.setCurrentSectionIndex(0);
-
-                    musicSyncProvider.dataSyncService
-                        .sendUpdateToAllClients(currentData.toJson());
+                    musicSyncProvider.sendCurrentSelectionToAll();
 
                     Navigator.push(
                       context,

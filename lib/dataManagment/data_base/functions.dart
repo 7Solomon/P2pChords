@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:P2pChords/networking/auth.dart';
-import 'package:P2pChords/networking/services/notification_service.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:http_parser/http_parser.dart' as http_parser;
@@ -92,7 +92,7 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
       print('Using auth token for file list');
     } else {
       print('No authorization token found');
-      NotificationService().showError('Kein Authentifizierungstoken gefunden');
+      SnackService().showError('Kein Authentifizierungstoken gefunden');
     }
 
     print('Fetching file list from: $listEndpoint');
@@ -111,17 +111,17 @@ Future<List<Map<String, dynamic>>?> getFilesFromServer({
         return files.cast<Map<String, dynamic>>();
       } catch (e) {
         print('Error parsing JSON response: $e');
-        NotificationService().showError('Fehler beim Parsen der Antwort');
+        SnackService().showError('Fehler beim Parsen der Antwort');
         return null;
       }
     } else {
       print('Failed to fetch files. Status code: ${response.statusCode}');
-      NotificationService().showError('Server-Fehler: ${response.statusCode}');
+      SnackService().showError('Server-Fehler: ${response.statusCode}');
       return null;
     }
   } catch (e) {
     print('Error in getFilesFromServer: $e');
-    NotificationService().showError('Verbindungsfehler: $e');
+    SnackService().showError('Verbindungsfehler: $e');
     return null;
   }
 }
@@ -139,7 +139,7 @@ Future<Song?> fetchSongFromServer({
     if (authToken != null && authToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $authToken';
     } else {
-      NotificationService().showError('Kein Authentifizierungstoken');
+      SnackService().showError('Kein Authentifizierungstoken');
     }
 
     // Normalize path separators for URL (Windows uses backslashes)
@@ -165,20 +165,20 @@ Future<Song?> fetchSongFromServer({
       final jsonData = json.decode(response.body);
       return Song.fromMap(jsonData);
     } else if (response.statusCode == 401 || response.statusCode == 403) {
-      NotificationService().showError('Zugriff verweigert');
+      SnackService().showError('Zugriff verweigert');
       return null;
     } else {
-      NotificationService().showError('Fehler ${response.statusCode}');
+      SnackService().showError('Fehler ${response.statusCode}');
       return null;
     }
   } catch (e) {
     print('Error fetching song: $e');
     if (e is http.ClientException) {
-      NotificationService().showError('Netzwerkfehler');
+      SnackService().showError('Netzwerkfehler');
     } else if (e is FormatException) {
-      NotificationService().showError('Ungültiges JSON-Format');
+      SnackService().showError('Ungültiges JSON-Format');
     } else {
-      NotificationService().showError('Fehler: $e');
+      SnackService().showError('Fehler: $e');
     }
     return null;
   }
@@ -208,7 +208,7 @@ Future<bool> uploadSongToServer({
     // Get admin token (upload requires admin privileges)
     final String? authToken = await tokenManager.getToken('serverApiToken');
     if (authToken == null || authToken.isEmpty) {
-      NotificationService().showError('Kein Admin-Token gefunden');
+      SnackService().showError('Kein Admin-Token gefunden');
       print('No admin token found');
       return false;
     }
@@ -268,34 +268,34 @@ Future<bool> uploadSongToServer({
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       print('Song uploaded successfully');
-      NotificationService().showSuccess(
+      SnackService().showSuccess(
         'Song "${song.header.name}" erfolgreich hochgeladen',
       );
       return true;
     } else if (response.statusCode == 401 || response.statusCode == 403) {
       print('Upload failed: Unauthorized');
-      NotificationService().showError('Keine Berechtigung zum Hochladen');
+      SnackService().showError('Keine Berechtigung zum Hochladen');
       return false;
     } else {
       print('Upload failed with status: ${response.statusCode}');
       print('Response body: ${response.body}');
-      NotificationService().showError('Upload fehlgeschlagen: ${response.statusCode}');
+      SnackService().showError('Upload fehlgeschlagen: ${response.statusCode}');
       return false;
     }
   } on TimeoutException catch (e) {
     print('Timeout error: $e');
-    NotificationService().showError('Server nicht erreichbar (Timeout)');
+    SnackService().showError('Server nicht erreichbar (Timeout)');
     return false;
   } on SocketException catch (e) {
     print('Socket error: $e');
-    NotificationService().showError('Netzwerkverbindung fehlgeschlagen');
+    SnackService().showError('Netzwerkverbindung fehlgeschlagen');
     return false;
   } catch (e) {
     print('Error uploading song to server: $e');
     if (e is http.ClientException) {
-      NotificationService().showError('Netzwerkfehler beim Hochladen');
+      SnackService().showError('Netzwerkfehler beim Hochladen');
     } else {
-      NotificationService().showError('Fehler beim Hochladen: $e');
+      SnackService().showError('Fehler beim Hochladen: $e');
     }
     return false;
   }

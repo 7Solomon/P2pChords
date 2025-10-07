@@ -19,16 +19,13 @@ class GroupOverviewpage extends StatefulWidget {
 }
 
 class _GroupOverviewpageState extends State<GroupOverviewpage> {
-  late DataLoadeProvider _dataProvider;
   late CurrentSelectionProvider _currentSelectionProvider;
   String? _expandedGroupName;
 
   @override
   void initState() {
     super.initState();
-    _dataProvider = Provider.of<DataLoadeProvider>(context, listen: false);
-    _currentSelectionProvider =
-        Provider.of<CurrentSelectionProvider>(context, listen: false);
+      Provider.of<CurrentSelectionProvider>(context, listen: false);
   }
 
   Future<bool?> showShouldSendDialog() {
@@ -58,21 +55,12 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
   }
 
   Future<void> sendSongDataToAllClients(
-      connectionProvider, SongData songData) async {
-    if (connectionProvider.userState == UserState.server) {
+      ConnectionProvider connectionProvider, SongData songData) async {
+    if (connectionProvider.userRole == UserRole.hub) {
       bool? shouldSend = await showShouldSendDialog();
-
-      // If Yes, send data
       if (shouldSend == true) {
-        bool success = await connectionProvider.dataSyncService
-            .sendSongDataToAllClients(songData);
-
-        if (success) {
-          SnackService()
-              .showSuccess('Daten erfolgreich an alle Clients gesendet');
-        } else {
-          SnackService().showError('Fehler beim Senden der Daten');
-        }
+        await connectionProvider.sendSongDataToAll(songData);
+        SnackService().showSuccess('Daten wurden gesendet');
       }
     }
   }
@@ -146,8 +134,8 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                   }
 
                   _currentSelectionProvider.setCurrentGroup(groupName);
-                  if (connectionProvider.userState != UserState.client) {
-                    if (connectionProvider.userState == UserState.server) {
+                  if (connectionProvider.userRole != UserRole.spoke) {
+                    if (connectionProvider.userRole == UserRole.hub) {
                       await sendSongDataToAllClients(
                           connectionProvider, songData);
                     }

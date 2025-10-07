@@ -97,7 +97,7 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
             ],
           ),
 
-          floatingActionButton: connectionProvider.userState == UserState.server
+          floatingActionButton: connectionProvider.userRole == UserRole.hub
               ? FloatingActionButton(
                   onPressed: () {
                     setState(() {
@@ -146,10 +146,9 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     sheetUiProvider.getCurrentKeyForSong(currentSong.hash),
                 onSectionChanged: (index) {
                   currentSelection.setCurrentSectionIndex(index);
-                  if (connectionProvider.userState == UserState.server &&
+                  if (connectionProvider.userRole == UserRole.hub &&
                       isLive) {
-                    connectionProvider.dataSyncService
-                        .sendUpdateToAllClients(currentSelection.toJson());
+                    connectionProvider.sendCurrentSelectionToAll();
                   }
                 },
                 onSongChanged: (index) {
@@ -161,9 +160,8 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
                     return;
                   }
                   currentSelection.setCurrentSong(hash);
-                  if (connectionProvider.userState == UserState.server) {
-                    connectionProvider.dataSyncService
-                        .sendUpdateToAllClients(currentSelection.toJson());
+                  if (connectionProvider.userRole == UserRole.hub) {
+                    connectionProvider.sendCurrentSelectionToAll();
                   }
                 },
               ),

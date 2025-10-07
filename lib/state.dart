@@ -1,74 +1,33 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:P2pChords/dataManagment/data_class.dart';
+import 'package:P2pChords/networking/settings.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
-import 'package:P2pChords/networking/services/data_sync_service.dart';
-import 'package:P2pChords/networking/services/message_handler_service.dart';
-import 'package:P2pChords/networking/services/notification_service.dart';
+import 'package:P2pChords/networking/hub/hub_service.dart';
+import 'package:P2pChords/networking/spoke/spoke_service.dart';
+import 'package:P2pChords/networking/models/connection_models.dart';
 import 'package:flutter/material.dart';
-import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/networking/services/permission_service.dart';
-import 'package:P2pChords/networking/nearby/nearby_service.dart';
-import 'package:P2pChords/networking/websocket/websocket_service.dart';
-import 'package:nearby_connections/nearby_connections.dart';
 
-enum UserState { server, client, pc, none }
+enum UserRole { hub, spoke, none }
 
-enum ConnectionMode { nearby, webSocket, hybrid }
-
-abstract class CustomeService {
-  // State
-  bool isServerRunning = false;
-  bool isAdvertising = false;
-  bool isDiscovering = false;
-
-  VoidCallback? onConnectionStateChanged;
-
-  // Callbacks for Service
-  late Function(SongData) sendSongData;
-  late Function(Map<String, dynamic>) sendUpdate;
-
-  // Server functionality
-  Future<bool> startServer() async => throw UnimplementedError();
-  Future<bool> stopServer() async => throw UnimplementedError();
-
-  // Client functionality
-  Future<bool> startClient() async => throw UnimplementedError();
-  Future<bool> stopClient() async => throw UnimplementedError();
-  Future<bool> connectToServer(String serverId) async =>
-      throw UnimplementedError();
-
-  void initializeDeviceIds({
-    required Set<String> connectedDeviceIds,
-    required Set<String> visibleDevices,
-    required Set<String> knownDevices,
-  });
-  Future<void> dispose();
-}
-
-// Unified connection provider that manages all connection types
+/// Simplified connection provider with clear hub-spoke model
 class ConnectionProvider with ChangeNotifier {
-  UserState _userState = UserState.none;
-  ConnectionMode _connectionMode = ConnectionMode.nearby;
+  UserRole _userRole = UserRole.none;
   String _deviceName = 'User Device';
 
-  // Connection Modes
-  final NearbyService nearbyService = NearbyService();
-  final WebSocketService webSocketService = WebSocketService();
+  // Hub-Spoke Services (replace old services)
+  final HubService _hubService = HubService();
+  final SpokeService _spokeService = SpokeService();
 
   // Data management
   final DataLoadeProvider _dataLoader;
   final CurrentSelectionProvider _currentSelectionProvider;
 
-  // Manager Services
-  final DataSyncService _dataSyncService = DataSyncService();
-  final MessageHandlerService _messageHandlerService = MessageHandlerService();
-  final NotificationService _notificationService = NotificationService();
-  final PermissionService _permissionService = PermissionService();
+  // Simplified state - single source of truth
+  final Set<String> _connectedDevices = {};
 
-  final Set<String> _connectedDeviceIds = {};
-  final Set<String> _visibleDevices = {};
-  final Set<String> _knownDevices = {};
+  ConnectionSettings _settings = ConnectionSettings();
+  ConnectionSettings get settings => _settings;
 
   // Initialization
   ConnectionProvider({
@@ -76,157 +35,234 @@ class ConnectionProvider with ChangeNotifier {
     required CurrentSelectionProvider currentSelectionProvider,
   })  : _dataLoader = dataLoader,
         _currentSelectionProvider = currentSelectionProvider {
-    // Only initialize nearby connections on mobile platforms
-    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      _initializeNearbyConnections();
-    } else {
-      debugPrint('Nearby Connections not supported on this platform');
-    }
-    _initializeServiceCallbacks();
-    _initializeDataSyncServiceCallbacks();
-    _initializeMessageHandlerServiceCallbacks();
+    _initializeServices();
+    _loadSettings(); // Load saved settings on startup
   }
 
-  void _initializeNearbyConnections() {
-    nearbyService.userNickName = _deviceName;
-    nearbyService.onConnectionStateChanged = notifyListeners;
-
-    // Callbacks
-    nearbyService.onNotification = (message) {
-      _notificationService.showInfo(message);
-    };
-    nearbyService.onPayloadReceived = (endpointId, payload) {
-      _messageHandlerService.handlePayload(endpointId, payload);
-    };
-
-    nearbyService.initializeDeviceIds(
-      connectedDeviceIds: _connectedDeviceIds,
-      visibleDevices: _visibleDevices,
-      knownDevices: _knownDevices,
-    );
-  }
-
-  void _initializeServiceCallbacks() {
-    // Remove nearby initialization from here - already done in constructor
-    if (_connectionMode == ConnectionMode.webSocket ||
-        _connectionMode == ConnectionMode.hybrid) {
-      webSocketService.userNickName = _deviceName;
-      webSocketService.onConnectionStateChanged = notifyListeners;
-
-      // Callbacks
-      webSocketService.onNotification = (message) {
-        _notificationService.showInfo(message);
-      };
-      webSocketService.onMessageReceived = (message) {
-        _messageHandlerService.handleIncomingMessage(message);
-      };
-
-      webSocketService.initializeDeviceIds(
-        connectedDeviceIds: _connectedDeviceIds,
-        visibleDevices: _visibleDevices,
-        knownDevices: _knownDevices,
-      );
-    }
-  }
-
-  void _initializeDataSyncServiceCallbacks() {
-    if (_connectionMode == ConnectionMode.nearby ||
-        _connectionMode == ConnectionMode.hybrid) {
-      // notification
-      _dataSyncService.onNotification = _notificationService.showInfo;
-
-      // Send Payload
-      _dataSyncService.sendBytesPayload = nearbyService.sendBytesPayload;
-
-      // Connected Devices
-      _dataSyncService.connectedDeviceIds = _connectedDeviceIds;
-    }
-    if (_connectionMode == ConnectionMode.webSocket ||
-        _connectionMode == ConnectionMode.hybrid) {
-      // Send Payload
-      _dataSyncService.sendBytesPayload = webSocketService.sendBytesPayload;
-
-      // Connected Devices
-      _dataSyncService.connectedDeviceIds = _connectedDeviceIds;
-    }
-  }
-
-  void _initializeMessageHandlerServiceCallbacks() {
-    _messageHandlerService.onNotification = _notificationService.showInfo;
-
-    _messageHandlerService.onUpdateMessage = (updateData) {
-      _currentSelectionProvider.fromJson(updateData);
-    };
-
-    _messageHandlerService.onSongDataMessage = (songData) {
-      _dataLoader.addSongsData(songData);
-    };
-
-    _messageHandlerService.onConnectionEstablished = () {
-      _connectedDeviceIds.add(_deviceName);
+  void _initializeServices() {
+    // Hub service callbacks
+    _hubService.onNotification = (message) {
+      SnackService().showInfo(message);
       notifyListeners();
     };
 
-    _messageHandlerService.onDisconnection = (deviceId) {
-      _notificationService.showInfo("Disconnected from $deviceId");
-      _connectedDeviceIds.remove(deviceId);
+    _hubService.onMessageReceived = (message, spokeId) {
+      _handleHubMessage(message, spokeId);
+    };
+
+    _hubService.onConnectionStateChanged = () {
+      _updateConnectedDevices();
       notifyListeners();
     };
+
+    // Spoke service callbacks
+    _spokeService.onNotification = (message) {
+      SnackService().showInfo(message);
+      notifyListeners();
+    };
+
+    _spokeService.onMessageReceived = (message) {
+      _handleSpokeMessage(message);
+    };
+
+    _spokeService.onConnectionStateChanged = () {
+      notifyListeners();
+    };
+
+    _spokeService.onHubsDiscovered = (hubs) {
+      notifyListeners();
+    };
+  }
+
+  Future<void> _loadSettings() async {
+    _settings = await ConnectionSettings.load();
+    _deviceName = _settings.deviceName;
+    
+    // Auto-restore role if enabled
+    if (_settings.autoReconnect && _settings.lastRole != null) {
+      if (_settings.lastRole == 'hub') {
+        await startAsHub();
+      }
+      // Note: Spoke auto-reconnect would need discovery first
+    }
+    
+    notifyListeners();
   }
 
   // Getters
-  UserState get userState => _userState;
-  ConnectionMode get connectionMode => _connectionMode;
+  UserRole get userRole => _userRole;
   String get deviceName => _deviceName;
+  bool get isHub => _userRole == UserRole.hub;
+  bool get isSpoke => _userRole == UserRole.spoke;
+  
+  // Hub-specific getters
+  bool get isHubRunning => _hubService.isRunning;
+  int get connectedSpokeCount => _hubService.spokeCount;
+  List<SpokeConnection> get connectedSpokes => _hubService.connectedSpokes;
+  String? get hubAddress => _hubService.hubAddress;
 
-  Set<String> get connectedDeviceIds => _connectedDeviceIds;
-  Set<String> get visibleDevices => _visibleDevices;
-  Set<String> get knownDevices => _knownDevices;
+  // Spoke-specific getters
+  bool get isDiscovering => _spokeService.isDiscovering;
+  bool get isConnectedToHub => _spokeService.isConnected;
+  List<DiscoveredHub> get discoveredHubs => _spokeService.discoveredHubs;
+  
+  Set<String> get connectedDevices => _connectedDevices;
 
-  // Server State Getter
-  bool get isServerRunning {
-    switch (_connectionMode) {
-      case ConnectionMode.nearby:
-        return nearbyService.isServerRunning;
-      case ConnectionMode.webSocket:
-        return webSocketService.isServerRunning;
-      case ConnectionMode.hybrid:
-        return nearbyService.isServerRunning &&
-            webSocketService.isServerRunning;
+  Future<String?> getHubAddressAsync() async {
+    return await _hubService.getHubAddressAsync();
+  }
+
+  // Hub operations
+  Future<bool> startAsHub() async {
+    final success = await _hubService.startHub(_deviceName);
+    if (success) {
+      _userRole = UserRole.hub;
+      await _saveRoleToSettings('hub');
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<void> stopHub() async {
+    await _hubService.stopHub();
+    _userRole = UserRole.none;
+    await _saveRoleToSettings(null);
+    _connectedDevices.clear();
+    notifyListeners();
+  }
+
+  Future<void> broadcastToSpokes(HubMessage message) async {
+    if (_userRole != UserRole.hub) return;
+    await _hubService.broadcast(message);
+  }
+
+  // Spoke operations
+  Future<void> startDiscovery() async {
+    if (_userRole == UserRole.hub) {
+      await stopHub();
+    }
+
+    _userRole = UserRole.spoke;
+    await _spokeService.startDiscovery();
+    notifyListeners();
+  }
+
+  Future<void> stopDiscovery() async {
+    await _spokeService.stopDiscovery();
+    if (!_spokeService.isConnected) {
+      _userRole = UserRole.none;
+    }
+    notifyListeners();
+  }
+
+  Future<bool> connectToHub(DiscoveredHub hub) async {
+    final success = await _spokeService.connectToHub(hub, _deviceName);
+    if (success) {
+      _userRole = UserRole.spoke;
+      _settings.lastHubAddress = hub.address;
+      await _saveRoleToSettings('spoke');
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<void> disconnectFromHub() async {
+    await _spokeService.disconnectFromHub();
+    _userRole = UserRole.none;
+    await _saveRoleToSettings(null);
+    notifyListeners();
+  }
+
+  Future<bool> addManualHub(String host, int port, String name) async {
+    return await _spokeService.addManualHub(host, port, name);
+  }
+
+  Future<void> sendToHub(HubMessage message) async {
+    if (_userRole != UserRole.spoke) return;
+    await _spokeService.sendToHub(message);
+  }
+
+  // Message handlers
+  void _handleHubMessage(HubMessage message, String spokeId) {
+    switch (message.type) {
+      case MessageType.stateUpdate:
+        _currentSelectionProvider.fromJson(message.payload);
+        // Broadcast to other spokes
+        _hubService.broadcast(message);
+        break;
+
+      case MessageType.songData:
+        final songData = SongData.fromMap(message.payload);
+        _dataLoader.addSongsData(songData);
+        // Broadcast to other spokes
+        _hubService.broadcast(message);
+        break;
+
+      default:
+        debugPrint('Unhandled hub message: ${message.type}');
     }
   }
 
-  bool get isAdvertising {
-    switch (_connectionMode) {
-      case ConnectionMode.nearby:
-        return nearbyService.isAdvertising;
-      case ConnectionMode.webSocket:
-        return webSocketService.isAdvertising;
-      case ConnectionMode.hybrid:
-        return nearbyService.isAdvertising && webSocketService.isAdvertising;
+  void _handleSpokeMessage(HubMessage message) {
+    switch (message.type) {
+      case MessageType.stateUpdate:
+        _currentSelectionProvider.fromJson(message.payload);
+        break;
+
+      case MessageType.songData:
+        final songData = SongData.fromMap(message.payload);
+        _dataLoader.addSongsData(songData);
+        break;
+
+      default:
+        debugPrint('Unhandled spoke message: ${message.type}');
     }
   }
 
-  bool get isDiscovering {
-    switch (_connectionMode) {
-      case ConnectionMode.nearby:
-        return nearbyService.isDiscovering;
-      case ConnectionMode.webSocket:
-        return webSocketService.isDiscovering;
-      case ConnectionMode.hybrid:
-        return nearbyService.isDiscovering && webSocketService.isDiscovering;
+  void _updateConnectedDevices() {
+    _connectedDevices.clear();
+    if (_userRole == UserRole.hub) {
+      for (final spoke in _hubService.connectedSpokes) {
+        _connectedDevices.add(spoke.id);
+      }
     }
   }
 
-  // LowLevel Getter
-  DataSyncService get dataSyncService => _dataSyncService;
-  MessageHandlerService get messageHandlerService => _messageHandlerService;
-  NotificationService get notificationService => _notificationService;
+  // High-level sync methods (for your existing code)
+  Future<void> sendSongDataToAll(SongData songData) async {
+    if (_userRole == UserRole.hub) {
+      final message = HubMessage(
+        type: MessageType.songData,
+        payload: songData.toMap(),
+      );
+      await _hubService.broadcast(message);
+    } else if (_userRole == UserRole.spoke) {
+      final message = HubMessage(
+        type: MessageType.songData,
+        payload: songData.toMap(),
+      );
+      await _spokeService.sendToHub(message);
+    }
+  }
 
-  // Connection management
-  Future<bool> checkPermissions() async {
-    return await _permissionService.requestPermissions(
-        onMessage: _notificationService.showInfo);
+  Future<void> sendStateUpdate(Map<String, dynamic> state) async {
+    if (_userRole == UserRole.hub) {
+      final message = HubMessage(
+        type: MessageType.stateUpdate,
+        payload: state,
+      );
+      await _hubService.broadcast(message);
+    } else if (_userRole == UserRole.spoke) {
+      final message = HubMessage(
+        type: MessageType.stateUpdate,
+        payload: state,
+      );
+      await _spokeService.sendToHub(message);
+    }
+  }
+
+  Future<void> sendCurrentSelectionToAll() async {
+    await sendStateUpdate(_currentSelectionProvider.toJson());
   }
 
   void setDeviceName(String name) {
@@ -234,68 +270,22 @@ class ConnectionProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setUserState(UserState state) {
-    _userState = state;
+  Future<void> updateDeviceName(String name) async {
+    _deviceName = name;
+    _settings.deviceName = name;
+    await _settings.save();
     notifyListeners();
   }
 
-  void setConnectionMode(ConnectionMode mode) {
-    if (_connectionMode == mode) return; // No changed
-
-    // Clear old callbacks before setting new ones
-    nearbyService.onConnectionStateChanged = null;
-    webSocketService.onConnectionStateChanged = null;
-    _connectionMode = mode;
-    _initializeServiceCallbacks();
-    _initializeDataSyncServiceCallbacks();
-    notifyListeners();
-  }
-
-  void setServerRunning(bool isRunning) {
-    switch (_connectionMode) {
-      case ConnectionMode.nearby:
-        nearbyService.isServerRunning = isRunning;
-      case ConnectionMode.webSocket:
-        webSocketService.isServerRunning = isRunning;
-      case ConnectionMode.hybrid:
-        nearbyService.isServerRunning = isRunning;
-        webSocketService.isServerRunning = isRunning;
-    }
-    notifyListeners();
-  }
-
-  void setDiscovering(bool isDiscovering) {
-    switch (_connectionMode) {
-      case ConnectionMode.nearby:
-        nearbyService.isDiscovering = isDiscovering;
-      case ConnectionMode.webSocket:
-        webSocketService.isDiscovering = isDiscovering;
-      case ConnectionMode.hybrid:
-        nearbyService.isDiscovering = isDiscovering;
-        webSocketService.isDiscovering = isDiscovering;
-    }
-    notifyListeners();
-  }
-
-  void setAdvertising(bool isAdvertising) {
-    switch (_connectionMode) {
-      case ConnectionMode.nearby:
-        nearbyService.isAdvertising = isAdvertising;
-      case ConnectionMode.webSocket:
-        webSocketService.isAdvertising = isAdvertising;
-      case ConnectionMode.hybrid:
-        nearbyService.isAdvertising = isAdvertising;
-        webSocketService.isAdvertising = isAdvertising;
-    }
-    notifyListeners();
+  Future<void> _saveRoleToSettings(String? role) async {
+    _settings.lastRole = role;
+    await _settings.save();
   }
 
   @override
   void dispose() {
-    //_dataSyncService.dispose();
-    //_messageHandlerService.dispose();
-    //_notificationService.dispose();
-    //_permissionService.dispose();
+    _hubService.dispose();
+    _spokeService.dispose();
     super.dispose();
   }
 }

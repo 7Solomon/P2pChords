@@ -1,60 +1,65 @@
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
+import 'package:P2pChords/networking/pages/connection_management.dart';
 import 'package:P2pChords/song_select_pipeline/beamer.dart';
 import 'package:P2pChords/styling/Button.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/song.dart';
 import 'package:P2pChords/state.dart';
 import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
-import 'package:P2pChords/networking/Pages/choose_page.dart';
 import 'package:P2pChords/song_select_pipeline/groups.dart';
 
 import 'package:P2pChords/dataManagment/local_manager/config_system.dart';
-
 Widget buildConnectionStatusChip(
     BuildContext context, ConnectionProvider provider) {
   Color chipColor;
   String statusText;
+  IconData iconData;
 
-  switch (provider.userState) {
-    case UserState.server:
-      chipColor = Colors.green;
-      statusText = "Server";
-      break;
-    case UserState.client:
-      chipColor = Colors.orange;
-      statusText = "Client";
-      break;
-    default:
-      chipColor = Colors.grey;
-      statusText = "Offline";
+  if (provider.isHub) {
+    chipColor = Colors.green;
+    statusText = "Hub (${provider.connectedSpokeCount})";
+    iconData = Icons.router;
+  } else if (provider.isSpoke) {
+    chipColor = Colors.blue;
+    statusText = provider.isConnectedToHub ? "Verbunden" : "Verbinde...";
+    iconData = Icons.smartphone;
+  } else {
+    chipColor = Colors.grey;
+    statusText = "Offline";
+    iconData = Icons.cloud_off;
   }
 
   return GestureDetector(
     onTap: () {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ChooseSCStatePage()),
+        MaterialPageRoute(
+          builder: (context) => const ConnectionManagementPage(),
+        ),
       );
     },
     child: Chip(
       avatar: CircleAvatar(
         backgroundColor: Colors.white,
-        child: Icon(Icons.circle, color: chipColor, size: 14),
+        child: Icon(iconData, color: chipColor, size: 16),
       ),
-      label: Text(statusText),
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      label: Text(
+        statusText,
+        style: const TextStyle(fontSize: 12),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       elevation: 2,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     ),
   );
 }
-
 Widget buildMainContent(
     BuildContext context,
-    ConnectionProvider songSyncProvider,
+    ConnectionProvider connectionProvider,
     CurrentSelectionProvider currentSection,
     DataLoadeProvider dataLoader) {
-  final isClient = songSyncProvider.userState == UserState.client;
+  final isClient = connectionProvider.userRole == UserRole.spoke;
   return Center(
     child: Padding(
       padding: const EdgeInsets.all(24.0),
@@ -89,7 +94,7 @@ Widget buildMainContent(
                   );
                 } else {
                   _handleClientSongAction(
-                      context, songSyncProvider, currentSection, dataLoader);
+                      context, connectionProvider, currentSection, dataLoader);
                 }
               } else {
                 Navigator.push(
@@ -120,21 +125,6 @@ Widget buildMainContent(
 
           // Local widget for additional features
           buildLocalWidget(context),
-
-          const Spacer(),
-
-          // Connection status indicator at the bottom
-          if (songSyncProvider.connectedDeviceIds.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Text(
-                '${songSyncProvider.connectedDeviceIds.length} device(s) connected',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
         ],
       ),
     ),
@@ -179,17 +169,17 @@ Future<bool?> _handleBeamer(BuildContext context) async {
 
 void _handleClientSongAction(
     BuildContext context,
-    ConnectionProvider songSyncProvider,
+    ConnectionProvider connectionProvider,
     CurrentSelectionProvider currentSection,
     DataLoadeProvider dataLoader) {
-  if (songSyncProvider.connectedDeviceIds.isNotEmpty) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ChordSheetPage()),
-    );
-  } else {
-    SnackService().showInfo(
-      'Du bist noch nicht mit einem Server verbunden',
-    );
-  }
+      if (connectionProvider.connectedDevices.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ChordSheetPage()),
+        );
+      } else {
+        SnackService().showInfo(
+          'Du bist noch nicht mit einem Server verbunden',
+        );
+      }
 }

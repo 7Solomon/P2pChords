@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:P2pChords/dataManagment/corrupted_storage.dart';
-import 'package:P2pChords/networking/services/notification_service.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:io';
@@ -69,11 +69,11 @@ class ApiTokenManager {
   Future<void> saveToken(String key, String token) async {
     final String? tokenKey = tokenMap[key];
     if (tokenKey == null) {
-      NotificationService().showError('Invalid token key: $key');
+      SnackService().showError('Invalid token key: $key');
       return;
     }
     await _storage.write(key: tokenKey, value: token);
-    NotificationService().showSuccess('Token saved successfully.');
+    SnackService().showSuccess('Token saved successfully.');
   }
 
   Future<String?> getToken(String key) async {
@@ -95,11 +95,11 @@ class ApiTokenManager {
   Future<void> deleteToken(String key) async {
     final String? tokenKey = tokenMap[key];
     if (tokenKey == null) {
-      NotificationService().showError('Invalid token key: $key');
+      SnackService().showError('Invalid token key: $key');
       return;
     }
     await _storage.delete(key: tokenKey);
-    NotificationService().showSuccess('Token deleted successfully.');
+    SnackService().showSuccess('Token deleted successfully.');
   }
 
   /// Clear all stored data
