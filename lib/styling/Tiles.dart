@@ -166,7 +166,7 @@ class CExpandableListTile extends StatefulWidget {
   final Widget Function(BuildContext)? dragHandleBuilder;
 
   const CExpandableListTile({
-    Key? key,
+    super.key,
     required this.title,
     required this.uniqueKey,
     this.subtitle,
@@ -177,7 +177,7 @@ class CExpandableListTile extends StatefulWidget {
     this.isExpanded,
     this.onExpansionChanged,
     this.dragHandleBuilder,
-  }) : super(key: key);
+  });
 
   @override
   State<CExpandableListTile> createState() => _CExpandableListTileState();

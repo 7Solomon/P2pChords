@@ -19,13 +19,11 @@ class GroupOverviewpage extends StatefulWidget {
 }
 
 class _GroupOverviewpageState extends State<GroupOverviewpage> {
-  late CurrentSelectionProvider _currentSelectionProvider;
   String? _expandedGroupName;
 
   @override
   void initState() {
     super.initState();
-      Provider.of<CurrentSelectionProvider>(context, listen: false);
   }
 
   Future<bool?> showShouldSendDialog() {
@@ -133,7 +131,8 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                     return;
                   }
 
-                  _currentSelectionProvider.setCurrentGroup(groupName);
+                  Provider.of<CurrentSelectionProvider>(context, listen: false)
+                      .setCurrentGroup(groupName);
                   if (connectionProvider.userRole != UserRole.spoke) {
                     if (connectionProvider.userRole == UserRole.hub) {
                       await sendSongDataToAllClients(
