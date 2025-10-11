@@ -49,7 +49,6 @@ enum SheetLayoutMode {
   verticalStack,     // sections stack vertically (most intuitive for tap navigation)
   singleSection,     // only show current section (fullscreen)
   multiColumn,       // multiple columns, flowing downward (formerly twoColumn)
-  multiColumnUniform,
 }
 
 class UiVariables {

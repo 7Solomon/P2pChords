@@ -39,16 +39,25 @@ class ResponsiveLayout extends StatelessWidget {
           valueListenable: uiVariables.layoutMode,
           builder: (context, mode, _) {
             switch (mode) {
-              case SheetLayoutMode.singleSection:
-                return _buildSingleSectionLayout(sectionsToDisplay, uiVariables);
               case SheetLayoutMode.verticalStack:
                 return _buildVerticalStackLayout(sectionsToDisplay, uiVariables);
+              
+              case SheetLayoutMode.singleSection:
+                return _buildSingleSectionLayout(sectionsToDisplay, uiVariables);
+              
               case SheetLayoutMode.multiColumn:
-                return _buildMultiColumnLayout(sectionsToDisplay, uiVariables, uniform: false);
-              case SheetLayoutMode.multiColumnUniform:
-                return _buildMultiColumnLayout(sectionsToDisplay, uiVariables, uniform: true);
-              default:
-                return _buildVerticalStackLayout(sectionsToDisplay, uiVariables);
+                return _buildMultiColumnLayout(sectionsToDisplay, uiVariables);
+              
+              case SheetLayoutMode.horizontalGrid:
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: CGridViewBuild(
+                    currentSectionIndex: currentSectionIndex,
+                    currentSongIndex: currentSongIndex,
+                    sectionsToDisplay: sectionsToDisplay,
+                    buildLine: buildLine,
+                  ),
+                );
             }
           },
         );
@@ -125,11 +134,7 @@ class ResponsiveLayout extends StatelessWidget {
   }
 
   // Multi Column Layout - sections in configurable columns, aligned in rows
-  Widget _buildMultiColumnLayout(
-    List<SectionTile> sections, 
-    UiVariables uiVariables,
-    {required bool uniform}
-  ) {
+  Widget _buildMultiColumnLayout(List<SectionTile> sections, UiVariables uiVariables) {
     final columnCount = uiVariables.columnCount.value;
     
     // Create keys for scrolling
@@ -155,71 +160,49 @@ class ResponsiveLayout extends StatelessWidget {
       }
     });
 
-    // Build rows
+    // Build rows - sections flow left to right, then down
     final rows = <Widget>[];
     for (int i = 0; i < sections.length; i += columnCount) {
-      final rowSections = <SectionTile>[];
-      final rowKeys = <GlobalKey>[];
+      final rowSections = <Widget>[];
       
-      // Collect sections for this row
+      // Get sections for this row
       for (int j = 0; j < columnCount; j++) {
         final index = i + j;
         if (index < sections.length) {
-          rowSections.add(sections[index]);
-          rowKeys.add(sectionKeys[index]!);
+          rowSections.add(
+            Expanded(
+              child: Padding(
+                key: sectionKeys[index],
+                padding: EdgeInsets.only(
+                  right: j < columnCount - 1 ? uiVariables.columnSpacing.value : 0,
+                ),
+                child: sections[index],
+              ),
+            ),
+          );
+        } else {
+          // Add empty spacer to maintain grid alignment
+          rowSections.add(
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: j < columnCount - 1 ? uiVariables.columnSpacing.value : 0,
+                ),
+                child: const SizedBox.shrink(),
+              ),
+            ),
+          );
         }
       }
 
-      // Create row based on mode
-      Widget row;
-      if (uniform) {
-        row = _UniformHeightRow(
-          sections: rowSections,
-          keys: rowKeys,
-          columnCount: columnCount,
-          columnSpacing: uiVariables.columnSpacing.value,
-        );
-      } else {
-        // Non-uniform: original implementation
-        final rowWidgets = <Widget>[];
-        for (int j = 0; j < columnCount; j++) {
-          final index = i + j;
-          if (index < sections.length) {
-            rowWidgets.add(
-              Expanded(
-                child: Padding(
-                  key: sectionKeys[index],
-                  padding: EdgeInsets.only(
-                    right: j < columnCount - 1 ? uiVariables.columnSpacing.value : 0,
-                  ),
-                  child: sections[index],
-                ),
-              ),
-            );
-          } else {
-            rowWidgets.add(
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: j < columnCount - 1 ? uiVariables.columnSpacing.value : 0,
-                  ),
-                  child: const SizedBox.shrink(),
-                ),
-              ),
-            );
-          }
-        }
-        
-        row = Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: rowWidgets,
-        );
-      }
-
+      // Add row - sections align at top naturally
       rows.add(
         Padding(
           padding: EdgeInsets.only(bottom: uiVariables.rowSpacing.value),
-          child: row,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start, // Align at top
+            children: rowSections,
+          ),
         ),
       );
     }
@@ -406,96 +389,5 @@ class ResponsiveLayout extends StatelessWidget {
 
   int sectionCountAfterCurrent(totalSections, totalSectionsBefore) {
     return totalSections - totalSectionsBefore - 1;
-  }
-}
-
-/// Custom widget that measures children and applies uniform height
-class _UniformHeightRow extends StatefulWidget {
-  final List<SectionTile> sections;
-  final List<GlobalKey> keys;
-  final int columnCount;
-  final double columnSpacing;
-
-  const _UniformHeightRow({
-    required this.sections,
-    required this.keys,
-    required this.columnCount,
-    required this.columnSpacing,
-  });
-
-  @override
-  State<_UniformHeightRow> createState() => _UniformHeightRowState();
-}
-
-class _UniformHeightRowState extends State<_UniformHeightRow> {
-  final List<GlobalKey> _childKeys = [];
-  double? _uniformHeight;
-
-  @override
-  void initState() {
-    super.initState();
-    _childKeys.addAll(List.generate(widget.sections.length, (_) => GlobalKey()));
-    
-    // Measure after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureChildren());
-  }
-
-  void _measureChildren() {
-    double maxHeight = 0;
-    
-    for (final key in _childKeys) {
-      final RenderBox? renderBox = key.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox != null && renderBox.hasSize) {
-        maxHeight = max(maxHeight, renderBox.size.height);
-      }
-    }
-    
-    if (maxHeight > 0 && _uniformHeight != maxHeight) {
-      setState(() {
-        _uniformHeight = maxHeight;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final rowWidgets = <Widget>[];
-    
-    for (int j = 0; j < widget.columnCount; j++) {
-      if (j < widget.sections.length) {
-        rowWidgets.add(
-          Expanded(
-            child: Container(
-              key: widget.keys[j],
-              height: _uniformHeight,
-              padding: EdgeInsets.only(
-                right: j < widget.columnCount - 1 ? widget.columnSpacing : 0,
-              ),
-              child: Container(
-                key: _childKeys[j],
-                child: widget.sections[j],
-              ),
-            ),
-          ),
-        );
-      } else {
-        // Empty spacer
-        rowWidgets.add(
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(
-                right: j < widget.columnCount - 1 ? widget.columnSpacing : 0,
-              ),
-              child: const SizedBox.shrink(),
-            ),
-          ),
-        );
-      }
-    }
-    
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: rowWidgets,
-    );
   }
 }

@@ -32,6 +32,7 @@ class SectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uiVariables = Provider.of<SheetUiProvider>(context).uiVariables;
+
     bool hasNextSection = !isLastSectionOfSong;
 
     // Build section content with conditional title
@@ -122,7 +123,6 @@ class SectionTile extends StatelessWidget {
           isCurrentSection ? const EdgeInsets.all(8) : const EdgeInsets.all(4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // Keep content compact
         children: [
           // Add a colored tag at the top if not first section
           if (!isFirstSectionOfSong)
