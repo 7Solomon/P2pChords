@@ -1,7 +1,8 @@
+import 'package:P2pChords/dataManagment/converter/classes.dart';
 import 'package:P2pChords/dataManagment/converter/components/chord_lyric_pair.dart';
 import 'package:P2pChords/dataManagment/converter/components/line_item.dart';
-import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:flutter/material.dart';
+
 
 class SectionCard extends StatefulWidget {
   final PreliminarySection section;

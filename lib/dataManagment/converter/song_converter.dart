@@ -1,50 +1,10 @@
 import 'dart:convert';
+import 'package:P2pChords/dataManagment/converter/classes.dart';
+import 'package:P2pChords/dataManagment/converter/section_management.dart';
 import 'package:flutter/material.dart';
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
-import 'package:P2pChords/dataManagment/converter/components/section_duplicate_dialog.dart';
 import 'package:crypto/crypto.dart';
-
-class PreliminarySongData {
-  final String originalText;
-  final List<PreliminarySection> sections;
-  final String title;
-  final List<String> authors;
-  final String key;
-
-  PreliminarySongData({
-    required this.originalText,
-    required this.sections,
-    required this.title,
-    this.authors = const [],
-    this.key = '',
-  });
-}
-
-class PreliminarySection {
-  String title;
-  List<PreliminaryLine> lines;
-
-  PreliminarySection({
-    required this.title,
-    required this.lines,
-  });
-}
-
-// Class to represent a line before final processing
-class PreliminaryLine {
-  String text;
-  bool isChordLine;
-  bool wasSplit;
-  double chordLineCertainty; // Certainty score from 0.0 to 1.0
-
-  PreliminaryLine({
-    required this.text,
-    required this.isChordLine,
-    this.wasSplit = false,
-    this.chordLineCertainty = 0.0, // Default to 0
-  });
-}
 
 class SongConverter {
   SongConverter();
@@ -52,16 +12,13 @@ class SongConverter {
   String key = "";
   String title = "";
 
-
-  SongConverter createSongConverter() {
-    return SongConverter();
-  }
   // MAIN
   PreliminarySongData convertTextToSongInteractive(String text, String title,
       {List<String> authors = const [], String key = ""}) {
     this.title = title;
     this.key = key;
 
+    // GET sections
     final List<SongSection> finalSections = parseSections(text, key);
     final List<PreliminarySection> preliminarySections =
         convertFinalSectionsToPreliminary(finalSections, key);
@@ -76,141 +33,64 @@ class SongConverter {
   }
 
     List<SongSection> parseSections(String text, String key) {
-    final List<SongSection> sections = [];
-    String? currentSectionTitle;
-    List<String> currentSectionLines = [];
+  final List<SongSection> sections = [];
+  String? currentSectionTitle;
+  List<String> currentSectionLines = [];
 
-    final lines = text.split('\n');
-    final unbracketedSectionRegex = RegExp(
-      r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
-      caseSensitive: false,
-    );
+  final lines = text.split('\n');
+  final unbracketedSectionRegex = RegExp(
+    r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
+    caseSensitive: false,
+  );
 
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+  for (int i = 0; i < lines.length; i++) {
+    final originalLine = lines[i]; // ← Keep original line with spacing
+    final trimmedLine = originalLine.trim(); // ← Trim only for checking
 
-      // Check for section headers
-      final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
-      final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(line);
+    // Check for section headers using trimmed version
+    final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(trimmedLine);
+    final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(trimmedLine);
 
-      if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
-        // Save previous section
-        if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
-          sections.add(
-            SongSection(
-              title: currentSectionTitle,
-              lines: processLyricLines(currentSectionLines, key),
-            ),
-          );
-          currentSectionLines = [];
-        }
-
-        // Set new section title
-        if (bracketedSectionMatch != null) {
-          currentSectionTitle = bracketedSectionMatch.group(1);
-        } else {
-          final sectionName = unbracketedSectionMatch!.group(1);
-          final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
-          currentSectionTitle = sectionNumber.isEmpty
-              ? sectionName
-              : '$sectionName $sectionNumber';
-        }
-      } else if (line.isNotEmpty) {
-        currentSectionTitle ??= "Untitled Section";
-        currentSectionLines.add(line);
-      }
-    }
-
-    // Add the last section
-    if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
-      sections.add(
-        SongSection(
-          title: currentSectionTitle,
-          lines: processLyricLines(currentSectionLines, key),
-        ),
-      );
-    }
-
-    return sections;
-  }
-
-  /// Parses text into preliminary sections for interactive review
-  List<PreliminarySection> parseTextForReview(String text) {
-    final List<PreliminarySection> sections = [];
-    String? currentSectionTitle;
-    List<PreliminaryLine> currentSectionLines = [];
-
-    // Split the text into lines and process each line
-    final lines = text.split('\n');
-
-    // Regular expression for common section names in all caps followed by optional number
-    final unbracketedSectionRegex = RegExp(
-      r'^(VERSE|CHORUS|BRIDGE|INTRO|OUTRO|PRE-CHORUS|INSTRUMENTAL)\s*(\d*):?$',
-      caseSensitive: false,
-    );
-
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
-      //print('Section: $currentSectionTitle');
-      // Check if this is a bracketed section header (e.g., [Verse 1])
-      final bracketedSectionMatch = RegExp(r'^\[(.*?)\]').firstMatch(line);
-      // Check if this is an unbracketed section header (e.g., VERSE 1)
-      final unbracketedSectionMatch = unbracketedSectionRegex.firstMatch(line);
-
-      if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
-        // If we were already processing a section, save it
-        if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
-          sections.add(
-            PreliminarySection(
-              title: currentSectionTitle,
-              lines: currentSectionLines,
-            ),
-          );
-          currentSectionLines = [];
-        }
-
-        if (bracketedSectionMatch != null) {
-          currentSectionTitle = bracketedSectionMatch.group(1);
-        } else {
-          // For unbracketed matches, format the title nicely
-          final sectionName = unbracketedSectionMatch!.group(1);
-          final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
-          currentSectionTitle = sectionNumber.isEmpty
-              ? sectionName
-              : '$sectionName $sectionNumber';
-        }
-      } else if (line.isNotEmpty) {
-        // If no section title yet, create a default section
-        currentSectionTitle ??= "Untitled Section";
-
-        // Detect if this is a chord line
-        final certainty = getChordLineCertainty(line);
-        bool isChordLineDetected = certainty > 0.5; // Threshold for being a chord line
-
-        // Preserve original text including spacing for chord lines
-        // Add the line to the current section with original text
-        currentSectionLines.add(
-          PreliminaryLine(
-            text: line, // Use original line, not cleaned
-            isChordLine: isChordLineDetected,
-            chordLineCertainty: certainty,
+    if (bracketedSectionMatch != null || unbracketedSectionMatch != null) {
+      // Save previous section
+      if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
+        sections.add(
+          SongSection(
+            title: currentSectionTitle,
+            lines: processLyricLines(currentSectionLines, key),
           ),
         );
+        currentSectionLines = [];
       }
-    }
 
-    // Add the last section
-    if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
-      sections.add(
-        PreliminarySection(
-          title: currentSectionTitle,
-          lines: currentSectionLines,
-        ),
-      );
+      // Set new section title
+      if (bracketedSectionMatch != null) {
+        currentSectionTitle = bracketedSectionMatch.group(1);
+      } else {
+        final sectionName = unbracketedSectionMatch!.group(1);
+        final sectionNumber = unbracketedSectionMatch.group(2)?.trim() ?? '';
+        currentSectionTitle = sectionNumber.isEmpty
+            ? sectionName
+            : '$sectionName $sectionNumber';
+      }
+    } else if (trimmedLine.isNotEmpty) { // ← Check if trimmed is empty
+      currentSectionTitle ??= "Untitled Section";
+      currentSectionLines.add(originalLine); // ← Add ORIGINAL line, not trimmed!
     }
-
-    return sections;
   }
+
+  // Add the last section
+  if (currentSectionTitle != null && currentSectionLines.isNotEmpty) {
+    sections.add(
+      SongSection(
+        title: currentSectionTitle,
+        lines: processLyricLines(currentSectionLines, key),
+      ),
+    );
+  }
+
+  return sections;
+}
 
   /// Creates a final Song object from the corrected preliminary data
   Song finalizeSong(PreliminarySongData preliminaryData, String key) {
@@ -315,7 +195,7 @@ class SongConverter {
       buffer.write(standardChord);
       currentPos = chord.position + standardChord.length;
     }
-
+    //print(buffer.toString());
     return buffer.toString();
   }
 
@@ -325,10 +205,6 @@ class SongConverter {
       String cleanedChordLine, String lyricLine, String key) {
     List<Chord> chords = [];
 
-    // DEBUG: Print the lines for comparison
-    //print("ORIGINAL: '$originalChordLine'");
-    //print("CLEANED:  '$cleanedChordLine'");
-    //print("LYRICS:   '$lyricLine'");
 
     // Use regex to find chord positions in the ORIGINAL line (preserving spacing)
     final chordMatches = RegExp(r'(\S+)').allMatches(originalChordLine);
@@ -427,28 +303,53 @@ class SongConverter {
       if (lines[i].trim().isEmpty) continue;
 
       final certainty = getChordLineCertainty(lines[i]);
-      if (certainty > 0.5 &&
-          i + 1 < lines.length &&
-          getChordLineCertainty(lines[i + 1]) < 0.5) {
-        // This is a chord line and the next is a lyric line
+      //print('Line: "${lines[i]}" - Certainty: $certainty');
+      
+      if (certainty > 0.5) {
         String originalChordLine = lines[i];
         String cleanedChordLine = cleanChordLineText(originalChordLine);
-        final lyricLine = lines[i + 1];
+        
+        // Check if next line is lyrics
+        if (i + 1 < lines.length && getChordLineCertainty(lines[i + 1]) < 0.5) {
+          // Chord line with lyrics below
+          final lyricLine = lines[i + 1];
+          final chords = extractChordsWithCleaning(
+              originalChordLine, cleanedChordLine, lyricLine, key);
 
-        // Extract chords using both original and cleaned versions
-        final chords = extractChordsWithCleaning(
-            originalChordLine, cleanedChordLine, lyricLine, key);
+          lyricLines.add(
+            LineData(
+              lyrics: lyricLine,
+              chords: chords,
+            ),
+          );
+          i++; // Skip the lyric line
+        } else {
+          // Standalone chord line (instrumental section)
+          final chords = extractChordsWithCleaning(
+              originalChordLine, cleanedChordLine, originalChordLine, key);
+          
+          
+          int maxEndPosition = originalChordLine.length;
+          if (chords.isNotEmpty) {
+            // Find the rightmost chord and add its display width
+            chords.sort((a, b) => b.position.compareTo(a.position)); // Sort descending
+            final lastChord = chords.first;
+            final lastChordText = ChordUtils.nashvilleToChord(lastChord.value, key);
+            maxEndPosition = lastChord.position + lastChordText.length + 5; // +5 for safety
+          }
+          
+          final placeholderLyrics = ' ' * maxEndPosition;
 
-        lyricLines.add(
-          LineData(
-            lyrics: lyricLine,
-            chords: chords,
-          ),
-        );
-
-        i++; // Skip the lyric line
+          lyricLines.add(
+            LineData(
+              lyrics: placeholderLyrics, 
+              chords: chords,
+            ),
+          );
+        }
       } else {
         // Just a lyric line without chords
+        print('|${lines[i]}|');
         lyricLines.add(
           LineData(
             lyrics: lines[i],
@@ -457,7 +358,7 @@ class SongConverter {
         );
       }
     }
-
+  
     return lyricLines;
   }
 
@@ -650,247 +551,49 @@ bool sectionsAreIdentical(PreliminarySection s1, PreliminarySection s2) {
   return true;
 }
 
-/// Processes duplicate sections while preserving order and showing interactive dialogs
-///
-/// Features:
-/// - Preserves the original order of sections in the song
-/// - Shows a mobile-friendly popup dialog when duplicate section titles are found with different content
-/// - Highlights differences between sections in red for easy identification
-/// - Allows users to choose:
-///   - Keep first version only
-///   - Keep second version only
-///   - Keep both versions (automatically numbered)
-/// - Falls back to automatic numbering if dialog interaction fails
-///
-/// Usage:
-/// ```dart
-/// final processedSections = await processDuplicateSectionsInteractive(
-///   originalSections,
-///   context: context,
-///   showDialog: true, // Set to false to skip dialogs and use automatic processing
-/// );
-/// ```
+
+/// Process duplicate sections with improved UX
 Future<List<PreliminarySection>> processDuplicateSectionsInteractive(
   List<PreliminarySection> originalSections, {
   required BuildContext context,
   bool showDialog = true,
 }) async {
-  final List<PreliminarySection> finalSections = [];
-  final Map<String, List<int>> seenSectionIndices = {};
-  final Map<String, int> titleCounters = {};
+  // Group all sections
+  final groups = groupSections(originalSections);
+  
+  // Filter to only groups with issues
+  final duplicateGroups = groups.where((g) => 
+    g.hasDuplicates && !g.hasIdenticalContent
+  ).toList();
 
-  for (int i = 0; i < originalSections.length; i++) {
-    final currentSection = originalSections[i];
-    final title = currentSection.title;
+  // If no duplicates need user input, auto-process
+  if (duplicateGroups.isEmpty || !showDialog) {
+    return applyResolutions(groups);
+  }
 
-    seenSectionIndices.putIfAbsent(title, () => []);
-    titleCounters.putIfAbsent(title, () => 0);
+  // Show streamlined duplicate resolution dialog
+  final resolvedGroups = await showDuplicateResolutionDialog(
+    context: context,
+    groups: duplicateGroups,
+  );
 
-    // Check if we've seen an identical section with this title
-    bool foundIdentical = false;
-    for (final seenIndex in seenSectionIndices[title]!) {
-      if (sectionsAreIdentical(currentSection, originalSections[seenIndex])) {
-        foundIdentical = true;
-        break;
-      }
-    }
+  if (resolvedGroups == null) {
+    // User cancelled, return original
+    return originalSections;
+  }
 
-    if (foundIdentical) {
-      continue; // Skip identical sections
-    }
-
-    // Check if we've seen a different section with the same title
-    bool foundDifferentWithSameTitle = false;
-    int? conflictingIndex;
-    for (final seenIndex in seenSectionIndices[title]!) {
-      if (!sectionsAreIdentical(currentSection, originalSections[seenIndex])) {
-        foundDifferentWithSameTitle = true;
-        conflictingIndex = seenIndex;
-        break;
-      }
-    }
-
-    if (foundDifferentWithSameTitle && showDialog && conflictingIndex != null) {
-      // Show dialog to user for conflict resolution
-      final action = await _showSectionConflictDialog(
-        context: context,
-        firstSection: originalSections[conflictingIndex],
-        secondSection: currentSection,
-        sectionTitle: title,
-      );
-
-      switch (action) {
-        case SectionDuplicateAction.keepFirst:
-          continue;
-        case SectionDuplicateAction.keepSecond:
-          _replaceExistingSection(finalSections, title, currentSection);
-          seenSectionIndices[title]!.add(i);
-          continue;
-        case SectionDuplicateAction.keepBoth:
-          break;
-        case SectionDuplicateAction.cancel:
-        default:
-          break;
-      }
-    }
-
-    // Add the section (either new or as part of keep both)
-    seenSectionIndices[title]!.add(i);
-    titleCounters[title] = titleCounters[title]! + 1;
-
-    if (seenSectionIndices[title]!.length == 1) {
-      // First section with this title
-      bool willHaveDuplicates =
-          _willHaveDuplicates(originalSections, i, title, currentSection);
-
-      if (willHaveDuplicates || foundDifferentWithSameTitle) {
-        // Add with number (1)
-        final numberedSection = PreliminarySection(
-          title: "$title (${titleCounters[title]!})",
-          lines: _copyLines(currentSection.lines),
-        );
-        finalSections.add(numberedSection);
-      } else {
-        // No duplicates coming, add without number
-        finalSections.add(currentSection);
-      }
-    } else {
-      // This is a duplicate - always add with number
-      final renamedSection = PreliminarySection(
-        title: "$title (${titleCounters[title]!})",
-        lines: _copyLines(currentSection.lines),
-      );
-      finalSections.add(renamedSection);
-
-      // If this is the first duplicate (counter = 2), go back and rename the original
-      if (titleCounters[title]! == 2) {
-        _renumberFirstSection(finalSections, title);
-      }
+  // Update resolutions in main groups list
+  for (final resolved in resolvedGroups) {
+    final index = groups.indexWhere((g) => g.title == resolved.title);
+    if (index != -1) {
+      groups[index] = resolved;
     }
   }
 
-  return finalSections;
+  return applyResolutions(groups);
 }
 
-/// Non-interactive version that preserves the original behavior
-List<PreliminarySection> processDuplicateSections(
-    List<PreliminarySection> originalSections) {
-  final List<PreliminarySection> finalSections = [];
-  final Map<String, List<PreliminarySection>> seenSectionsByTitle = {};
-  final Map<String, int> titleCounters = {};
 
-  for (int i = 0; i < originalSections.length; i++) {
-    final currentSection = originalSections[i];
-    final title = currentSection.title;
-
-    seenSectionsByTitle.putIfAbsent(title, () => []);
-    titleCounters.putIfAbsent(title, () => 0);
-
-    bool foundIdentical = false;
-    for (final seenSection in seenSectionsByTitle[title]!) {
-      if (sectionsAreIdentical(currentSection, seenSection)) {
-        foundIdentical = true;
-        break;
-      }
-    }
-
-    if (foundIdentical) {
-      continue;
-    }
-
-    seenSectionsByTitle[title]!.add(currentSection);
-    titleCounters[title] = titleCounters[title]! + 1;
-
-    if (seenSectionsByTitle[title]!.length == 1) {
-      bool willHaveDuplicates =
-          _willHaveDuplicates(originalSections, i, title, currentSection);
-
-      if (willHaveDuplicates) {
-        final numberedSection = PreliminarySection(
-          title: "$title (${titleCounters[title]!})",
-          lines: _copyLines(currentSection.lines),
-        );
-        finalSections.add(numberedSection);
-      } else {
-        finalSections.add(currentSection);
-      }
-    } else {
-      final renamedSection = PreliminarySection(
-        title: "$title (${titleCounters[title]!})",
-        lines: _copyLines(currentSection.lines),
-      );
-      finalSections.add(renamedSection);
-
-      if (titleCounters[title]! == 2) {
-        _renumberFirstSection(finalSections, title);
-      }
-    }
-  }
-
-  return finalSections;
-}
-
-// Helper functions
-bool _willHaveDuplicates(List<PreliminarySection> originalSections,
-    int currentIndex, String title, PreliminarySection currentSection) {
-  for (int j = currentIndex + 1; j < originalSections.length; j++) {
-    if (originalSections[j].title == title &&
-        !sectionsAreIdentical(currentSection, originalSections[j])) {
-      return true;
-    }
-  }
-  return false;
-}
-
-List<PreliminaryLine> _copyLines(List<PreliminaryLine> lines) {
-  return lines
-      .map((l) => PreliminaryLine(
-          text: l.text, isChordLine: l.isChordLine, wasSplit: l.wasSplit))
-      .toList();
-}
-
-void _replaceExistingSection(List<PreliminarySection> finalSections,
-    String title, PreliminarySection newSection) {
-  for (int j = 0; j < finalSections.length; j++) {
-    if (finalSections[j].title == title ||
-        finalSections[j].title.startsWith("$title (")) {
-      finalSections[j] = newSection;
-      break;
-    }
-  }
-}
-
-void _renumberFirstSection(
-    List<PreliminarySection> finalSections, String title) {
-  for (int j = 0; j < finalSections.length - 1; j++) {
-    if (finalSections[j].title == title) {
-      finalSections[j] = PreliminarySection(
-        title: "$title (1)",
-        lines: finalSections[j].lines,
-      );
-      break;
-    }
-  }
-}
-
-Future<SectionDuplicateAction?> _showSectionConflictDialog({
-  required BuildContext context,
-  required PreliminarySection firstSection,
-  required PreliminarySection secondSection,
-  required String sectionTitle,
-}) async {
-  try {
-    return await showSectionDuplicateDialog(
-      context: context,
-      firstSection: firstSection,
-      secondSection: secondSection,
-      sectionTitle: sectionTitle,
-    );
-  } catch (e) {
-    // Fallback to automatic behavior if dialog not available
-    return SectionDuplicateAction.keepBoth;
-  }
-}
 
 String cleanChordLineText(String text) {
   return text

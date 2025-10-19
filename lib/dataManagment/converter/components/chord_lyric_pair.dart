@@ -1,5 +1,5 @@
+import 'package:P2pChords/dataManagment/converter/classes.dart';
 import 'package:P2pChords/dataManagment/converter/components/chord_editor.dart';
-import 'package:P2pChords/dataManagment/converter/functions.dart';
 import 'package:flutter/material.dart';
 
 /// Widget for displaying a chord-lyric pair

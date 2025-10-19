@@ -1,50 +1,107 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-
-export 'package:P2pChords/dataManagment/chords/comp_based_chord_utils.dart';
-
-/*
 class ChordUtils {
-  static Map<String, Map<String, String>>? _nashvilleMappings;
-  static bool _initialized = false;
+  static const List<String> _sharpKeys = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#'];
+  static const List<String> _flatKeys = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'];
+  
+  static const List<String> _notesSharp = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  static const List<String> _notesFlat = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-  // Enhanced chord pattern to recognize various parts of a chord including complex chords
-  static final RegExp _chordPattern = RegExp(r'^([A-Ga-g][#b]?)' // Root note
-      r'(m|maj|min|aug|dim|sus|add|\+|°|ø|-)?' // Quality/type
-      r'(\d+)?' // Number/extension (7, 9, etc.)
-      r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))*' // Additional modifiers (allow multiple)
-      r'(\*)?$' // Optional trailing asterisk
-      );
+  static const Map<String, List<int>> _scaleIntervals = {
+    'major': [0, 2, 4, 5, 7, 9, 11],
+    'minor': [0, 2, 3, 5, 7, 8, 10],
+  };
+
+  static const List<String> _majorScaleQualities = ['', 'm', 'm', '', '', 'm', 'dim'];
+  static const List<String> _minorScaleQualities = ['m', 'dim', '', 'm', 'm', '', ''];
+
   static final RegExp _bassNotePattern = RegExp(r'^[A-Ga-g][#b]?$');
 
-  // Enhanced Nashville pattern to recognize various parts of a Nashville chord
-  static final RegExp _nashvillePattern = RegExp(r'^(\d+)' // Number
-      r'(-|maj|min|aug|dim|sus|add|\+|°|ø)?' // Quality/type
-      r'(\d+)?' // Extension (7, 9, etc.)
-      r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))?' // Additional modifiers/parenthetical
-      r'(\/\d+)?' // Optional bass note
-      r'$');
+  static final RegExp _chordPattern = RegExp(
+    r'^([A-Ga-g][#b]?)' // Root note
+    r'(m|maj|min|aug|dim|sus|add|\+|°|ø|-)?' // Quality/type
+    r'(\d+)?' // Number/extension (7, 9, etc.)
+    r'(sus\d+|add\d+|aug|dim|\+|\(.*?\))*' // Additional modifiers
+    r'(\*)?$' // Optional trailing asterisk
+  );
 
-  /// Initialize the chord mappings from assets
-  static Future<void> initialize(BuildContext context) async {
-    if (_initialized) return;
-
-    final jsonString = await DefaultAssetBundle.of(context)
-        .loadString('assets/nashville_to_chord_by_key.json');
-    _nashvilleMappings = Map<String, Map<String, String>>.from(json
-        .decode(jsonString)
-        .map((key, value) => MapEntry(key, Map<String, String>.from(value))));
-    _initialized = true;
+  static Map<String, String> parseKey(String key) {
+    if (key.endsWith('m') && !key.endsWith('dim') && key.length > 1) {
+      return {'root': key.substring(0, key.length - 1), 'scale': 'minor'};
+    }
+    return {'root': key, 'scale': 'major'};
   }
 
-  /// Check if mappings are initialized
-  static bool get isInitialized => _initialized;
+  // FIXED: Use proper sharp/flat convention
+  static List<String> get availableKeys {
+    final keys = <String>[];
+    
+    // Sharp keys (major)
+    for (var key in _sharpKeys) {
+      keys.add(key);
+      keys.add('${key}m');
+    }
+    
+    // Flat keys (major) - excluding C which is already in sharp keys
+    for (var key in _flatKeys) {
+      if (key != 'C') {
+        keys.add(key);
+        keys.add('${key}m');
+      }
+    }
+    
+    return keys..sort();
+  }
 
-  /// Get all supported keys
-  static List<String> get availableKeys =>
-      _checkInitialized() ? _nashvilleMappings?.keys.toList() ?? [] : [];
+  static List<String> _generateScale(String key) {
+    final keyInfo = parseKey(key);
+    final root = keyInfo['root']!;
+    final scaleType = keyInfo['scale']!;
 
-  /// Parse a chord into its components
+    // Use sharp notation for sharp keys, flat for flat keys
+    final useSharps = _sharpKeys.contains(root);
+    final chromaticScale = useSharps ? _notesSharp : _notesFlat;
+    
+    int startIndex = chromaticScale.indexWhere((note) => note.toLowerCase() == root.toLowerCase());
+    if (startIndex == -1) {
+      // Try the other chromatic scale
+      final altChromaticScale = useSharps ? _notesFlat : _notesSharp;
+      startIndex = altChromaticScale.indexWhere((note) => note.toLowerCase() == root.toLowerCase());
+      if (startIndex == -1) {
+        throw FormatException('Invalid key: $key');
+      }
+      return _generateScaleFromIndex(startIndex, scaleType, altChromaticScale);
+    }
+
+    return _generateScaleFromIndex(startIndex, scaleType, chromaticScale);
+  }
+
+  static List<String> _generateScaleFromIndex(int startIndex, String scaleType, List<String> chromaticScale) {
+    final intervals = _scaleIntervals[scaleType]!;
+    List<String> scaleNotes = [];
+
+    for (int interval in intervals) {
+      final noteIndex = (startIndex + interval) % 12;
+      scaleNotes.add(chromaticScale[noteIndex]);
+    }
+
+    return scaleNotes;
+  }
+
+  static String _applyAccidental(String note, String accidental) {
+    if (accidental.isEmpty) return note;
+
+    int index = _notesSharp.indexOf(note);
+    if (index == -1) index = _notesFlat.indexOf(note);
+    if (index == -1) return note;
+
+    if (accidental == 'b') {
+      index = (index - 1 + 12) % 12;
+    } else if (accidental == '#') {
+      index = (index + 1) % 12;
+    }
+
+    return note.contains('b') ? _notesFlat[index] : _notesSharp[index];
+  }
+
   static Map<String, String> parseChordComponents(String chord) {
     Map<String, String> components = {
       'root': '',
@@ -54,7 +111,6 @@ class ChordUtils {
       'bass': ''
     };
 
-    // Handle "N.C." (No Chord)
     if (chord == "N.C.") {
       components['root'] = "N.C.";
       return components;
@@ -62,20 +118,17 @@ class ChordUtils {
 
     String mainChord = chord;
 
-    // Handle slash chords
     if (chord.contains('/')) {
       List<String> parts = chord.split('/');
       mainChord = parts[0].trim();
       if (parts.length > 1) {
         String bassNote = parts[1].trim();
-        // Validate bass note
         if (_bassNotePattern.hasMatch(bassNote)) {
-          components['bass'] = '/' + bassNote;
+          components['bass'] = '/$bassNote';
         }
       }
     }
 
-    // Now parse the main chord part (without bass)
     final match = _chordPattern.firstMatch(mainChord);
     if (match != null) {
       components['root'] = match.group(1) ?? '';
@@ -83,13 +136,11 @@ class ChordUtils {
       components['extension'] = match.group(3) ?? '';
       components['modifier'] = match.group(4) ?? '';
     } else {
-      // Fallback: try to extract just the root
       final rootMatch = RegExp(r'^([A-Ga-g][#b]?)').firstMatch(mainChord);
       if (rootMatch != null) {
         components['root'] = rootMatch.group(1)!;
         if (mainChord.length > components['root']!.length) {
-          components['modifier'] =
-              mainChord.substring(components['root']!.length);
+          components['modifier'] = mainChord.substring(components['root']!.length);
         }
       } else {
         components['root'] = mainChord;
@@ -99,275 +150,242 @@ class ChordUtils {
     return components;
   }
 
-  /// Parse a Nashville number into its components
-  static Map<String, String> parseNashvilleComponents(String nashville) {
-    Map<String, String> components = {
-      'number': '',
-      'quality': '',
-      'extension': '',
-      'modifier': '',
-      'bass': ''
-    };
+ static Map<String, String> parseNashvilleComponents(String nashville) {
+  Map<String, String> components = {
+    'number': '',
+    'quality': '',
+    'extension': '',
+    'modifier': '',
+    'bass': ''
+  };
 
-    // Handle "N.C." (No Chord)
-    if (nashville == "N.C.") {
-      components['number'] = "N.C.";
-      return components;
-    }
-
-    // Handle slash chords
-    if (nashville.contains('/')) {
-      List<String> parts = nashville.split('/');
-      nashville = parts[0];
-      if (parts.length > 1) {
-        components['bass'] = '/${parts[1]}';
-      }
-    }
-
-    // Try to match the Nashville pattern
-    final match = _nashvillePattern.firstMatch(nashville);
-    if (match != null) {
-      components['number'] = match.group(1) ?? '';
-
-      // Handle quality modifiers
-      String? quality = match.group(2);
-      if (quality != null && quality.isNotEmpty) {
-        components['quality'] = quality;
-      }
-
-      // Handle extensions
-      String? extension = match.group(3);
-      if (extension != null && extension.isNotEmpty) {
-        components['extension'] = extension;
-      }
-
-      // Handle additional modifiers
-      String? modifier = match.group(4);
-      if (modifier != null && modifier.isNotEmpty) {
-        components['modifier'] = modifier;
-      }
-    } else {
-      // Extract the numerical part if possible
-      final numberMatch = RegExp(r'^(\d+)').firstMatch(nashville);
-      if (numberMatch != null) {
-        components['number'] = numberMatch.group(1)!;
-        if (nashville.length > numberMatch.group(1)!.length) {
-          components['quality'] =
-              nashville.substring(numberMatch.group(1)!.length);
-        }
-      } else {
-        // If no match, treat the whole string as the number
-        components['number'] = nashville;
-      }
-    }
-
+  if (nashville == "N.C.") {
+    components['number'] = "N.C.";
     return components;
   }
 
-  /// Convert a Nashville number to a standard chord in the specified key
+  if (nashville.contains('/')) {
+    List<String> parts = nashville.split('/');
+    nashville = parts[0];
+    if (parts.length > 1) {
+      components['bass'] = '/${parts[1]}';
+    }
+  }
+
+  final numberMatch = RegExp(r'^([b#]?[1-7])').firstMatch(nashville);
+  if (numberMatch == null) {
+    return components;
+  }
+
+  components['number'] = numberMatch.group(1)!;
+  String remaining = nashville.substring(components['number']!.length);
+
+  // FIXED: Better pattern that handles 'add9', 'sus4', etc. as modifiers, not quality
+  // Match quality (without 'add' or 'sus' since those need numbers)
+  final qualityPattern = RegExp(r'^(m|maj|min|aug|dim|-|°|ø|\+)?');
+  final qualityMatch = qualityPattern.firstMatch(remaining);
+  
+  if (qualityMatch != null && qualityMatch.group(1) != null) {
+    components['quality'] = qualityMatch.group(1)!;
+    remaining = remaining.substring(qualityMatch.group(0)!.length);
+  }
+
+  // Now check for extension (standalone number like '7', '9')
+  final extensionPattern = RegExp(r'^(\d+)');
+  final extensionMatch = extensionPattern.firstMatch(remaining);
+  
+  if (extensionMatch != null) {
+    components['extension'] = extensionMatch.group(1)!;
+    remaining = remaining.substring(extensionMatch.group(0)!.length);
+  }
+
+  // Everything else is modifier (add9, sus4, etc.)
+  if (remaining.isNotEmpty) {
+    components['modifier'] = remaining;
+  }
+
+  return components;
+}
+  // FIXED: Apply default quality even when extension is present
   static String nashvilleToChord(String nashvilleNumber, String key) {
-    if (!_checkInitialized()) {
-      return nashvilleNumber; // Return unchanged if not initialized
-    }
-
     if (nashvilleNumber == "N.C." || key.isEmpty) {
-      return nashvilleNumber; // Return as-is for "No Chord" or if no key provided
+      return nashvilleNumber;
     }
 
-    // Handle slash chords
+    final keyInfo = parseKey(key);
+    final scale = _generateScale(key);
+    if (scale.isEmpty) {
+      return nashvilleNumber;
+    }
+
+    // Handle slash chords recursively
     if (nashvilleNumber.contains('/')) {
       List<String> parts = nashvilleNumber.split('/');
       if (parts.length == 2) {
         String baseNashville = parts[0].trim();
         String bassNashville = parts[1].trim();
-
         String baseChord = nashvilleToChord(baseNashville, key);
-        String bassNote = "";
-
-        // Convert the bass note
-        if (RegExp(r'^\d+$').hasMatch(bassNashville)) {
-          final keyMap = _nashvilleMappings?[key];
-          if (keyMap != null) {
-            bassNote = keyMap[bassNashville] ?? bassNashville;
-          } else {
-            bassNote = bassNashville;
-          }
-        } else {
-          bassNote = nashvilleToChord(bassNashville, key);
-        }
-
-        return "$baseChord/$bassNote";
+        
+        // FIXED: For bass notes, just get the root note without quality
+        String bassChord = _nashvilleToBassNote(bassNashville, key);
+        return "$baseChord/$bassChord";
       }
     }
 
-    // Parse the Nashville number into components
     var components = parseNashvilleComponents(nashvilleNumber);
+    String numberStr = components['number'] ?? '';
+    if (numberStr.isEmpty) return nashvilleNumber;
 
-    // If we can't parse properly or number is empty, use direct mapping fallback
-    if (components['number']!.isEmpty) {
-      return _directMappingFallback(nashvilleNumber, key);
+    String accidental = '';
+    if (numberStr.startsWith('b') || numberStr.startsWith('#')) {
+      accidental = numberStr[0];
+      numberStr = numberStr.substring(1);
     }
 
-    // Get the root note from the Nashville number
-    final keyMap = _nashvilleMappings?[key];
-    if (keyMap == null) {
-      return nashvilleNumber; // Return original if key mapping not found
+    int number = int.tryParse(numberStr) ?? 0;
+    if (number < 1 || number > 7) {
+      return nashvilleNumber;
     }
 
-    String? rootNote = keyMap[components['number']];
-    if (rootNote == null) {
-      return _directMappingFallback(nashvilleNumber, key);
+    String rootNote = scale[number - 1];
+
+    if (accidental.isNotEmpty) {
+      rootNote = _applyAccidental(rootNote, accidental);
     }
 
-    // Convert quality and build the chord
     String quality = components['quality'] ?? '';
-    if (quality == '-') {
+    String extension = components['extension'] ?? '';
+    String modifier = components['modifier'] ?? '';
+
+    // FIXED: Apply default quality if no explicit quality is given (regardless of extension)
+    if (quality.isEmpty && accidental.isEmpty) {
+      final qualities = keyInfo['scale'] == 'minor' ? _minorScaleQualities : _majorScaleQualities;
+      quality = qualities[number - 1];
+    } else if (quality == '-') {
       quality = 'm';
     }
 
-    // Assemble the chord
-    String chord = rootNote + quality;
-
-    // Add extension if present
-    if (components['extension']?.isNotEmpty == true) {
-      chord += components['extension']!;
+    if (quality == 'M') {
+      quality = '';
     }
 
-    // Add modifier if present
-    if (components['modifier']?.isNotEmpty == true) {
-      chord += components['modifier']!;
-    }
-
-    // Add bass note if present
-    if (components['bass']?.isNotEmpty == true) {
-      String bassNumber = components['bass']!.substring(1); // Remove the slash
-      String? bassNote = keyMap[bassNumber];
-      if (bassNote != null) {
-        chord += '/' + bassNote;
-      } else {
-        chord += components['bass']!;
-      }
-    }
-
-    return chord;
+    return '$rootNote$quality$extension$modifier';
   }
 
-  // Use direct mapping as fallback for complex cases
-  static String _directMappingFallback(String nashvilleNumber, String key) {
-    // Try to extract just the number part
-    final numberMatch = RegExp(r'^(\d+)').firstMatch(nashvilleNumber);
-    if (numberMatch != null) {
-      final number = numberMatch.group(1);
-      final keyMap = _nashvilleMappings?[key];
-      if (keyMap != null && number != null) {
-        final rootNote = keyMap[number];
-        if (rootNote != null) {
-          // Add any modifiers after the number
-          final remainingPart = nashvilleNumber.substring(number.length);
-          String quality = remainingPart;
-          if (quality == '-') {
-            quality = 'm';
-          }
-          return rootNote + quality;
-        }
-      }
+  // NEW: Helper to convert Nashville to just the bass note (no quality)
+  static String _nashvilleToBassNote(String nashvilleNumber, String key) {
+    final keyInfo = parseKey(key);
+    final scale = _generateScale(key);
+    if (scale.isEmpty) {
+      return nashvilleNumber;
     }
 
-    // If all else fails, return the original nashville number
-    return nashvilleNumber;
+    var components = parseNashvilleComponents(nashvilleNumber);
+    String numberStr = components['number'] ?? '';
+    if (numberStr.isEmpty) return nashvilleNumber;
+
+    String accidental = '';
+    if (numberStr.startsWith('b') || numberStr.startsWith('#')) {
+      accidental = numberStr[0];
+      numberStr = numberStr.substring(1);
+    }
+
+    int number = int.tryParse(numberStr) ?? 0;
+    if (number < 1 || number > 7) {
+      return nashvilleNumber;
+    }
+
+    String rootNote = scale[number - 1];
+
+    if (accidental.isNotEmpty) {
+      rootNote = _applyAccidental(rootNote, accidental);
+    }
+
+    // Return ONLY the root note for bass notes
+    return rootNote;
   }
 
-  /// Convert a standard chord to Nashville notation in the specified key
   static String chordToNashville(String chord, String key) {
-    if (!_checkInitialized()) {
-      return chord; // Return unchanged if not initialized
-    }
-
     if (chord == "N.C." || key.isEmpty) {
-      return chord; // Return as-is for "No Chord" or if no key provided
+      return chord;
     }
 
-    // Validation for songKey
-    if (!RegExp(r'^[A-G][#b]?$').hasMatch(key)) {
-      throw FormatException('Invalid key format: $key');
+    final keyInfo = parseKey(key);
+    final scale = _generateScale(key);
+    if (scale.isEmpty) {
+      return chord;
     }
 
-    // Handle slash chords (e.g., "C/G")
+    final noteToNumberMap = {for (var i = 0; i < scale.length; i++) scale[i].toLowerCase(): (i + 1).toString()};
+
     if (chord.contains('/')) {
       List<String> parts = chord.split('/');
       if (parts.length == 2) {
         String basePart = parts[0].trim();
         String bassPart = parts[1].trim();
-
-        // Get the Nashville number for the base chord
         String baseNashville = chordToNashville(basePart, key);
-
-        // For the bass note, we need to find the Nashville number
-        String bassRoot = bassPart.replaceAll(RegExp(r'[^A-Ga-g#b]'), '');
-        String bassNashville = _getNashvilleNumberForRoot(bassRoot, key);
-
-        return "$baseNashville/$bassNashville";
+        String bassNashvilleNum = chordToNashville(bassPart, key).replaceAll(RegExp(r'[^b#\d]'), '');
+        return "$baseNashville/$bassNashvilleNum";
       }
     }
 
-    // Parse the chord into components
     var components = parseChordComponents(chord);
+    String root = components['root'] ?? '';
+    if (root.isEmpty) return chord;
 
-    // Get the Nashville number for the root note
-    String nashvilleNumber =
-        _getNashvilleNumberForRoot(components['root'] ?? '', key);
+    String rootLower = root.toLowerCase();
+    String? nashvilleNumber;
+    String accidentalPrefix = '';
 
-    // Convert quality
+    if (noteToNumberMap.containsKey(rootLower)) {
+      nashvilleNumber = noteToNumberMap[rootLower];
+    } else {
+      int noteIndex = _notesSharp.indexOf(root);
+      if (noteIndex == -1) noteIndex = _notesFlat.indexOf(root);
+      if (noteIndex == -1) return chord;
+
+      for (var i = 0; i < scale.length; i++) {
+        int scaleNoteIndex = _notesSharp.indexOf(scale[i]);
+        if (scaleNoteIndex == -1) scaleNoteIndex = _notesFlat.indexOf(scale[i]);
+        
+        if ((noteIndex + 1) % 12 == scaleNoteIndex) {
+          accidentalPrefix = 'b';
+          nashvilleNumber = (i + 1).toString();
+          break;
+        }
+        if ((noteIndex - 1 + 12) % 12 == scaleNoteIndex) {
+          accidentalPrefix = '#';
+          nashvilleNumber = (i + 1).toString();
+          break;
+        }
+      }
+    }
+
+    if (nashvilleNumber == null) {
+      return chord;
+    }
+
     String quality = components['quality'] ?? '';
+    String extension = components['extension'] ?? '';
+    String modifier = components['modifier'] ?? '';
+
+    int number = int.parse(nashvilleNumber);
+    if (accidentalPrefix.isEmpty) {
+      final qualities = keyInfo['scale'] == 'minor' ? _minorScaleQualities : _majorScaleQualities;
+      String defaultQuality = qualities[number - 1];
+      
+      if (defaultQuality == 'M') defaultQuality = '';
+
+      if (quality == defaultQuality) {
+        quality = '';
+      }
+    }
+    
     if (quality == 'm' || quality == 'min') {
       quality = '-';
     }
 
-    // Assemble the Nashville notation
-    String nashville = nashvilleNumber + quality;
-
-    // Add extension if present
-    if (components['extension']?.isNotEmpty == true) {
-      nashville += components['extension']!;
-    }
-
-    // Add modifier if present
-    if (components['modifier']?.isNotEmpty == true) {
-      nashville += components['modifier']!;
-    }
-
-    // Add bass note if present
-    if (components['bass']?.isNotEmpty == true) {
-      String bassNote = components['bass']!.substring(1); // Remove the slash
-      String bassNashville = _getNashvilleNumberForRoot(bassNote, key);
-      nashville += '/$bassNashville';
-    }
-
-    return nashville;
-  }
-
-  /// Helper method to get Nashville number for a root note
-  static String _getNashvilleNumberForRoot(String rootNote, String key) {
-    if (rootNote.isEmpty) {
-      throw const FormatException("Empty chord root");
-    }
-
-    String? nashvilleNumber;
-    final keyMap = _nashvilleMappings?[key];
-
-    if (keyMap != null) {
-      keyMap.forEach((number, note) {
-        if (note.toLowerCase() == rootNote.toLowerCase()) {
-          nashvilleNumber = number;
-        }
-      });
-    }
-
-    if (nashvilleNumber == null) {
-      throw FormatException("Invalid Chord Root: $rootNote");
-    }
-
-    return nashvilleNumber!;
+    return '$accidentalPrefix$nashvilleNumber$quality$extension$modifier';
   }
 
   static bool isPotentialChordToken(String token) {
@@ -379,24 +397,27 @@ class ChordUtils {
       return true;
     }
 
-    // Handle slash chords separately
+    String mainChord = trimmedToken;
+    String? bassNote;
+    
     if (trimmedToken.contains('/')) {
       List<String> parts = trimmedToken.split('/');
-      if (parts.length == 2) {
-        String mainChord = parts[0].trim();
-        String bassNote = parts[1].trim();
-
-        return _chordPattern.hasMatch(mainChord) &&
-            _bassNotePattern.hasMatch(bassNote);
-      }
+      if (parts.length != 2) return false;
+      
+      mainChord = parts[0].trim();
+      bassNote = parts[1].trim();
+      
+      if (!_chordPattern.hasMatch(mainChord)) return false;
+      if (!_bassNotePattern.hasMatch(bassNote)) return false;
+      
+      return true;
     }
 
-    return _chordPattern.hasMatch(trimmedToken);
+    return _chordPattern.hasMatch(mainChord);
   }
 
   static List<String> extractChordsFromLine(String line) {
     List<String> chords = [];
-
     final tokens = line.split(RegExp(r'\s+'));
 
     for (String token in tokens) {
@@ -407,10 +428,4 @@ class ChordUtils {
 
     return chords;
   }
-
-  /// Check if the ChordUtils has been properly initialized
-  static bool _checkInitialized() {
-    return _initialized && _nashvilleMappings != null;
-  }
 }
-*/

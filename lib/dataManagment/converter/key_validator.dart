@@ -1,5 +1,5 @@
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
-import 'package:P2pChords/dataManagment/converter/functions.dart';
+import 'package:P2pChords/dataManagment/converter/classes.dart';
 import 'package:flutter/material.dart';
 
 class KeyInputPreview extends StatefulWidget {

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:P2pChords/dataManagment/Pages/edit/style.dart';
-// Import FilePickerUtil
 import 'package:P2pChords/dataManagment/Pages/file_picker.dart';
+import 'package:P2pChords/dataManagment/converter/classes.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/styling/SpeedDial.dart';
@@ -10,7 +10,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
-import 'package:P2pChords/dataManagment/converter/functions.dart';
+import 'package:P2pChords/dataManagment/converter/song_converter.dart';
 import 'package:P2pChords/dataManagment/converter/components/section_card.dart';
 import 'package:P2pChords/dataManagment/converter/key_validator.dart';
 
@@ -73,7 +73,10 @@ class _SongEditPageState extends State<SongEditPage> {
       // CREATE
       _originalBpm = null;
       _originalTimeSignature = null;
+
+       WidgetsBinding.instance.addPostFrameCallback((_) {
       _convertRawTextToPreliminaryData();
+    });
     }
   }
 

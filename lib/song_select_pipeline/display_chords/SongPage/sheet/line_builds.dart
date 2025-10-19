@@ -152,13 +152,6 @@ class LineBuildFunction {
                   // Calculate position relative to the start of the segment
                   final int relativePos = chord.position - segment.startIndex;
 
-                  // DEBUG: Print positioning info
-                  //print("DISPLAY DEBUG - Chord: ${chord.value}, "
-                  //    "AbsolutePos: ${chord.position}, "
-                  //    "SegmentStart: ${segment.startIndex}, "
-                  //    "RelativePos: $relativePos, "
-                  //    "SegmentLength: ${segment.text.length}");
-
                   if (relativePos < 0 || relativePos > segment.text.length) {
                     // Chord is outside this segment's text range
                     //print(
@@ -174,9 +167,6 @@ class LineBuildFunction {
                         ui.Rect.zero, // Caret prototype is zero
                       )
                       .dx;
-
-                  //print(
-                  //    "DISPLAY DEBUG - Chord: ${chord.value}, XOffset: $xOffset");
 
                   // Translate chord if needed
                   final String displayChord = translateChord(chord);
@@ -203,6 +193,7 @@ class LineBuildFunction {
   String translateChord(Chord chord) {
     String chordName =
         ChordUtils.nashvilleToChord(chord.value, currentKey ?? 'C');
+    
     return chordName;
   }
 

@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:P2pChords/dataManagment/chords/chord_utils.dart';
 import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:flutter/material.dart';
-import 'package:P2pChords/dataManagment/converter/functions.dart';
+import 'package:P2pChords/dataManagment/converter/song_converter.dart';
 
 // Function types remain the same
 typedef GetXFromPosition = double Function(int position);
