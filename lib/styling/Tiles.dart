@@ -327,11 +327,7 @@ class _CExpandableListTileState extends State<CExpandableListTile>
                       // Expand/collapse indicator
                       AnimatedRotation(
                         duration: const Duration(milliseconds: 300),
-                        turns: _effectiveIsExpanded ? 0.5 : 0,
-                        child: Icon(
-                          Icons.expand_more,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
+                        turns: _effectiveIsExpanded ? 0.5 : 0
                       ),
                     ],
                   ),
