@@ -2,7 +2,7 @@ import 'package:P2pChords/dataManagment/data_class.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
 import 'package:P2pChords/dataManagment/provider/data_loade_provider.dart';
 import 'package:P2pChords/dataManagment/provider/sheet_ui_provider.dart';
-import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/_components/quick_select_overlay/overlay.dart';
+import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/select_overlay/overlay.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/SongPage/sheet.dart';
 import 'package:P2pChords/song_select_pipeline/display_chords/drawer.dart';
 import 'package:P2pChords/state.dart';
@@ -52,8 +52,10 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
         final List<String> songHashList =
             dataLoader.groups[currentSelection.currentGroup!]!;
         _controller = QSelectOverlay(
-          songs: songHashList,
+          songHashes: songHashList,
           initialSong: currentSelection.currentSongHash!,
+          getDisplayName: (hash) =>
+              dataLoader.getSongByHash(hash)?.header.name ?? hash,
           onSongSelected: (selectedSongHash) {
             setState(() {
               currentSelection.setCurrentSong(selectedSongHash);
