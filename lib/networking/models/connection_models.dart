@@ -86,6 +86,9 @@ enum MessageType {
   metronomeUpdate,
   disconnect,
   error,
+
+  songDataRequest,      // NEW
+
 }
 
 class HubMessage {

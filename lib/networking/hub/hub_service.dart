@@ -231,7 +231,7 @@ class HubService {
       case MessageType.stateUpdate:
       case MessageType.songData:
       case MessageType.metronomeUpdate:
-        await _broadcastMessage(message, excludeSpokeId: spoke.id);
+      case MessageType.songDataRequest:
         onMessageReceived?.call(message, spoke.id);
         break;
 

@@ -155,13 +155,14 @@ class SongConverter {
         }
 
         // Add lyric line
-        preliminaryLines.add(PreliminaryLine(
+        if (lineData.lyrics.isNotEmpty && lineData.lyrics != "") {
+          preliminaryLines.add(PreliminaryLine(
           text: lineData.lyrics,
           isChordLine: false,
           wasSplit: lineData.chords.isNotEmpty
               ? false
               : false, // Only wasSplit if part of a pair
-        ));
+        ));}
       }
 
       preliminarySections.add(PreliminarySection(
@@ -323,33 +324,23 @@ class SongConverter {
             ),
           );
           i++; // Skip the lyric line
-        } else {
-          // Standalone chord line (instrumental section)
+         } else {
+          // Standalone chord line (instrumental)
           final chords = extractChordsWithCleaning(
               originalChordLine, cleanedChordLine, originalChordLine, key);
-          
-          
-          int maxEndPosition = originalChordLine.length;
-          if (chords.isNotEmpty) {
-            // Find the rightmost chord and add its display width
-            chords.sort((a, b) => b.position.compareTo(a.position)); // Sort descending
-            final lastChord = chords.first;
-            final lastChordText = ChordUtils.nashvilleToChord(lastChord.value, key);
-            maxEndPosition = lastChord.position + lastChordText.length + 5; // +5 for safety
-          }
-          
-          final placeholderLyrics = ' ' * maxEndPosition;
 
+          // Represent instrumental lines with empty lyrics.
+          // The UI will detect empty lyrics and render chords-only lines.
           lyricLines.add(
             LineData(
-              lyrics: placeholderLyrics, 
+              lyrics: '',
               chords: chords,
             ),
           );
         }
       } else {
         // Just a lyric line without chords
-        print('|${lines[i]}|');
+        //print('|${lines[i]}|');
         lyricLines.add(
           LineData(
             lyrics: lines[i],

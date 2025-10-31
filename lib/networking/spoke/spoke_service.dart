@@ -263,7 +263,9 @@ class SpokeService {
           break;
 
         case MessageType.stateUpdate:
+          onMessageReceived?.call(message);
         case MessageType.songData:
+          onMessageReceived?.call(message);
         case MessageType.metronomeUpdate:
           onMessageReceived?.call(message);
           break;

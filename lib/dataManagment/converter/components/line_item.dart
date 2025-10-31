@@ -116,7 +116,7 @@ class _LineItemState extends State<LineItem> {
                   value: isChordLine,
                   onChanged: (value) => widget.onToggleLineType(
                       widget.sectionIndex, widget.lineIndex),
-                  activeColor: Colors.amber.shade800, // Chord color
+                  activeThumbColor: Colors.amber.shade800, // Chord color
                   inactiveThumbColor: Colors.green.shade800, // Lyric color
                   activeTrackColor: Colors.amber.shade200,
                   inactiveTrackColor: Colors.green.shade200,

@@ -16,10 +16,43 @@ class _ServerImportPageState extends State<ServerImportPage> {
   String _statusMessage = '';
   bool _hasError = false;
   List<Song>? _importedSongs;
+  List<Song>? _filteredSongs;
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (_importedSongs == null) return;
+
+    final query = _searchController.text.toLowerCase();
+    
+    if (query.isEmpty) {
+      setState(() {
+        _filteredSongs = _importedSongs;
+      });
+      return;
+    }
+
+    setState(() {
+          _filteredSongs = _importedSongs!.where((song) {
+            final titleMatch = song.header.name.toLowerCase().contains(query);
+            final artistMatch = (song.header.authors)
+                .any((author) => author.toLowerCase().contains(query));
+            return titleMatch || artistMatch;
+          }).toList();
+        });
   }
 
   Future<void> _importSongData() async {
@@ -34,6 +67,8 @@ class _ServerImportPageState extends State<ServerImportPage> {
       _statusMessage = '';
       _hasError = false;
       _importedSongs = null;
+      _filteredSongs = null;
+      _searchController.clear();
     });
 
     try {
@@ -47,6 +82,7 @@ class _ServerImportPageState extends State<ServerImportPage> {
         _isLoading = false;
         if (songs != null && songs.isNotEmpty) {
           _importedSongs = songs;
+          _filteredSongs = songs;
           _statusMessage = '${songs.length} Songs gefunden';
           _hasError = false;
         } else {
@@ -65,6 +101,16 @@ class _ServerImportPageState extends State<ServerImportPage> {
     }
   }
 
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchController.clear();
+        _filteredSongs = _importedSongs;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,21 +118,116 @@ class _ServerImportPageState extends State<ServerImportPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        title: const Text(
-          'Song Datenbank',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Song oder Künstler suchen...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                ),
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 16,
+                ),
+              )
+            : const Text(
+                'Song Datenbank',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(
+            _isSearching ? Icons.arrow_back : Icons.arrow_back,
+            color: Colors.black87,
+          ),
+          onPressed: () {
+            if (_isSearching) {
+              _toggleSearch();
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
         ),
+        actions: (_importedSongs?.isNotEmpty ?? false)
+            ? [
+                IconButton(
+                  icon: Icon(
+                    _isSearching ? Icons.close : Icons.search,
+                    color: Colors.black87,
+                  ),
+                  onPressed: _toggleSearch,
+                ),
+              ]
+            : null,
       ),
       body: (_importedSongs?.isNotEmpty ?? false)
-          ? SongListView(songs: _importedSongs!)
+          ? Column(
+              children: [
+                if (_filteredSongs != null && _searchController.text.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: Colors.blue[50],
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_filteredSongs!.length} von ${_importedSongs!.length} Songs',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: _filteredSongs!.isEmpty
+                      ? _buildNoResultsState()
+                      : SongListView(songs: _filteredSongs!),
+                ),
+              ],
+            )
           : _buildEmptyState(),
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Keine Songs gefunden',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Versuche andere Suchbegriffe',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

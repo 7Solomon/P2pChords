@@ -120,9 +120,9 @@ class _ChordLyricPairState extends State<ChordLyricPair> {
       // print("Warning: TextPainter not laid out in _getLyricXFromPosition. Forcing layout.");
       _updateTextPainter(); // Force layout if needed
     }
-    if (_lyricTextPainter.text == null)
+    if (_lyricTextPainter.text == null){
       return _textFieldHorizontalPadding; // Return padding if no text
-
+    }
     final textLength = _lyricTextPainter.text!.toPlainText().length;
     final clampedPosition = position.clamp(0, textLength);
 

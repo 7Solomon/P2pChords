@@ -86,6 +86,7 @@ Widget buildMainContent(
             icon: isClient ? Icons.queue_music : Icons.library_music,
             onPressed: () async {
               if (isClient) {
+                connectionProvider.requestSongDataFromHub();
                 bool beamer = await _handleBeamer(context) ?? false;
                 if (beamer) {
                   Navigator.push(

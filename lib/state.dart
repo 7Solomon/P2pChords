@@ -190,12 +190,16 @@ class ConnectionProvider with ChangeNotifier {
         // Broadcast to other spokes
         _hubService.broadcast(message);
         break;
+      
+      case MessageType.songDataRequest:
+          sendSongDataToRequestingSpoke(spokeId);
+        break;
 
       case MessageType.songData:
         final songData = SongData.fromMap(message.payload);
         _dataLoader.addSongsData(songData);
-        // Broadcast to other spokes
-        _hubService.broadcast(message);
+        // Broadcast to other spokes DONT THINK IS GOOD
+        //_hubService.broadcast(message);
         break;
 
       default:
@@ -213,7 +217,7 @@ class ConnectionProvider with ChangeNotifier {
         final songData = SongData.fromMap(message.payload);
         _dataLoader.addSongsData(songData);
         break;
-
+      
       default:
         debugPrint('Unhandled spoke message: ${message.type}');
     }
@@ -228,7 +232,27 @@ class ConnectionProvider with ChangeNotifier {
     }
   }
 
-  // High-level sync methods (for your existing code)
+
+  Future<void> sendSongDataToRequestingSpoke(String spokeId) async {
+    final group = _currentSelectionProvider.currentGroup;
+    if (group == null) return;  // BMAYBE ADD MESSAGE TO SPOKE
+    final message = HubMessage(
+      type: MessageType.songData,
+      payload: _dataLoader.getSongData(group).toMap(),
+    );
+    await _hubService.sendToSpoke(spokeId, message);
+    //await _spokeService.sendToHub(message);
+  }
+
+  Future<void> requestSongDataFromHub() async {
+    final message = HubMessage(
+      type: MessageType.songDataRequest,
+      payload: {},
+    );
+    await _spokeService.sendToHub(message);
+  }
+
+  // High-level sync methods (for compatablilty for my old shit code)
   Future<void> sendSongDataToAll(SongData songData) async {
     if (_userRole == UserRole.hub) {
       final message = HubMessage(
@@ -241,7 +265,7 @@ class ConnectionProvider with ChangeNotifier {
         type: MessageType.songData,
         payload: songData.toMap(),
       );
-      await _spokeService.sendToHub(message);
+      await _hubService.broadcast(message);
     }
   }
 
