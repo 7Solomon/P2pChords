@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:P2pChords/utils/notification_service.dart';
 import 'package:bonsoir/bonsoir.dart';
 import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/io.dart';
@@ -168,16 +169,6 @@ class SpokeService {
 
       _connection = IOWebSocketChannel(socket);
 
-      // Send handshake
-      final handshake = HubMessage(
-        type: MessageType.handshake,
-        payload: {
-          'id': _spokeId,
-          'name': spokeName,
-        },
-      );
-      _connection!.sink.add(jsonEncode(handshake.toJson()));
-
       // Listen for messages
       _connection!.stream.listen(
         _handleMessage,
@@ -189,15 +180,28 @@ class SpokeService {
         cancelOnError: true,
       );
 
+      // Send handshake
+      final handshake = HubMessage(
+        type: MessageType.handshake,
+        payload: {
+          'id': _spokeId,
+          'name': spokeName,
+        },
+      );
+      _connection!.sink.add(jsonEncode(handshake.toJson()));
+
+
+
       _connectedHubId = hub.id;
       _isConnected = true;
       _notify('Connected to hub: ${hub.name}');
       onConnectionStateChanged?.call();
 
       // Start ping timer
-      _pingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        _sendPong();
-      });
+      // THIS NOT BECAUSE JUST PONG WHEN PING
+      //_pingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      //  _sendPong();
+      //});
 
       return true;
     } catch (e) {
@@ -244,10 +248,12 @@ class SpokeService {
 
   /// Handle incoming messages
   void _handleMessage(dynamic data) {
+    print('HANDLE');
     try {
       final json = jsonDecode(data as String);
       final message = HubMessage.fromJson(json);
 
+      //SnackService().showInfo('Message received: ${message.type}');
       switch (message.type) {
         case MessageType.handshakeAck:
           _notify('Handshake acknowledged by hub');

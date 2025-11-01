@@ -34,12 +34,34 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
       builder: (context, currentSelection, dataLoader, sheetUiProvider,
           connectionProvider, _) {
         if (currentSelection.currentGroup == null) {
-          return const Scaffold(
-            body: Center(
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            body: const Center(
               child: Text('Keine Gruppe ausgewählt'),
             ),
           );
         }
+
+        // FOR WHEN SPOKE
+        if (currentSelection.currentSongHash == null){
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            body: const Center(
+              child: Text('Es ist noch kein Song ausgewählt'),
+            ),
+          );
+        } 
+
         // Get Current Data
         final List<Song> songs =
             dataLoader.getSongsInGroup(currentSelection.currentGroup!);

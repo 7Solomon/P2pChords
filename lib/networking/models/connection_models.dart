@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -31,7 +32,7 @@ class SpokeConnection {
 
   Future<void> send(Map<String, dynamic> data) async {
     try {
-      channel.sink.add(data);
+      channel.sink.add(jsonEncode(data)); 
     } catch (e) {
       print('Error sending to spoke $id: $e');
       rethrow;

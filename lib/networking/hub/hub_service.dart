@@ -222,7 +222,6 @@ class HubService {
     HubMessage message,
   ) async {
     spoke.updatePing();
-
     switch (message.type) {
       case MessageType.pong:
         // Health check response
@@ -230,11 +229,10 @@ class HubService {
 
       case MessageType.stateUpdate:
       case MessageType.songData:
-      case MessageType.metronomeUpdate:
       case MessageType.songDataRequest:
         onMessageReceived?.call(message, spoke.id);
         break;
-
+      case MessageType.metronomeUpdate:
       case MessageType.disconnect:
         await _disconnectSpoke(spoke.id);
         break;

@@ -52,17 +52,16 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
     );
   }
 
-  // DEPR
-  //Future<void> sendSongDataToAllClients(
-  //    ConnectionProvider connectionProvider, SongData songData) async {
-  //  if (connectionProvider.userRole == UserRole.hub) {
-  //    bool? shouldSend = await showShouldSendDialog();
-  //    if (shouldSend == true) {
-  //      await connectionProvider.sendSongDataToAll(songData);
-  //      SnackService().showSuccess('Daten wurden gesendet');
-  //    }
-  //  }
-  //}
+  Future<void> sendSongDataToAllClients(
+      ConnectionProvider connectionProvider, SongData songData) async {
+    if (connectionProvider.userRole == UserRole.hub) {
+      //bool? shouldSend = await showShouldSendDialog();
+      //if (shouldSend == true) {
+        await connectionProvider.sendSongDataToAll(songData);
+        //SnackService().showSuccess('Daten wurden gesendet');
+      //}
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +134,10 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                   Provider.of<CurrentSelectionProvider>(context, listen: false)
                       .setCurrentGroup(groupName);
                   if (connectionProvider.userRole != UserRole.spoke) {
-                    //if (connectionProvider.userRole == UserRole.hub) {
-                    //  await sendSongDataToAllClients(
-                    //      connectionProvider, songData);
-                    //}
+                    if (connectionProvider.userRole == UserRole.hub) {
+                      await sendSongDataToAllClients(
+                          connectionProvider, songData);
+                    }
                     if (mounted) {
                       Navigator.push(
                         context,

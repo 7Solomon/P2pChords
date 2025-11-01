@@ -173,7 +173,7 @@ void _handleClientSongAction(
     ConnectionProvider connectionProvider,
     CurrentSelectionProvider currentSection,
     DataLoadeProvider dataLoader) {
-      if (connectionProvider.connectedDevices.isNotEmpty) {
+      if (connectionProvider.isConnectedToHub) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const ChordSheetPage()),
