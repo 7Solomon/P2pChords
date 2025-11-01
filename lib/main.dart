@@ -9,10 +9,24 @@ import 'package:P2pChords/navigator.dart';
 import 'package:P2pChords/utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import 'state.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await windowManager.ensureInitialized();
+
+  WindowOptions windowOptions = const WindowOptions(
+    title: 'P2P Chords',
+    fullScreen: true,
+    center: true,
+  );
+
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
 
   try {
     debugPrint('Initializing SharedPreferences...');
