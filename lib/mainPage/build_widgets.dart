@@ -125,7 +125,8 @@ Widget buildMainContent(
             const SizedBox(height: 20),
 
             // Manage groups button
-            buildCloseButton(context),
+            if (Platform.isWindows) buildCloseButton(context),
+            if (Platform.isLinux) buildCloseButton(context),
 
           ],
         ),
