@@ -86,46 +86,59 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.bottomRight,
-      children: [
-        // Category Buttons
-        if (_isOpen && _activeCategory == null)
-          for (int i = 0; i < widget.categories.length; i++)
-            _buildCategoryButton(widget.categories[i], i),
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomRight,
+        children: [
+          // Background overlay to close dial when tapping outside
+          if (_isOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() {
+                    _isOpen = false;
+                    _activeCategory = null;
+                    _animationController.reverse();
+                  });
+                },
+                child: Container(color: Colors.transparent),
+              ),
+            ),
 
-        // Child Buttons for Active Category
-        if (_isOpen && _activeCategory != null) ...[
-          // Back button
-          _buildBackButton(),
+          // Category Buttons
+          if (_isOpen && _activeCategory == null)
+            for (int i = 0; i < widget.categories.length; i++)
+              _buildCategoryButton(widget.categories[i], i),
 
-          // Category children
-          for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
-            _buildChildButton(_activeCategory!.children[i], i),
-        ],
+          // Child Buttons for Active Category
+          if (_isOpen && _activeCategory != null) ...[
+            _buildBackButton(),
+            for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
+              _buildChildButton(_activeCategory!.children[i], i),
+          ],
 
-        // Main Dial Button (should be last to appear on top)
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: FloatingActionButton(
-            backgroundColor:
-                widget.backgroundColor ?? widget.theme.primaryColor,
-            foregroundColor: widget.foregroundColor ?? Colors.white,
-            elevation: widget.elevation,
-            enableFeedback: true,
-            onPressed: () {
-              //print("Main button pressed");
-              _toggleMainDial();
-            },
-            child: AnimatedIcon(
-              icon: widget.animatedIcon,
-              progress: _animation,
+          // Main Dial Button
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: FloatingActionButton(
+              backgroundColor:
+                  widget.backgroundColor ?? widget.theme.primaryColor,
+              foregroundColor: widget.foregroundColor ?? Colors.white,
+              elevation: widget.elevation,
+              enableFeedback: true,
+              onPressed: _toggleMainDial,
+              child: AnimatedIcon(
+                icon: widget.animatedIcon,
+                progress: _animation,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
