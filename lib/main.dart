@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:P2pChords/dataManagment/provider/app_ui_provider.dart';
 import 'package:P2pChords/dataManagment/provider/beamer_ui_provider.dart';
 import 'package:P2pChords/dataManagment/provider/current_selection_provider.dart';
@@ -15,18 +16,21 @@ import 'state.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  await windowManager.ensureInitialized();
+  // Only initialize window manager on desktop platforms
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
 
-  WindowOptions windowOptions = const WindowOptions(
-    title: 'P2P Chords',
-    fullScreen: true,
-    center: true,
-  );
+    WindowOptions windowOptions = const WindowOptions(
+      title: 'P2P Chords',
+      fullScreen: true,
+      center: true,
+    );
 
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
 
   try {
     debugPrint('Initializing SharedPreferences...');
