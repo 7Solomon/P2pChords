@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum AppButtonType { primary, secondary, tertiary }
-
+enum AppButtonType { primary, secondary, tertiary  }
 class AppButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
