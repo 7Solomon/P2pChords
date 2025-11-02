@@ -114,6 +114,7 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
                 widget.backgroundColor ?? widget.theme.primaryColor,
             foregroundColor: widget.foregroundColor ?? Colors.white,
             elevation: widget.elevation,
+            enableFeedback: true,
             onPressed: () {
               //print("Main button pressed");
               _toggleMainDial();
@@ -183,6 +184,7 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
             heroTag: 'category_${category.title}',
             backgroundColor: category.color,
             foregroundColor: Colors.white,
+            enableFeedback: true,
             child: Icon(category.icon),
             onPressed: () => _openCategory(category),
           ),
@@ -216,8 +218,9 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
           FloatingActionButton.small(
             heroTag: 'back_button',
             backgroundColor: Colors.grey.shade700,
-            child: const Icon(Icons.arrow_back),
+            enableFeedback: true,
             onPressed: _closeCategory,
+            child: const Icon(Icons.arrow_back),
           ),
         ],
       ),
@@ -253,6 +256,7 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
             heroTag: 'child_${_activeCategory!.title}_$index',
             backgroundColor: child.backgroundColor ?? _activeCategory!.color,
             foregroundColor: child.foregroundColor ?? Colors.white,
+            enableFeedback: true,
             child: child.child,
             onPressed: () {
               // Close the dial first
