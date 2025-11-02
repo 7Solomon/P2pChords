@@ -48,7 +48,16 @@ enum SheetLayoutMode {
   horizontalGrid,    // sections flow left-to-right, top-to-bottom
   verticalStack,     // sections stack vertically (most intuitive for tap navigation)
   singleSection,     // only show current section (fullscreen)
-  multiColumn,       // multiple columns, flowing downward (formerly twoColumn)
+  multiColumn;       // multiple columns, flowing downward (formerly twoColumn)
+
+  String toJson() => name;
+  
+  static SheetLayoutMode fromJson(String value) {
+    return SheetLayoutMode.values.firstWhere(
+      (mode) => mode.name == value,
+      orElse: () => SheetLayoutMode.verticalStack,
+    );
+  }
 }
 
 class UiVariables {
@@ -140,7 +149,15 @@ class UiVariables {
       }
     });
 
-    return UiVariables(initialValues: initialValues);
+    // Add this line to restore layoutMode
+    final layoutMode = json.containsKey('layoutMode')
+        ? SheetLayoutMode.fromJson(json['layoutMode'])
+        : SheetLayoutMode.verticalStack;
+
+    return UiVariables(
+      initialValues: initialValues,
+      initialLayoutMode: layoutMode,
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -149,6 +166,9 @@ class UiVariables {
     _variableDefinitions.keys.forEach((key) {
       result[key] = _variables[key]!.toJson();
     });
+
+    // Add this line to save layoutMode
+    result['layoutMode'] = layoutMode.value.toJson();
 
     return result;
   }

@@ -12,6 +12,8 @@ class CSpeedDial extends SpeedDial {
     super.elevation = 8.0,
     double super.spacing = 8,
     double super.spaceBetweenChildren = 8,
+    super.buttonSize = const Size(65, 65),
+    super.childrenButtonSize = const Size(65, 65),
   }) : super(
           backgroundColor: backgroundColor ?? theme.primaryColor,
           foregroundColor: foregroundColor ?? Colors.white,
@@ -39,6 +41,7 @@ class HierarchicalSpeedDial extends StatefulWidget {
   final Color? backgroundColor;
   final Color? foregroundColor;
   final double elevation;
+  final double buttonSize;
 
   const HierarchicalSpeedDial({
     Key? key,
@@ -48,6 +51,7 @@ class HierarchicalSpeedDial extends StatefulWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.elevation = 8.0,
+    this.buttonSize = 65.0,
   }) : super(key: key);
 
   @override

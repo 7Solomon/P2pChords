@@ -19,6 +19,7 @@ class AppTheme {
       backgroundColor: Colors.blue.shade700,
       foregroundColor: Colors.white,
       elevation: 0,
+      toolbarHeight: 90
     ),
     cardTheme: CardThemeData(
       elevation: 2,
@@ -28,7 +29,7 @@ class AppTheme {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        textStyle: TextStyle(fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(fontWeight: FontWeight.bold),
       ),
     ),
     textTheme: TextTheme(
@@ -66,6 +67,7 @@ class AppTheme {
       backgroundColor: Colors.grey.shade900,
       foregroundColor: Colors.white,
       elevation: 0,
+      toolbarHeight: 90,
     ),
     cardTheme: CardThemeData(
       elevation: 2,
@@ -75,7 +77,7 @@ class AppTheme {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        textStyle: TextStyle(fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(fontWeight: FontWeight.bold),
       ),
     ),
     textTheme: const TextTheme(
@@ -111,6 +113,10 @@ class AppTheme {
       outline: Color(0xFFDCDCDC),
     ),
     scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+    appBarTheme: const AppBarTheme(
+      elevation: 0,
+      toolbarHeight: 90,
+    ),
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
         fontSize: 24,
