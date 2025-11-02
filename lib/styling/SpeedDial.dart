@@ -104,23 +104,35 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
                     _animationController.reverse();
                   });
                 },
-                child: Container(color: Colors.transparent),
+                child: IgnorePointer(
+                  ignoring: false,
+                  child: Container(color: Colors.black.withOpacity(0.3)), // 👈 visible overlay
+                ),
               ),
             ),
 
           // Category Buttons
           if (_isOpen && _activeCategory == null)
             for (int i = 0; i < widget.categories.length; i++)
-              _buildCategoryButton(widget.categories[i], i),
+              IgnorePointer(
+                ignoring: false,
+                child: _buildCategoryButton(widget.categories[i], i),
+              ),
 
           // Child Buttons for Active Category
           if (_isOpen && _activeCategory != null) ...[
-            _buildBackButton(),
+            IgnorePointer(
+              ignoring: false,
+              child: _buildBackButton(),
+            ),
             for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
-              _buildChildButton(_activeCategory!.children[i], i),
+              IgnorePointer(
+                ignoring: false,
+                child: _buildChildButton(_activeCategory!.children[i], i),
+              ),
           ],
 
-          // Main Dial Button
+          // Main Dial Button (always receives touches)
           Positioned(
             right: 0,
             bottom: 0,
