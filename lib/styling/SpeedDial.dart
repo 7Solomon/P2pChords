@@ -92,11 +92,10 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
         clipBehavior: Clip.none,
         alignment: Alignment.bottomRight,
         children: [
-          // Background overlay to close dial when tapping outside
+          // 1. Background overlay (rendered first)
           if (_isOpen)
             Positioned.fill(
               child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   setState(() {
                     _isOpen = false;
@@ -104,35 +103,24 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
                     _animationController.reverse();
                   });
                 },
-                child: IgnorePointer(
-                  ignoring: false,
-                  child: Container(color: Colors.black.withOpacity(0.3)), // 👈 visible overlay
+                child: Container(
+                  color: Colors.black.withOpacity(0.3),
                 ),
               ),
             ),
 
-          // Category Buttons
+          // 2. Buttons (rendered after overlay - receive events first)
           if (_isOpen && _activeCategory == null)
             for (int i = 0; i < widget.categories.length; i++)
-              IgnorePointer(
-                ignoring: false,
-                child: _buildCategoryButton(widget.categories[i], i),
-              ),
+              _buildCategoryButton(widget.categories[i], i),
 
-          // Child Buttons for Active Category
           if (_isOpen && _activeCategory != null) ...[
-            IgnorePointer(
-              ignoring: false,
-              child: _buildBackButton(),
-            ),
+            _buildBackButton(),
             for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
-              IgnorePointer(
-                ignoring: false,
-                child: _buildChildButton(_activeCategory!.children[i], i),
-              ),
+              _buildChildButton(_activeCategory!.children[i], i),
           ],
 
-          // Main Dial Button (always receives touches)
+          // 3. Main FAB (always on top)
           Positioned(
             right: 0,
             bottom: 0,
