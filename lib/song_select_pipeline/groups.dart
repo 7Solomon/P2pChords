@@ -71,6 +71,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
       appBar: AppBar(
         title: const Text('Alle Gruppen'),
       ),
+      resizeToAvoidBottomInset: false, 
       floatingActionButton: buildFloatingActionButtonForGroups(context),
       body: Consumer<DataLoadeProvider>(
         builder: (context, dataProvider, child) {

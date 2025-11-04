@@ -122,31 +122,33 @@ class _ChordSheetPageState extends State<ChordSheetPage> {
           ),
 
           floatingActionButton: connectionProvider.userRole == UserRole.hub
-              ? FloatingActionButton(
-                  onPressed: () {
-                    setState(() {
-                      isLive = !isLive;
-                    });
-                  },
-                  tooltip: isLive ? 'Live Modus aus' : 'Live Modus an',
-                  child: isLive
-                      ? Container(
-                          width: 16,
-                          height: 16,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
+              ? Padding(
+                padding: const EdgeInsets.only(bottom: 64.0, right: 64.0),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        isLive = !isLive;
+                      });
+                    },
+                    tooltip: isLive ? 'Live Modus aus' : 'Live Modus an',
+                    child: isLive
+                        ? Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        : Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300, // Colors.transparent
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        )
-                      : Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300, // Colors.transparent
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                )
+                  ))
               : null,
           endDrawer: SongDrawer(
             song: currentSong,

@@ -1,23 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
-class CSpeedDial extends SpeedDial {
-  CSpeedDial({
+class CSpeedDial extends StatelessWidget {
+  final ThemeData theme;
+  final List<SpeedDialChild> children;
+  final AnimatedIconData animatedIcon;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final double elevation;
+  final double spacing;
+  final double spaceBetweenChildren;
+  final Size buttonSize;
+  final Size childrenButtonSize;
+
+  const CSpeedDial({
     super.key,
-    required ThemeData theme,
-    required super.children,
-    AnimatedIconData super.animatedIcon = AnimatedIcons.menu_close,
-    Color? backgroundColor,
-    Color? foregroundColor,
-    super.elevation = 8.0,
-    double super.spacing = 8,
-    double super.spaceBetweenChildren = 8,
-    super.buttonSize = const Size(65, 65),
-    super.childrenButtonSize = const Size(65, 65),
-  }) : super(
-          backgroundColor: backgroundColor ?? theme.primaryColor,
-          foregroundColor: foregroundColor ?? Colors.white,
-        );
+    required this.theme,
+    required this.children,
+    this.animatedIcon = AnimatedIcons.menu_close,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.elevation = 8.0,
+    this.spacing = 8,
+    this.spaceBetweenChildren = 8,
+    this.buttonSize = const Size(65, 65),
+    this.childrenButtonSize = const Size(65, 65),
+  });
+
+  static const double _bottomPadding = 64.0;
+  static const double _rightPadding = 64.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: _bottomPadding, right: _rightPadding),
+      child: SpeedDial(
+        animatedIcon: animatedIcon,
+        backgroundColor: backgroundColor ?? theme.primaryColor,
+        foregroundColor: foregroundColor ?? Colors.white,
+        elevation: elevation,
+        spacing: spacing,
+        spaceBetweenChildren: spaceBetweenChildren,
+        buttonSize: buttonSize,
+        childrenButtonSize: childrenButtonSize,
+        children: children,
+      ),
+    );
+  }
 }
 
 class SpeedDialCategory {
@@ -65,6 +94,10 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
+  // Add padding constants
+  static const double _bottomPadding = 64.0;
+  static const double _rightPadding = 64.0;
+
   @override
   void initState() {
     super.initState();
@@ -86,58 +119,61 @@ class _HierarchicalSpeedDialState extends State<HierarchicalSpeedDial>
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomRight,
-        children: [
-          // 1. Background overlay (rendered first)
-          if (_isOpen)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isOpen = false;
-                    _activeCategory = null;
-                    _animationController.reverse();
-                  });
-                },
-                child: Container(
-                  color: Colors.black.withOpacity(0.3),
+    return Padding(
+      padding: EdgeInsets.only(bottom: _bottomPadding, right: _rightPadding),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomRight,
+          children: [
+            // 1. Background overlay (rendered first)
+            if (_isOpen)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isOpen = false;
+                      _activeCategory = null;
+                      _animationController.reverse();
+                    });
+                  },
+                  child: Container(
+                    color: Colors.black.withOpacity(0.0),
+                  ),
+                ),
+              ),
+
+            // 2. Buttons (rendered after overlay - receive events first)
+            if (_isOpen && _activeCategory == null)
+              for (int i = 0; i < widget.categories.length; i++)
+                _buildCategoryButton(widget.categories[i], i),
+
+            if (_isOpen && _activeCategory != null) ...[
+              _buildBackButton(),
+              for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
+                _buildChildButton(_activeCategory!.children[i], i),
+            ],
+
+            // 3. Main FAB (always on top)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: FloatingActionButton(
+                backgroundColor:
+                    widget.backgroundColor ?? widget.theme.primaryColor,
+                foregroundColor: widget.foregroundColor ?? Colors.white,
+                elevation: widget.elevation,
+                enableFeedback: true,
+                onPressed: _toggleMainDial,
+                child: AnimatedIcon(
+                  icon: widget.animatedIcon,
+                  progress: _animation,
                 ),
               ),
             ),
-
-          // 2. Buttons (rendered after overlay - receive events first)
-          if (_isOpen && _activeCategory == null)
-            for (int i = 0; i < widget.categories.length; i++)
-              _buildCategoryButton(widget.categories[i], i),
-
-          if (_isOpen && _activeCategory != null) ...[
-            _buildBackButton(),
-            for (int i = 0; i < (_activeCategory?.children.length ?? 0); i++)
-              _buildChildButton(_activeCategory!.children[i], i),
           ],
-
-          // 3. Main FAB (always on top)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: FloatingActionButton(
-              backgroundColor:
-                  widget.backgroundColor ?? widget.theme.primaryColor,
-              foregroundColor: widget.foregroundColor ?? Colors.white,
-              elevation: widget.elevation,
-              enableFeedback: true,
-              onPressed: _toggleMainDial,
-              child: AnimatedIcon(
-                icon: widget.animatedIcon,
-                progress: _animation,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
