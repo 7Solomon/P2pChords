@@ -44,6 +44,7 @@ class _SongoverviewpageState extends State<Songoverviewpage> {
         children: [
           Expanded(
             child: ReorderableListView.builder(
+              buildDefaultDragHandles: false,
               itemCount: songs.length,
               onReorder: (oldIndex, newIndex) async {
                 if (oldIndex < newIndex) {
@@ -72,6 +73,7 @@ class _SongoverviewpageState extends State<Songoverviewpage> {
                 return CExpandableListTile(
                   key: ValueKey(hash),
                   uniqueKey: hash,
+                  reorderIndex: index,
                   title: name,
                   subtitle: song.header.authors.isNotEmpty
                       ? song.header.authors[0]
@@ -82,19 +84,6 @@ class _SongoverviewpageState extends State<Songoverviewpage> {
                     setState(() {
                       _expandedSongHash = expanded ? hash : null;
                     });
-                  },
-                  dragHandleBuilder: (context) {
-                    return ReorderableDragStartListener(
-                      index: index,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.drag_handle,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 28,
-                        ),
-                      ),
-                    );
                   },
                   onTap: () {
                     if (isExpanded) {

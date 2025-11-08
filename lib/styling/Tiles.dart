@@ -155,6 +155,7 @@ class CListTile extends ListTile {
 
 class CExpandableListTile extends StatefulWidget {
   final String title;
+  final int? reorderIndex;
   final String? subtitle;
   final IconData? icon;
   final double? iconSize;
@@ -163,12 +164,12 @@ class CExpandableListTile extends StatefulWidget {
   final String uniqueKey;
   final bool? isExpanded;
   final ValueChanged<bool>? onExpansionChanged;
-  final Widget Function(BuildContext)? dragHandleBuilder;
 
   const CExpandableListTile({
     super.key,
     required this.title,
     required this.uniqueKey,
+    this.reorderIndex,
     this.subtitle,
     this.icon,
     this.iconSize,
@@ -176,7 +177,6 @@ class CExpandableListTile extends StatefulWidget {
     this.actions = const [],
     this.isExpanded,
     this.onExpansionChanged,
-    this.dragHandleBuilder,
   });
 
   @override
@@ -283,16 +283,8 @@ class _CExpandableListTileState extends State<CExpandableListTile>
                   ),
                   child: Row(
                     children: [
-                      // Leading icon or drag handle
-                      if (_effectiveIsExpanded && widget.dragHandleBuilder != null)
-                        widget.dragHandleBuilder!(context)
-                      else if (_effectiveIsExpanded)
-                        Icon(
-                          Icons.drag_handle,
-                          color: theme.colorScheme.primary,
-                          size: 28,
-                        )
-                      else if (widget.icon != null)
+                      // Leading icon (only when NOT expanded)
+                      if (!_effectiveIsExpanded && widget.icon != null) ...[
                         CircleAvatar(
                           backgroundColor: theme.colorScheme.primary,
                           child: Icon(
@@ -301,8 +293,10 @@ class _CExpandableListTileState extends State<CExpandableListTile>
                             size: widget.iconSize ?? 24.0,
                           ),
                         ),
-                      const SizedBox(width: 16),
-                      // Title and subtitle
+                        const SizedBox(width: 16),
+                      ],
+                      
+                      // Title and subtitle (takes up remaining space)
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,19 +310,26 @@ class _CExpandableListTileState extends State<CExpandableListTile>
                               Text(
                                 widget.subtitle!,
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
+                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                             ],
                           ],
                         ),
                       ),
-                      // Expand/collapse indicator
-                      AnimatedRotation(
-                        duration: const Duration(milliseconds: 300),
-                        turns: _effectiveIsExpanded ? 0.5 : 0
-                      ),
+
+                      if (widget.reorderIndex != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child:ReorderableDragStartListener(
+                            index: widget.reorderIndex!,
+                            child: Icon(
+                              Icons.drag_handle,
+                              size: 32.0,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ),
+                      )                        
                     ],
                   ),
                 ),

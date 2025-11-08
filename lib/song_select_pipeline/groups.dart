@@ -86,6 +86,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
           final groupNames = dataProvider.groups.keys.toList();
 
           return ReorderableListView.builder(
+            buildDefaultDragHandles: false,
             itemCount: groupNames.length,
             onReorder: (oldIndex, newIndex) async {
               if (oldIndex < newIndex) {
@@ -102,6 +103,7 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
               return CExpandableListTile(
                 key: ValueKey(groupName),
                 uniqueKey: groupName,
+                reorderIndex: index,
                 title: groupName,
                 subtitle: '$songCount Song${songCount != 1 ? 's' : ''}',
                 icon: Icons.folder,
@@ -110,19 +112,6 @@ class _GroupOverviewpageState extends State<GroupOverviewpage> {
                   setState(() {
                     _expandedGroupName = expanded ? groupName : null;
                   });
-                },
-                dragHandleBuilder: (context) {
-                  return ReorderableDragStartListener(
-                    index: index,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.drag_handle,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 28,
-                      ),
-                    ),
-                  );
                 },
                 onTap: () async {
                   if (isExpanded) {
